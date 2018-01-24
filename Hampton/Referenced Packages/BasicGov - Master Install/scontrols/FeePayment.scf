@@ -1,0 +1,870 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+	<head>
+		<title>{!HTMLENCODE(Permit__c.Name)}{!HTMLENCODE(Permit2__c.Name)}{!HTMLENCODE(Complaint__c.Id)}{!HTMLENCODE(Planning_Application__c.Name)}{!HTMLENCODE(License1__c.Name)}: Pay Fees</title>
+		<link href="/sCSS/8.0/1171411121000/Theme2/default/ie7/common.css" media="handheld,print,projection,screen,tty,tv" rel="stylesheet" type="text/css" />
+		<script src="/js/functions.js" type="text/javascript"></script>
+		<script src="/dJS/en/1170289429000/library.js" type="text/javascript"></script>
+		<script src="/js/setup.js" type="text/javascript"></script>
+	    <script src="/soap/ajax/8.0/connection.js"></script>
+		<script src="/jslibrary/0/sfdc/SfdcCore.js" type="text/javascript"></script>
+		{!INCLUDE($SControl.lgmCommon)}
+		<script id="clientEventHandlersJS" language="javascript">
+<!-- 
+	var uInfo;
+	var dformat; 
+	var tformat = " hh:mm a";
+	var feesForUpdate;
+	var outstandingFees = new Array(); //2-D array: [outstanding amount, new paid amount]
+	var availableReceipts = new Array();
+	
+	var mergeData = new Array(); //lookup list of id values
+	
+	var gPaymentAvailable=0;
+	var gTotalPaid=0;
+	var gTotalOutstanding=0;
+	var gTotalUnallocated=0;
+	
+	var gPriorPaidAmount=0; //remember what the fee paid amount is before a user change
+	
+	var permitID = "{!JSENCODE(Permit__c.Id)}";
+	var permit2ID = "{!JSENCODE(Permit2__c.Id)}";
+	var complaintID = "{!JSENCODE(Complaint__c.Id)}";
+	var applicationID = "{!JSENCODE(Planning_Application__c.Id)}";
+	var licenseID = "{!JSENCODE(License1__c.Id)}";
+	
+	//for updating parent
+	var gTotalReceipts = 0;
+	var gTotalFees = 0;
+	var parentName = "";
+	var parentId = "";
+	
+	function setup() {
+	
+		isDebug = {!$User.Debug__c};
+
+		if (isDebug) {
+			document.getElementById("divDebugHeader").style.display = "block";
+			document.getElementById("divDebug").style.display = "block";
+		}
+		
+		if ({!$User.Step_Through__c}) {
+			//throw uncaught exception so can step through in managed client environment
+			throw "e";
+		}
+	
+		uInfo = sforce.connection.getUserInfo(); // has the locale
+		dformat = lgm.date.parseDateFormat("{!Today}", uInfo.userLocale);
+		
+		//Load Picklist information
+		initPicklist("MUSW__Receipt__c","MUSW__Payment_Method__c","paymentMethod");
+		
+		//Load Fee information
+		
+		var sqlModule = "";
+		
+		if (permitID != "") {
+			sqlModule = " MUSW__Permit__c = '" + permitID + "'";
+			parentName = "MUSW__Permit__c";
+			parentId = permitID;
+		} else if (permit2ID != "") {
+			sqlModule = " MUSW__Permit2__c = '" + permit2ID + "'";
+			parentName = "MUSW__Permit2__c";
+			parentId = permit2ID;
+		} else if (complaintID != "") {
+			sqlModule = " MUSW__Complaint__c = '" + complaintID + "'";
+			parentName = "MUSW__Complaint__c";
+			parentId = complaintID;
+		} else if (applicationID != "") {
+			sqlModule = " MUSW__Planning_Application__c = '" + applicationID + "'";
+			parentName = "MUSW__Planning_Application__c";
+			parentId = applicationID;
+		} else if (licenseID != "") {
+			sqlModule = " MUSW__License1__c = '" + licenseID + "'";
+			parentName = "MUSW__License1__c";
+			parentId = licenseID;
+		} else 
+			sqlModule = " 0=1"; //get nothing
+		
+		sqlRuleSort = " order by Id";
+		
+		var results = sforce.connection.query("Select Id, MUSW__Type__c, MUSW__Fee_Paid__c, CreatedById, CreatedDate, MUSW__Amount__c, MUSW__Outstanding_Fee__c, MUSW__Amount_Paid__c from MUSW__Fee__c where " + sqlModule + sqlRuleSort);
+		var fees2 = results.getArray("records");
+		
+		var table = document.getElementById("contentTable").getElementsByTagName("TBODY")[0];
+		
+		var amountTotal = 0;
+		var feeAmount = 0;
+		
+		
+		var optionNum = 0;
+		for (var i=0;i<fees2.length;i++) {
+			if (fees2[i]["MUSW__Amount__c"] != null) {
+				if (fees2[i]["MUSW__Fee_Paid__c"] == "false") {
+					
+					if ( fees2[i]["MUSW__Outstanding_Fee__c"] != null ) 
+						feeAmount = lgm.numeric.round(fees2[i].getFloat("MUSW__Outstanding_Fee__c"),2);
+					else
+						feeAmount = 0;
+					
+					if (feeAmount > 0) {
+						var row = document.createElement("tr");
+						row.className = "dataRow even first";
+						row.onblur = "if (window.hiOff){hiOff(this);}' onfocus='if (window.hiOn){hiOn(this);}";			
+						row.onmouseout = "if (window.hiOff){hiOff(this);}' onmouseover='if (window.hiOn){hiOn(this);}";
+
+						row.appendChild(createCell("th", "row", "dataCell", "<input type='checkbox' id = 'id"+optionNum+"' name = 'ids' value = '" + fees2[i]["Id"] + "' onclick='javascript:setFeePaid("+ optionNum +",this.checked)'/>"));
+						row.appendChild(createCell("td", "row", "dataCell", fees2[i]["MUSW__Type__c"]));
+						row.appendChild(createCell("td", "row", "dataCell", lookup("User", "Id",fees2[i]["CreatedById"],"Name")));
+						row.appendChild(createCell("td", "row", "dataCell", lgm.date.formatDate(lgm.date.parseDate(fees2[i]["CreatedDate"]), dformat )));  //+ tformat
+
+						row.appendChild(createCell("td", "row", "dataCell", formatCurrency(feeAmount)));
+						row.appendChild(createCell("td", "row", "dataCell", "<input type='text' id = 'paid" + optionNum +"' tabindex='"+ 10+optionNum +"' value = '0' onblur='javascript:feePaid("+optionNum +",this)' onfocus='javascript:feePaidCheck("+ optionNum +",this)'/>"));
+						table.appendChild(row);
+
+						outstandingFees[optionNum] = [feeAmount,0];
+
+						gTotalOutstanding = gTotalOutstanding + feeAmount;
+						optionNum = optionNum+1;
+					}	
+				}
+				gTotalFees = gTotalFees + lgm.numeric.round(fees2[i].getFloat("MUSW__Amount__c"),2);
+			}
+			
+		}
+				
+		//Re-Load Fee information for update
+		var results = sforce.connection.query("Select " + getFields("MUSW__Fee__c", true) + " from MUSW__Fee__c Where MUSW__Fee_Paid__c = false and MUSW__Outstanding_Fee__c > 0 and MUSW__Amount__c != null and " + sqlModule + sqlRuleSort);
+		feesForUpdate = results.getArray("records");
+		
+		//***
+		//Load Available Receipts
+		
+		//get non-refunded receipts
+		var receipts = sforce.connection.query("Select " + getFields("MUSW__Receipt__c", true) + " from MUSW__Receipt__c where MUSW__Refunded__c = FALSE and " + sqlModule + sqlRuleSort);
+		receipts = receipts.getArray("records");	
+		
+		var pickList = document.getElementById("availableReceipt");
+		var label = "";
+		
+		pickList[pickList.length] = new Option("New Receipt");
+		optionNum = 1;
+		for (var i=0;i<receipts.length;i++) {
+			if (receipts[i]["MUSW__Amount_Available__c"] > 0.01) {
+				label = optionNum + ". " + receipts[i]["MUSW__Payment_Method__c"] + " " + formatCurrency(receipts[i]["MUSW__Amount_Tendered__c"]) + " Available: " + formatCurrency(receipts[i]["MUSW__Amount_Available__c"]);
+				pickList[pickList.length] = new Option(label);
+								
+				availableReceipts[optionNum] = receipts[i];
+				optionNum = optionNum + 1;
+			}
+			gTotalReceipts = gTotalReceipts + lgm.numeric.round(receipts[i].getFloat(["MUSW__Amount_Tendered__c"]),2);
+		}
+		
+		//update totals in window
+		document.getElementById('amountTotal').innerHTML = formatCurrency(gTotalOutstanding);
+		document.getElementById('paidTotal').innerHTML = formatCurrency(gTotalPaid);
+		document.getElementById('unallocatedTotal').innerHTML = formatCurrency(gTotalUnallocated);
+		//default tendered amount
+		document.getElementById("tenderedAmount").value =lgm.numeric.round(gTotalOutstanding,2); 
+		
+		//set focus on first field
+		document.getElementById("tenderedAmount").focus();
+	}
+
+	function getFields(sobject, forUpdate) {
+		var fields = sforce.connection.describeSObject(sobject).fields;
+		var fieldList = "";
+		
+		if (!forUpdate) {
+			for (var i=0; i<fields.length; i++) {
+				fieldList = fieldList + fields[i].name + ", ";
+			}
+		} else {
+			fieldList = "Id, ";
+			for (var i=0; i<fields.length; i++) {
+				if (fields[i].updateable == true || fields[i].updateable == "true") {
+					fieldList = fieldList + fields[i].name + ", ";
+				}
+			}
+		}
+		
+		//chop off last comma
+		fieldList = fieldList.substring(0, fieldList.length-2);
+		return fieldList;
+	}
+	
+	function createCell(type, scope, className, innerHTML) {
+		var retVal = document.createElement(type);
+		retVal.scope = scope;
+		retVal.className = className;
+		retVal.innerHTML = innerHTML;
+		return retVal;
+	}
+	
+	function lookup(object, id, idValue, fields) {
+		var lookupValue = mergeData[object+idValue+fields];
+	
+		//if we do not have the lookup field values already, query for them
+		if (lookupValue == null ) {	
+			lookupValue = idValue;
+			var results = sforce.connection.query("Select Id, " + fields + " from " + object + " Where " + id + " = '" + idValue + "'");
+			var table = results.getArray("records");
+			
+			if (table.length > 0) {
+				// expect only loop once
+				for (var i=0;i<table.length;i++) {						
+					var fieldList = ", " + fields + ",";
+					lookupValue = "";
+			
+					//get wanted field values from record
+					while (fieldList.indexOf(",") != -1 && fieldList.length > 1 ) {
+						var startQuotePos = fieldList.indexOf(", ")+1;
+						var endQuotePos = fieldList.indexOf(",", startQuotePos+1);
+						var fieldName = fieldList.substring(startQuotePos+1,endQuotePos); // get column name to retrieve from record
+
+						lookupValue = lookupValue + " " + table[i].get(fieldName); //build list of field values with " " between them
+						fieldList = fieldList.substring(endQuotePos);
+					}
+				}
+				//add lookupValue to list
+				mergeData[object+idValue+fields] = lookupValue;
+			}
+		}
+		
+		return lookupValue;
+	}
+
+	function makePayment(form, element_name, value) { 
+	var error = false;
+	
+		//validation
+		
+		//JAWvar payment = document.getElementById("paymentAmount");
+		if (gPaymentAvailable == 0) {
+			alert("Enter a new Receipt Tendered Amount or choose from Available Receipts"); 
+			return;
+		}
+
+		if (gTotalPaid == 0) {
+			alert("Select Fees to pay"); 
+			return;
+		}
+		
+		var availableReceipt = document.getElementById("availableReceipt");
+		
+		//if a new receipt, ensure required receipt fields are filled in
+		if ((availableReceipt.selectedIndex == 0) && ((document.getElementById("tenderedAmount").value == ""))) {
+			alert("Enter Tendered Amount"); 
+			return;
+		}
+			
+		if ((availableReceipt.selectedIndex == 0) && (gPaymentAvailable > document.getElementById("tenderedAmount").value)) {
+			alert("Reduce Payment Amount to or below Tendered Amount"); 
+			return;
+		}	
+		
+		//if not a new receipt, ensure payment is no more than receipt available amount
+		if ((availableReceipt.selectedIndex != 0) && (gPaymentAvailable > availableReceipts[availableReceipt.selectedIndex]["MUSW__Amount_Available__c"])) {
+			alert("Receipt has insuffient payment available. Reduce payment."); 
+			return;
+		}
+		
+		if (gPaymentAvailable < gTotalPaid ) {
+			alert("Can not pay more than Payment Amount. Reduce Paid Amount(s)."); 
+			return;
+		}
+		
+		if (gTotalPaid < gPaymentAvailable) { 
+			var x = window.confirm("Confirm partial Payment"); 
+			if (!x) { 
+				return;
+			} 
+		}
+		
+		
+		
+		//Set payment defaults
+		
+		var updateObjects = 0;
+		var feePaidinFull = false;
+		
+		var paidDate = document.getElementById("paidDate").value;
+
+		if ((paidDate != "") && (paidDate != null)) {
+			var setPaidDate = true;
+			paidDate = lgm.date.formatDate(new Date (paidDate), dformat ); //+ tformat
+		} else {
+			var setPaidDate = false;
+		}
+		
+		//get receipt info
+		
+		var feePaidBy = document.getElementById("feePaidBy_lkid").value;
+		if ((feePaidBy != "") && (feePaidBy != null) && (feePaidBy != "000000000000000")) {var setfeePaidBy = true;} else {var setfeePaidBy = false;}
+	
+		var paymentMethod = document.getElementById("paymentMethod");
+		var paymentMethod = paymentMethod[paymentMethod.selectedIndex].text;
+		if ((paymentMethod != "") && (paymentMethod != null)) {var setpaymentMethod = true;} else {var setpaymentMethod = false;}
+	
+		var paymentComment = document.getElementById("paymentComment").value;
+		if ((paymentComment != "") && (paymentComment != null)) {var setpaymentComment = true;} else {var setpaymentComment = false;}
+		
+		var receiptNumber = document.getElementById("receiptNumber").value;
+		if ((receiptNumber != "") && (receiptNumber != null)) {var setreceiptNumber = true;} else {var setreceiptNumber = false;}
+		
+		var checkNumber = document.getElementById("checkNumber").value;
+		if ((checkNumber != "") && (checkNumber != null)) {var setcheckNumber = true;} else {var setcheckNumber = false;}
+		
+		
+		//check if receipt number already in use (if manually entered and creating a new receipt)
+		if ((setreceiptNumber) && ((availableReceipt.selectedIndex == 0))) { 
+			var result = sforce.connection.query("Select MUSW__Track_No__c from MUSW__Receipt__c where MUSW__Track_No__c = '" + receiptNumber + "'");
+			var receiptCheck = result.getArray("records");
+			if (receiptCheck.length > 0) {
+				alert("Receipt Number already in use.\nIf you are allocating a prior receipt (split receipt), then append a letter to the back of Receipt Number eg. 12345-B\nenter Tendered Amount: full receipt, and Payment Amount: portion allocated."); 
+				return;
+			}
+
+		}
+		
+		var receiptRec = new sforce.SObject("MUSW__Receipt__c");
+		
+		//set receipt data
+		
+		//if using existing receipt
+		if (availableReceipt.selectedIndex != 0) {
+			var newReceipt = false;
+			receiptRec.set("Id",availableReceipts[availableReceipt.selectedIndex]["Id"]);
+			//decrement available amount of receipt based on total new payments
+			receiptRec.set("MUSW__Amount_Available__c",gTotalUnallocated);
+		} else { //new receipt <!--JAW Review old financials are deprecated-->
+			var newReceipt = true;
+			receiptRec.set("MUSW__Permit__c",permitID);
+			receiptRec.set("MUSW__Planning_Application__c",applicationID);
+			receiptRec.set("MUSW__Complaint__c",complaintID);
+			receiptRec.set("MUSW__License1__c",licenseID);
+			receiptRec.set("MUSW__Amount_Available__c",gTotalUnallocated);  //new value as the result of the following fees paid
+			receiptRec.set("MUSW__Amount_Tendered__c",lgm.numeric.round(document.getElementById("tenderedAmount").value-0,2));
+		
+			if (setfeePaidBy == true) {
+				receiptRec.set("MUSW__Receipt_Paid_By__c",feePaidBy);
+			}
+			if (setPaidDate == true) {
+				receiptRec.set("MUSW__Effective_Date__c",new Date(paidDate));
+			}
+			if (setpaymentMethod == true) {
+				receiptRec.set("MUSW__Payment_Method__c",paymentMethod);
+			}
+			if (setreceiptNumber == true) {
+				receiptRec.set("MUSW__Track_No__c",receiptNumber);
+			}
+			if (setcheckNumber == true) {
+				receiptRec.set("MUSW__Check_Number__c",checkNumber);
+			}
+			if (setpaymentComment == true) {
+				receiptRec.set("MUSW__Comments__c", paymentComment);
+			}
+			
+			gTotalReceipts = gTotalReceipts + lgm.numeric.round(document.getElementById("tenderedAmount").value-0,2);
+		}
+		//set fee and payment fields
+		var payments = new Array();
+		var iii = 0;
+		for (var i = 0; i < form.elements.length; i++) { 
+			if ((form.elements[i].name == element_name) && (form.elements[i].checked)) { 
+				for(var ii=0; ii<feesForUpdate.length; ii++) {
+					if (form.elements[i].value == feesForUpdate[ii]["Id"]) {
+						updateObjects++;
+						
+						//create fee payment record and set data
+						
+						var paymentRec = new sforce.SObject("MUSW__Fee_Payment__c");
+						
+						paymentRec.set("MUSW__Fee__c",feesForUpdate[ii]["Id"]);
+						paymentRec.set("MUSW__Fee_Amount__c",feesForUpdate[ii]["MUSW__Amount__c"]);
+						paymentRec.set("MUSW__Paid_Date__c",new Date(paidDate));
+						paymentRec.set("MUSW__Payment_Amount__c",outstandingFees[ii][1]);
+						paymentRec.set("MUSW__Receipt_Amount_Available__c",receiptRec["MUSW__Amount_Available__c"]);
+						
+						if (!newReceipt) { //set Receipt Id
+							paymentRec.set("MUSW__Receipt__c",availableReceipts[availableReceipt.selectedIndex]["Id"]);
+							paymentRec.set("MUSW__Receipt_Amount_Tendered__c",lgm.numeric.round(availableReceipts[availableReceipt.selectedIndex].getFloat("MUSW__Amount_Tendered__c"),2));
+						} else {
+							paymentRec.set("MUSW__Receipt_Amount_Tendered__c",receiptRec["MUSW__Amount_Tendered__c"]);
+						}
+						
+						//set fee data
+						
+						//if outstanding amount = amount paid
+						if(lgm.numeric.round(outstandingFees[ii][0],2) == outstandingFees[ii][1] ) {
+							paidinFull = true;
+							feesForUpdate[ii]["MUSW__Amount_Paid__c"] = outstandingFees[ii][1];
+						}else { //add to the initial amount paid
+							paidinFull = false; //add to the amount paid
+							feesForUpdate[ii]["MUSW__Amount_Paid__c"] = feesForUpdate[ii]["MUSW__Amount_Paid__c"]-0 + outstandingFees[ii][1];
+						}
+						
+						feesForUpdate[ii]["MUSW__Fee_Paid__c"] = paidinFull;
+
+						if (setPaidDate == true) {
+							feesForUpdate[ii]["MUSW__Fee_Paid_Date2__c"] = new Date(paidDate); 
+						}
+						if (setfeePaidBy == true) {
+							feesForUpdate[ii]["MUSW__Fee_Paid_By__c"] = feePaidBy;
+						}
+						if (setpaymentMethod == true) {
+							feesForUpdate[ii]["MUSW__Payment_Method__c"] = paymentMethod;
+						}
+						if (setreceiptNumber == true) {
+							feesForUpdate[ii]["MUSW__Receipt_Number__c"] = receiptNumber;
+						}
+						if (setcheckNumber == true) {
+							feesForUpdate[ii]["MUSW__Check_Number__c"] = checkNumber;
+						}
+						if (setpaymentComment == true) {
+							if (feesForUpdate[ii]["MUSW__Payment_Comment__c"] > "") {
+								feesForUpdate[ii]["MUSW__Payment_Comment__c"] = feesForUpdate[ii]["MUSW__Payment_Comment__c"] + "\n" + paymentComment;
+							} else {
+								feesForUpdate[ii]["MUSW__Payment_Comment__c"] = paymentComment;
+							}
+						}
+						
+						payments[iii] = paymentRec;
+						iii = iii+1;
+					}
+				}
+			} 
+		} 
+		
+		if (updateObjects > 0) { 
+			
+			if (newReceipt) { 
+				var sr = sforce.connection.update(feesForUpdate);
+				var sr = sforce.connection.create([receiptRec]);
+				
+				//update receipt id before making payments
+				for(var i=0; i<payments.length; i++) {
+					payments[i].set("MUSW__Receipt__c",sr[0]["id"]);
+				}
+				var sr = sforce.connection.create(payments);
+				
+
+				
+			} else {	
+				var sr = sforce.connection.update([receiptRec]);
+				var sr = sforce.connection.update(feesForUpdate);
+				var sr = sforce.connection.create(payments);
+				
+			}
+			//update parent
+			var parentRec = new sforce.SObject(parentName);
+			parentRec.set("Id",parentId);
+			parentRec.set("MUSW__Total_Receipts__c",gTotalReceipts);
+			//parentRec.set("MUSW__Total_Payments__c",gTotalPaid);
+			parentRec.set("MUSW__Total_Fees__c",gTotalFees);
+			var sr = sforce.connection.update([parentRec]);
+			
+			
+			window.parent.parent.location.href ="../" + parentId; 
+		} 
+	} 	
+	
+	function cancelUpdate() { 
+		window.parent.parent.location.href ="../" + parentId; 
+	}
+	
+	//A fee has been un/paid, update internal fees and totals
+	function refreshPaymentInfo(amount, optionNum) {
+		outstandingFees[optionNum][1] = lgm.numeric.round(amount,2);
+		refreshTotals(outstandingFees[optionNum][1]);
+	
+	}
+	
+	//A fee has been un/paid, update totals
+	function refreshTotals(amount) {
+		gTotalPaid = lgm.numeric.round(gTotalPaid - gPriorPaidAmount + lgm.numeric.round(amount,2),2);
+		gTotalUnallocated = lgm.numeric.round(gPaymentAvailable - gTotalPaid,2);
+		document.getElementById('paidTotal').innerHTML = formatCurrency(gTotalPaid);
+		document.getElementById('unallocatedTotal').innerHTML = formatCurrency(gTotalUnallocated);
+	}
+	
+	
+	function feePaid(optionNum, paidField) { //on Paid amount blur
+		
+		var checked = document.getElementById("id"+optionNum);
+	
+		//validation
+		
+		if ((paidField.value < 0)) {
+			alert("Enter Fee Amount Paid >= 0");
+			paidField.focus();
+		}
+		
+		if (lgm.numeric.round(paidField.value,2) > lgm.numeric.round(outstandingFees[optionNum][0],2)) {
+			alert("Can not enter Fee Amount Paid more than Fee Amount Outstanding");
+			paidField.focus();
+		}
+		
+		if (paidField.value == 0) //then uncheck
+			document.getElementById("id"+optionNum).checked = false;
+		
+		
+		//set internal data and totals 
+		refreshPaymentInfo(paidField.value, optionNum);
+	}
+	
+	function feePaidCheck(optionNum, field) { //on Paid amount focus
+		
+		gPriorPaidAmount = lgm.numeric.round(field.value-0,2); //remember old value so that when leave field, can recalc total paid
+		
+		var checked = document.getElementById("id"+optionNum);
+	
+		checked.checked = true;
+	}
+	
+	function SelectReceipt(receipt) { //on Select Receipt blur
+		//reset values
+		
+		var totalAvailable = document.getElementById("paymentAmount");
+		var amountTendered = document.getElementById("tenderedAmount");
+		var receiptNumber = document.getElementById("receiptNumber");
+		var issueNumber = document.getElementById("popTrackNo");
+		var paymentMethod = document.getElementById("paymentMethod");
+		var checkNumber = document.getElementById("checkNumber");
+		var paidById = document.getElementById("feePaidBy_lkid");
+		var searchPaidBy = document.getElementById("feePaidBy_lkwgt");
+		var paidBy = document.getElementById("feePaidBy");
+		var comments = document.getElementById("paymentComment");
+		
+		
+		
+		//if using existing receipt
+		if (receipt.selectedIndex-1 >= 0) {
+			totalAvailable.value = lgm.nvl(availableReceipts[receipt.selectedIndex]["MUSW__Amount_Available__c"],"");
+			gPaymentAvailable = lgm.numeric.round(lgm.nvl(availableReceipts[receipt.selectedIndex]["MUSW__Amount_Available__c"],0),2);
+			amountTendered.value = lgm.nvl(availableReceipts[receipt.selectedIndex]["MUSW__Amount_Tendered__c"],"");
+			receiptNumber.value = lgm.nvl(availableReceipts[receipt.selectedIndex]["MUSW__Track_No__c"],"");
+			paymentMethod.selectedIndex = picklistIndexLookup(paymentMethod, lgm.nvl(availableReceipts[receipt.selectedIndex]["MUSW__Payment_Method__c"],""));
+			checkNumber.value = lgm.nvl(availableReceipts[receipt.selectedIndex]["MUSW__Check_Number__c"],"");
+			paidById.value = lgm.nvl(availableReceipts[receipt.selectedIndex]["MUSW__Receipt_Paid_By__c"],""); 
+			if (paidById.value > " ") {paidBy.value = "*****"; }//JAW REVIEW look up name instead. 
+			comments.value = lgm.nvl(availableReceipts[receipt.selectedIndex]["MUSW__Comments__c"],"");
+			
+			amountTendered.disabled = true;
+			receiptNumber.disabled = true;
+			paymentMethod.disabled = true;
+			checkNumber.disabled = true;
+			paidBy.disabled = true;
+			
+			totalAvailable.disabled = true;
+			
+			issueNumber.style.visibility = "hidden";
+			searchPaidBy.style.visibility = "hidden";
+			
+		} else {
+			totalAvailable.value = "";
+			gPaymentAvailable = gTotalOutstanding;
+			
+			amountTendered.value = "";
+			receiptNumber.value = "";
+			paymentMethod.selectedIndex = paymentMethod.defaultOption;
+			checkNumber.value = "";
+			paidById.value = "";
+			paidBy.value = "";
+			comments.value = "";
+			
+			amountTendered.disabled = false;
+			totalAvailable.disabled = false;
+			amountTendered.value = gPaymentAvailable;
+			totalAvailable.value = gPaymentAvailable;
+			
+			receiptNumber.disabled = false;
+			paymentMethod.disabled = false;
+			checkNumber.disabled = false;
+			paidBy.disabled = false;
+			
+			
+			
+			issueNumber.style.visibility = "visible";
+			searchPaidBy.style.visibility = "visible";
+		}
+		
+		
+		gPriorPaidAmount = 0;
+		refreshTotals(0);
+	}
+	
+	//when check-all is un/checked, un/pay all fees
+	function setFeesPaid(val) {
+		for(var i=0; i<feesForUpdate.length; i++) {
+			setFeePaid(i,val);
+		}
+	}
+	
+	//when un/check fee, un/pay it
+	function setFeePaid(optionNum,val) {
+	
+		var amount = 0;
+		var paidfield = document.getElementById("paid"+optionNum);
+		gPriorPaidAmount = lgm.numeric.round(paidfield.value-0,2);
+		if (val) {
+			amount = lgm.numeric.round(outstandingFees[optionNum][0],2);
+		}else {
+			amount = 0;
+		} 
+		
+		//set fee field
+		paidfield.value = amount;
+		
+		//set totals and internal info
+		refreshPaymentInfo(amount,optionNum);
+	}
+	
+	//when exit tendered amount, set payment amoun
+	function blurTenderedAmount(field) {
+		if (field.value != "") {
+			if (field.value - 0 != 0) {
+				var paymentField = document.getElementById("paymentAmount");
+				paymentField.value = lgm.numeric.round(field.value,2);
+				gPaymentAvailable = lgm.numeric.round(field.value,2);
+				gPriorPaidAmount = 0;
+				refreshTotals(0);
+			}
+		}
+		
+		document.getElementById("availableReceipt").selectedIndex = 0;
+	}
+	
+	//when exit Payment amount, set global payment amount
+	function blurPaymentAmount(field) {
+		if (field.value != "") {
+			if (field.value - 0 != 0) {
+				gPaymentAvailable = lgm.numeric.round(field.value,2);
+				gPriorPaidAmount = 0;
+				refreshTotals(0);
+			}
+		}
+		
+	}
+	
+	function initPicklist(object, picklist, element) {
+		var obj = sforce.connection.describeSObject(object);			
+		var pickList = document.getElementById(element);
+		var defaultOption = 0;
+		var defaultVal = "false";
+		
+		for (var i=0;i<obj.fields.length;i++) {
+			if (obj.fields[i].name == picklist)
+			{
+				for (var ii=0;ii<obj.fields[i].picklistValues.length;ii++) {
+					if (obj.fields[i].picklistValues[ii].defaultValue=="true") {
+						defaultOption = ii;
+						defaultVal = "true";
+					} else {
+						defaultVal = "false";
+					}
+					pickList[pickList.length] = new Option(obj.fields[i].picklistValues[ii].label,ii,defaultVal);
+				}
+				pickList[defaultOption].selected = true;
+			}
+		}
+	}	
+	
+	function picklistIndexLookup(picklist, value) {
+		for (var i=0;i<picklist.length;i++) {
+			if (picklist[i].text == value ) {
+				return i;
+			}
+		}
+	}
+	
+	function formatCurrency(num) {
+	num = num.toString().replace(/\$|\,/g,'');
+	if(isNaN(num)) {
+	num = "0";}
+	sign = (num == (num = Math.abs(num)));
+	num = Math.floor(num*100+0.50000000001);
+	cents = num%100;
+	num = Math.floor(num/100).toString();
+	if(cents<10) {
+	cents = "0" + cents;}
+	for (var i = 0; i < Math.floor((num.length-(1+i))/3); i++)
+	num = num.substring(0,num.length-(4*i+3))+','+ num.substring(num.length-(4*i+3));
+	return (((sign)?'':'-') + '$' + num + '.' + cents);
+}
+	
+//--> 
+		</script>
+	</head>
+	<body onLoad="setup();" >
+		<table class="" width="100%" id="bodyTable" border="0" cellspacing="0" cellpadding="0">
+			<tr>
+				<td class="oRight" id="bodyCell">
+					<a name="skiplink"><img src="/s.gif" height='1' width='1' alt="Content Starts Here" class="skiplink" title="Content Starts Here"></a>
+					<!-- HEADER SECTIONS -->
+					<div class="bPageTitle">
+						<div class="ptBody secondaryPalette">
+							<div class="content">
+								<img src="/s.gif" alt="Permit" class="pageTitleIcon" title="Permit">
+								<h1 class="pageType">Pay Fees<span class="titleSeparatingColon">:</span></h1>
+								<h2 class="pageDescription">Create New Receipt or Allocate Available Receipts</h2>
+								<div class="blank">&nbsp;</div>
+							</div>
+							<div class="links">
+								<a href="javascript:openPopupFocusEscapePounds('/help/doc/user_ed.jsp?loc=help&target=co_overview.htm&section=CustomObjects', 'Help', 700, 600, 'width=700,height=600,resizable=yes,toolbar=yes,status=no,scrollbars=yes,menubar=yes,directories=no,location=no,dependant=no', false, false);" title="Help for this Page (New Window)"><span class="helpLink">Help for this Page</span><img src="/s.gif" alt="" class="helpImage" title=""></a>
+							</div>
+						</div>
+						<div class="ptBreadcrumb">&nbsp;&nbsp;<a href="/{!HTMLENCODE(Permit__c.Id)}{!HTMLENCODE(Permit2__c.Id)}{!HTMLENCODE(Complaint__c.Id)}{!HTMLENCODE(Planning_Application__c.Id)}{!HTMLENCODE(License1__c.Id)}" target="_top">Back to {!HTMLENCODE(Permit__c.Name)}{!HTMLENCODE(Permit2__c.Name)}{!HTMLENCODE(Complaint__c.Name)}{!HTMLENCODE(Planning_Application__c.Name)} {!HTMLENCODE(License1__c.Name)}</a></div>
+					</div>
+					<!-- CONTROL SECTIONS -->
+					<div class="filterOverview">
+						<form action="/a00" id="filter_element" method="GET" name="filter_element" onsubmit="if (window.ffInAlert) { return false; }">
+							<div class="bFilterView">
+								<span class="bFilter">
+									<span class="fBody" align = center>
+										<TABLE bgcolor:#EEEEEE  class="detailList" cellpadding="1" cellspacing="1" border="0"  >
+											<TR>
+												<td colspan="2"><h2 class="pageDescription">Create New Receipt:</h2></td>
+											</TR>
+											<TR>
+												<TD style = "padding:2px 10px 2px 2px; text-align:right; font-size: 8pt; font-weight: bold; color:#333;">Tendered Amount</TD>
+												<span>
+												<TD>
+													<input  tabindex="1" maxlength="50" type="text" id="tenderedAmount" size="20" name="tenderedAmount" onblur="javascript:blurTenderedAmount(this)">
+												</TD>
+												</span>
+												
+												<TD style = "padding:2px 10px 2px 2px; text-align:right; font-size: 8pt; font-weight: bold; color:#333;">Receipt Number</TD>
+												<TD colspan="3"><nobr>
+													<input  tabindex="2" maxlength="50" type="text" id="receiptNumber" size="20" name="receiptNumber">
+													[&nbsp;<a href="javascript:openPopupFocus('/servlet/servlet.Integration?lid=01N600000008s5e&Id=0&ic=1&object=MUSW__Receipt__c&type=DEFAULT&trackField=MUSW__Track_No__c&field=receiptNumber', '_blank', 270, 190, 'width=270,height=170,resizable=yes,toolbar=no,status=no,scrollbars=no,menubar=no,directories=no,location=no,dependant=yes', true, true);" class="datePicker" tabindex="3" title="Track Number (New Window)" onclick="setLastMousePosition(event)" id="popTrackNo">Issue Number</a>&nbsp;]
+													<!-- [&nbsp;<a href="javascript:openPopupFocus('/home/calendar.jsp?form=filter_element&field=receiptNumber&mo=0', '_blank', 186, 170, 'width=300,height=170,resizable=yes,toolbar=no,status=no,scrollbars=no,menubar=no,directories=no,location=no,dependant=yes', true, true);" class="datePicker" tabindex="3" title="Track Number" onclick="setLastMousePosition(event)" id="popTrackNo">Issue Number</a>&nbsp;] --></nobr>
+												</TD>
+												
+											</TR>
+											<TR>
+												<TD style = "padding:2px 10px 2px 2px; text-align:right; font-size: 8pt; font-weight: bold; color:#333;">Payment Method</TD>
+												<TD>
+												<span>
+													<select  tabindex="3" id="paymentMethod" name="paymentMethod" selectIndex="1">
+													</select>
+												</span>
+												</TD>
+												<TD style = "padding:2px 10px 2px 2px; text-align:right; font-size: 8pt; font-weight: bold; color:#333;">Check Number</TD>
+												<TD>
+													<input  tabindex="4" maxlength="25" type="text" id="checkNumber" size="20" name="checkNumber">
+												</TD>
+											</TR>
+											<TR>
+												<TD style = "padding:2px 10px 2px 2px; text-align:right; font-size: 8pt; font-weight: bold; color:#333;">Paid By</TD>
+												<TD><input type="hidden" name="feePaidBy_lkid" id="feePaidBy_lkid" value="000000000000000">
+													<input type="hidden" name="feePaidBy_lkold" id="feePaidBy_lkold" value="null">
+													<input type="hidden" name="feePaidBy_lktp" id="feePaidBy_lktp" value="003">
+													<input type="hidden" name="feePaidBy_lspf" id="feePaidBy_lspf" value="0">
+													<input type="hidden" name="feePaidBy_mod" id="feePaidBy_mod" value="0">
+													<span style = "padding:2px 10px 2px 0px; text-align:left; font-size: 8pt; color:#333;">
+														<input  tabindex="5" maxlength="80" type="text" readonly="true" onchange="document.getElementById('feePaidBy_lkid').value='';document.getElementById('feePaidBy_mod').value='1';" id="feePaidBy" size="20" name="feePaidBy">
+														<a href="JavaScript: openLookup('/_ui/common/data/LookupPage?lknm=feePaidBy&lkfm=editPage&lktp=' + document.getElementById('feePaidBy_lktp').value,670,document.getElementById('feePaidBy_mod').value,'&lksrch=' + escapeUTF(document.getElementById('feePaidBy').value),'maxw')" tabindex="6" title="Fee Paid By Lookup (New Window)" onclick="setLastMousePosition(event)" id="feePaidBy_lkwgt">
+															<img src="/s.gif" alt="Fee Paid By Lookup (New Window)"  class="lookupPopup">
+														</a>
+													</span>
+												</TD>
+												<TD style = "padding:2px 10px 2px 2px; text-align:right; font-size: 8pt; font-weight: bold; color:#333;">Comments</TD>
+												<TD>
+													<textarea  tabindex="6" maxlength="255" id="paymentComment" rows="2" cols="20" name="paymentComment"></textarea>
+												</TD>
+											</TR>
+											<tr>
+												<td colspan="2">
+													<h2 class="pageDescription">OR Use Available Receipts:</h2>
+													
+												</td>
+											</tr>
+											<tr>
+												<TD style = "padding:2px 10px 2px 2px; text-align:right; font-size: 8pt; font-weight: bold; color:#333;">Receipt</TD>
+												<TD>
+												<span>
+													<select  tabindex="7" id="availableReceipt" name="availableReceipt" onChange="SelectReceipt(this)">
+													</select>
+												</span>
+												</TD>
+												<TD style = "padding:2px 10px 2px 2px; text-align:right; font-size: 8pt; font-weight: bold; color:#333;">Payment Amount</TD>
+												<span>
+												<TD>
+													<input  tabindex="8" maxlength="50" type="text" id="paymentAmount" size="20" name="paymentAmount" onblur="blurPaymentAmount(this)">
+												</TD>
+												</span>
+												<TD style = "padding:2px 10px 2px 2px; text-align:right; font-size: 8pt; font-weight: bold; color:#333;">Paid Date</TD>
+												<TD><nobr><input type="text" id="paidDate" size="20" name="paidDate" value="{!Today}"/><a href="javascript:openPopupFocus('/home/calendar.jsp?form=filter_element&field=paidDate&mo=0', '_blank', 186, 170, 'width=186,height=170,resizable=yes,toolbar=no,status=no,scrollbars=no,menubar=no,directories=no,location=no,dependant=yes', true, true);" class="datePicker" tabindex="3" title="Pick A Date (New Window)" onclick="setLastMousePosition(event)" id="PopCal"><img src="/s.gif" alt="Pick A Date (New Window)" class="datePickerIcon"></a><span class="dateFormat">[&nbsp;<a id="paidDateDefault" href="#" onclick="var inputField = getElementByIdCS('paidDate'); if (inputField && inputField.disabled == false) { inputField.value = '{!Today}'; if (inputField.onchange) {inputField.onchange();}}return false;">{!Today}</a> &nbsp;]</span></nobr></TD>
+											</tr>
+										</TABLE>										
+									</span>
+									<span class="fFooter">
+									</span>
+								</span>
+							</div>
+						</form>
+					</div>
+					<!-- Begin RelatedListElement -->
+					<div class="bRelatedList">
+						<div class="bNext">
+							<div class="withFilter">
+								<div class="clearingBox"></div>
+							</div>
+						</div>
+						<!-- WrappingClass -->
+						<div class="hotListElement">
+							<div class="bPageBlock secondaryPalette">
+								<div class="pbHeader">
+									<form action="/a00/o" id="hotlist" method="GET" name="hotlist" onsubmit="if (window.ffInAlert) { return false; }">
+										<table border="0" cellpadding="0" cellspacing="0">
+											<tr>
+												<td width="22%" class="pbTitle">
+													<img src="/s.gif" alt="" width="1" height="1" class="minWidth" title="" />
+													<h3>Unpaid Fees for: {!HTMLENCODE(Permit__c.Name)}{!HTMLENCODE(Permit2__c.Name)}{!HTMLENCODE(Complaint__c.Name)} {!HTMLENCODE(Planning_Application__c.Name)} {!HTMLENCODE(License1__c.Name)}</h3>
+												</td>
+												<td align="left" width="20%" class="pbButton">											
+													<INPUT class="btn" id="update" onclick="javascript: makePayment(document.forms['records'],'ids',this.checked)" type="button" value="Update" name="update">&nbsp;
+													<INPUT class="btn" id="cancel" onclick="javascript: cancelUpdate()" type="button" value="Cancel" name="cancel">
+												</td>
+												
+												<td width="20%" align="left" ><h3><span id = "amountTotal" name = "amountTotal"></span></h3></td>
+												<td width="20%" align="left" ><h3><span id = "paidTotal" name = "paidTotal"></span></h3></td>
+												<td width="17%" align="left" ><h3><span id = "unallocatedTotal" name = "unallocatedTotal"></span></h3></td>
+											</tr>
+										</table>
+									</form>
+								</div>
+								<div class="pbBody">
+									<form id = "records">
+									<table id = "contentTable" class="list" border="0" cellspacing="0" cellpadding="0">
+										<tr class="headerRow">
+											<th scope="col" class=""><input id="" tabindex="9" onclick="javascript:SelectChecked(document.forms['records'],'ids',this.checked);setFeesPaid(this.checked);" type="checkbox" value="" name=""></th>
+											<th scope="col" class="">Fee Type</th>
+											<th scope="col" class="">Created By</th>
+											<th scope="col" class="">Created On</th>
+											<th scope="col" class="">Amount Outstanding</th>
+											<div id="allocatedHeader" style="display: none">
+											<th scope="col" class="">Amount Paid</th>
+											</div>
+										</tr>
+									</table>
+									</form>	
+								</div>
+								<div class="pbFooter secondaryPalette">
+									<div class="bg"></div>
+								</div>
+							</div>
+						</div>
+						<div class="listElementBottomNav"></div>
+					</div>
+				</td>
+			</tr>
+		</table>
+		<DIV id="divDebugHeader" style="display: none">
+			<hr/>
+			<b>Debug Mode</b>
+		</DIV>
+		<DIV id="divDebug" style="display: none"></DIV>
+	</body>
+</html>

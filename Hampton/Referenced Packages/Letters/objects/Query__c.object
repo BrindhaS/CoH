@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <actionOverrides>
+        <actionName>Accept</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>CancelEdit</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>Clone</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>Delete</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>Edit</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>Follow</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>List</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>New</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>SaveEdit</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>Tab</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>View</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <allowInChatterGroups>false</allowInChatterGroups>
+    <compactLayoutAssignment>SYSTEM</compactLayoutAssignment>
+    <customHelp>MUSW__HelpInterface</customHelp>
+    <deploymentStatus>Deployed</deploymentStatus>
+    <deprecated>false</deprecated>
+    <description>Query definitions including fields, where clause, etc</description>
+    <enableActivities>false</enableActivities>
+    <enableBulkApi>true</enableBulkApi>
+    <enableEnhancedLookup>true</enableEnhancedLookup>
+    <enableFeeds>false</enableFeeds>
+    <enableHistory>false</enableHistory>
+    <enableReports>false</enableReports>
+    <enableSearch>true</enableSearch>
+    <enableSharing>true</enableSharing>
+    <enableStreamingApi>true</enableStreamingApi>
+    <fields>
+        <fullName>LIMIT_Filter__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <inlineHelpText>Limit the maximum number of results returned  eg. 100</inlineHelpText>
+        <label>LIMIT</label>
+        <length>20</length>
+        <required>false</required>
+        <trackTrending>false</trackTrending>
+        <type>Text</type>
+        <unique>false</unique>
+    </fields>
+    <fields>
+        <fullName>ORDER_BY_Direction_Short__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <formula>IF
+(
+TEXT( ORDER_BY_Direction__c ) == &quot;Ascending&quot;,
+&quot;ASC&quot;,
+&quot;DESC&quot;
+)</formula>
+        <formulaTreatBlanksAs>BlankAsZero</formulaTreatBlanksAs>
+        <inlineHelpText>ORDER BY Direction (Short). eg. ASC or DESC</inlineHelpText>
+        <label>ORDER</label>
+        <required>false</required>
+        <trackTrending>false</trackTrending>
+        <type>Text</type>
+        <unique>false</unique>
+    </fields>
+    <fields>
+        <fullName>ORDER_BY_Direction__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>ORDER BY Direction</label>
+        <picklist>
+            <picklistValues>
+                <fullName>Ascending</fullName>
+                <default>true</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Descending</fullName>
+                <default>false</default>
+            </picklistValues>
+            <sorted>false</sorted>
+        </picklist>
+        <required>false</required>
+        <trackTrending>false</trackTrending>
+        <type>Picklist</type>
+    </fields>
+    <fields>
+        <fullName>ORDER_BY_Filter__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <inlineHelpText>Use to return query results in a particular order eg. CloseDate, CreatedDate</inlineHelpText>
+        <label>ORDER BY Fields</label>
+        <length>255</length>
+        <required>false</required>
+        <trackTrending>false</trackTrending>
+        <type>Text</type>
+        <unique>false</unique>
+    </fields>
+    <fields>
+        <fullName>Object_Fields__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <inlineHelpText>Field names should be comma-separated and use full API name (e.g., &quot;__c&quot; for custom fields)
+
+Example:  
+  Id, Name, BillingStreet, BillingCity, CustomField__c</inlineHelpText>
+        <label>Fields</label>
+        <length>32000</length>
+        <trackTrending>false</trackTrending>
+        <type>LongTextArea</type>
+        <visibleLines>5</visibleLines>
+    </fields>
+    <fields>
+        <fullName>Object_Name__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <inlineHelpText>Full API Object Name eg. MUSW__Permit__c</inlineHelpText>
+        <label>Object Name</label>
+        <length>255</length>
+        <required>true</required>
+        <trackTrending>false</trackTrending>
+        <type>Text</type>
+        <unique>false</unique>
+    </fields>
+    <fields>
+        <fullName>Tracking_Number__c</fullName>
+        <caseSensitive>false</caseSensitive>
+        <deprecated>false</deprecated>
+        <externalId>true</externalId>
+        <label>Query No.</label>
+        <length>80</length>
+        <required>false</required>
+        <trackTrending>false</trackTrending>
+        <type>Text</type>
+        <unique>true</unique>
+    </fields>
+    <fields>
+        <fullName>WHERE_Filter__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <inlineHelpText>eg. Region__c = &apos;East&apos; AND ModifiedDate = LAST_YEAR</inlineHelpText>
+        <label>WHERE Filter</label>
+        <length>2000</length>
+        <trackTrending>false</trackTrending>
+        <type>LongTextArea</type>
+        <visibleLines>3</visibleLines>
+    </fields>
+    <label>Letter Query</label>
+    <listViews>
+        <fullName>All</fullName>
+        <columns>NAME</columns>
+        <columns>Object_Name__c</columns>
+        <columns>WHERE_Filter__c</columns>
+        <columns>LIMIT_Filter__c</columns>
+        <columns>LAST_UPDATE</columns>
+        <filterScope>Everything</filterScope>
+        <label>All</label>
+    </listViews>
+    <nameField>
+        <label>Description</label>
+        <type>Text</type>
+    </nameField>
+    <pluralLabel>Letter Queries</pluralLabel>
+    <searchLayouts>
+        <customTabListAdditionalFields>Object_Name__c</customTabListAdditionalFields>
+        <customTabListAdditionalFields>WHERE_Filter__c</customTabListAdditionalFields>
+        <customTabListAdditionalFields>ORDER_BY_Direction_Short__c</customTabListAdditionalFields>
+        <customTabListAdditionalFields>LIMIT_Filter__c</customTabListAdditionalFields>
+        <customTabListAdditionalFields>LAST_UPDATE</customTabListAdditionalFields>
+        <lookupDialogsAdditionalFields>Object_Name__c</lookupDialogsAdditionalFields>
+        <lookupDialogsAdditionalFields>WHERE_Filter__c</lookupDialogsAdditionalFields>
+        <lookupDialogsAdditionalFields>ORDER_BY_Direction_Short__c</lookupDialogsAdditionalFields>
+        <lookupDialogsAdditionalFields>LIMIT_Filter__c</lookupDialogsAdditionalFields>
+        <lookupDialogsAdditionalFields>UPDATEDBY_USER</lookupDialogsAdditionalFields>
+        <searchFilterFields>NAME</searchFilterFields>
+        <searchFilterFields>Object_Name__c</searchFilterFields>
+        <searchFilterFields>ORDER_BY_Direction_Short__c</searchFilterFields>
+        <searchResultsAdditionalFields>Object_Name__c</searchResultsAdditionalFields>
+        <searchResultsAdditionalFields>WHERE_Filter__c</searchResultsAdditionalFields>
+        <searchResultsAdditionalFields>ORDER_BY_Direction_Short__c</searchResultsAdditionalFields>
+        <searchResultsAdditionalFields>LIMIT_Filter__c</searchResultsAdditionalFields>
+        <searchResultsAdditionalFields>UPDATEDBY_USER</searchResultsAdditionalFields>
+    </searchLayouts>
+    <sharingModel>Read</sharingModel>
+    <validationRules>
+        <fullName>Fields_Required</fullName>
+        <active>true</active>
+        <errorConditionFormula>Object_Fields__c = &quot;&quot;</errorConditionFormula>
+        <errorDisplayField>Object_Fields__c</errorDisplayField>
+        <errorMessage>You must specify which fields you want the query to return for merging.</errorMessage>
+    </validationRules>
+    <validationRules>
+        <fullName>Relationship_Queries_are_not_Supported</fullName>
+        <active>false</active>
+        <description>.NET letter app needs relationship queries to be defined explicitly</description>
+        <errorConditionFormula>OR(CONTAINS( Object_Fields__c, &quot;(&quot;),CONTAINS(Object_Fields__c, &quot;)&quot;))</errorConditionFormula>
+        <errorMessage>Relationship queries are not permitted with Letter Generator. Instead, create another letter query with this query as the parent to follow this one</errorMessage>
+    </validationRules>
+    <webLinks>
+        <fullName>Test_Query</fullName>
+        <availability>online</availability>
+        <displayType>button</displayType>
+        <linkType>javascript</linkType>
+        <masterLabel>Test Query</masterLabel>
+        <openType>onClickJavaScript</openType>
+        <protected>false</protected>
+        <url>{!requireScript(&quot;/soap/ajax/25.0/connection.js&quot;)}
+
+var qs = &quot;SELECT  {!Query__c.Object_Fields__c} FROM {!Query__c.Object_Name__c}&quot;; 
+//where
+qs += (&quot;{!Query__c.WHERE_Filter__c}&quot; != &quot;&quot;) ? &quot; WHERE {!Query__c.WHERE_Filter__c} &quot;:&quot;&quot;;
+//order by
+qs += (&quot;{!Query__c.ORDER_BY_Filter__c}&quot; != &quot;&quot;) ? &quot; ORDER BY &quot; + &quot;{!Query__c.ORDER_BY_Filter__c} &quot; + &quot;{!Query__c.ORDER_BY_Direction_Short__c}&quot;:&quot;&quot;;
+//limit
+qs += (&quot;{!Query__c.LIMIT_Filter__c}&quot; != &quot;&quot;) ? &quot; LIMIT &quot; + &quot;{!Query__c.LIMIT_Filter__c}&quot;: &quot;&quot;;
+
+
+try
+{
+result = sforce.connection.query(qs);
+records = result.getArray(&quot;records&quot;);
+alert(&quot;successfully returned &quot; + records.length + &quot; record(s)&quot;);
+}
+catch(e)
+{
+alert(&quot;Error: &quot; + e);
+}</url>
+    </webLinks>
+</CustomObject>

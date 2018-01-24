@@ -1,0 +1,643 @@
+<script id="clientEventHandlersJS" language="javascript">	
+<!-- 
+
+
+/**************************************************************************************
+* 	Class		: LGM Object Operations Library
+*	Created By	: Chris McLuckie
+*	Created On  : 03/22/2007
+*	Purpose		:
+*   Requires    : $SControl.lgmCommon
+**************************************************************************************/
+lgmSFDCObjectQuery = function(table, query, filter, level, relationship, processed) {
+	this.Table = table;
+	this.Query = query;
+	this.Filter = filter;
+	this.Level = level;
+	this.Relationship = relationship;
+	this.Processed = processed;
+};
+
+lgmSFDCObjectOperations = function() {
+	//**********************************
+	// private properties
+	//**********************************
+	var that = this;  // Required for Javascript limitation of 'this' operator
+
+	//**********************************
+	// public properties
+	//**********************************
+	this.Queries = new Array();
+	this.Definitions = new Array();
+	
+	//**********************************
+	// private methods
+	//**********************************
+	function gatherFields(sobject) {
+		var fieldList = "";
+		if (sobject == "Task")
+			fieldList = "Id, OwnerId, ";
+		else
+			fieldList = "Name, Id, OwnerId, "; 
+		var fields = that.Definitions[sobject].fields;
+		for (var i=0; i<fields.length; i++) {
+			if ((fields[i].name != "IsDeleted") && (fields[i].name != "IsPublic") && (fields[i].name != "IsArchived")
+				&& (fields[i].name != "Name") && (fields[i].name != "Id") && (fields[i].name != "OwnerId") 
+				&& (fields[i].name != "ConnectionReceivedId") && (fields[i].name != "ConnectionSentId")
+				&& ((fields[i].type == "reference") || (lgmDataContext.fieldList.indexOf(fields[i].name) > -1))) { 
+				fieldList = [fieldList, fields[i].name, ", "].join("");
+			}
+		}
+		//chop off last comma
+		fieldList = fieldList.substring(0, fieldList.length-2);
+		lgm.debug.addMessage("fieldList: " + fieldList);
+		return fieldList;
+	}
+	
+	//**********************************
+	// public methods
+	//**********************************
+	lgmSFDCObjectOperations.prototype.ProcessIncompleteQueries=function() {
+		//gather all fields for queries undefined
+		var dgRetrieve = new Array();
+		
+		// find missing described objects
+		var ii = 0;
+		for (var i=0; i<this.Queries.length; i++) {
+			if (this.Definitions[this.Queries[i].Table] == null) {
+				dgRetrieve[ii] = this.Queries[i].Table;
+				ii++;
+			}
+		}
+
+		// add missing described objects to cache
+		var tableDefs = sforce.connection.describeSObjects(dgRetrieve);
+		for (var i=0; i<tableDefs.length; i++) {
+			this.Definitions[tableDefs[i].name] = tableDefs[i];
+		}	
+		
+		// processed queries
+		for (var i=0; i<this.Queries.length; i++) {
+			// select fields
+			if (this.Queries[i].Query == null || this.Queries[i].Query == "") {
+				var result = ["SELECT ", gatherFields(this.Queries[i].Table), " FROM ", this.Queries[i].Table, " "].join("");
+				
+				// where clause
+				if (this.Queries[i].Filter != null)
+					result += this.Queries[i].Filter;
+					
+				this.Queries[i].Query = result;
+			}
+		}
+	}
+};
+
+
+/**************************************************************************************
+* 	Class		: LGM Data Context Library
+*	Created By	: Chris McLuckie
+*	Created On  : 01/24/2007
+*	Purpose		:
+*   Requires    : $SControl.lgmCommon
+**************************************************************************************/
+lgmDataContext = function() {
+};
+
+lgmDataContext.tableName = null;
+lgmDataContext.recordID = null;
+lgmDataContext.processOnly = null; //get only these tables and their children
+lgmDataContext.endAtList = "User, Account, Contact, MUSW__Parcel__c, MUSW__Condition__c, MUSW__Fee__c, MUSW__Fund__c, MUSW__Fee_Payment__c,MUSW__Receipt__c, MUSW__Binder__c,MUSW__Work_Item__c"; //stop it from jumping to other contexts (common objects)
+lgmDataContext.exclusionList = "user, note, recurringevent, caseshare, casecontactrole, openactivity,emailstatus,musw__vehicle__c,musw__receipt__c,musw__binder__c,musw__proceeding_agenda__c,musw__fund__c,processinstance"; 
+lgmDataContext.includeList = "musw__permit__c,musw__complaint__c,musw__planning__application__c,musw__master_project__c,musw__license1__c,permit2__c,complaint2__c,application2__c,license2__c,project2__c" //BASE
+lgmDataContext.compoundFKs = false;
+lgmDataContext.createFlatFile = false;
+lgmDataContext.masterRecordList = new Array();
+lgmDataContext.retrievedRecordList = new Array();
+lgmDataContext.objectRecord = new Array();
+lgmDataContext.flatArray = new Array();
+lgmDataContext.flatArrayNumColumns = 0;
+lgmDataContext.continueFunc = null; //set to name of function to continue onto when data context is finished
+lgmDataContext.upLevels = 3;
+lgmDataContext.dwnLevels = 2;
+lgmDataContext.fields = new Array(); //fields to query for (limits the number of formula fields)
+lgmDataContext.fieldList = ""; //comma delimited list of lgmDataContext.fields
+
+var recursionCounter = 0;
+var levelCounter = new Array();
+var tablesProcessed = new Array();
+var queryBuilder = new lgmSFDCObjectOperations();
+
+lgmDataContext.getDataContext = function() {
+
+	lgmAutomationEngine.filterFields = lgm.connection.query("SELECT MUSW__Table__c, MUSW__Field__c, count(Id) FROM MUSW__Automation_Filter__c where MUSW__Automation_Rule__r.MUSW__Active__c = true and ( MUSW__Automation_Rule__r.MUSW__Type__c = 'Assess' OR MUSW__Automation_Rule__r.MUSW__Type__c = '' ) group by MUSW__Table__c, MUSW__Field__c");
+	lgm.debug.addMessage("Number of filter fields to filter on: " + lgmAutomationEngine.filterFields.length);
+	
+	lgmDataContext.fields = lgmAutomationEngine.filterFields;
+	
+	var resultFields = lgm.connection.query("SELECT MUSW__Table__c, MUSW__Field__c, count(Id) FROM MUSW__Automation_Result__c where MUSW__Automation_Rule__r.MUSW__Active__c = true and ( MUSW__Automation_Rule__r.MUSW__Type__c = 'Assess' OR MUSW__Automation_Rule__r.MUSW__Type__c = '' ) group by MUSW__Table__c, MUSW__Field__c");
+	lgm.debug.addMessage("Number of result fields on: " + resultFields.length); //content tags in result values must be filtered before being used
+	 
+	lgmDataContext.fields.push.apply(lgmDataContext.fields, resultFields);
+	
+	for (var i=0; i<lgmDataContext.fields.length; i++) 
+	{
+		lgmDataContext.fieldList = [lgmDataContext.fieldList, lgmDataContext.fields[i].get("MUSW__Field__c"), ", "].join("");
+	}
+	//chop off last comma
+	lgmDataContext.fieldList = lgmDataContext.fieldList.substring(0, lgmDataContext.fieldList.length-2);
+	
+	//var fields = filterFieldslgm.connection.query("SELECT name, MUSW__table__c FROM MUSW__Automation_Field__c where MUSW__DRE_Only__c = false");
+	lgm.debug.addMessage("Total Number of assess fields: " + lgmDataContext.fields.length);
+	
+	// Begin Building Context	
+	lgm.debug.addMessage(["<STRONG>DC START TIME:", new Date(), "</STRONG>"].join(""));	
+
+	if (lgmDataContext.continueFunc == null) {
+		lgm.debug.addMessage("<STRONG>Set return function before calling context</STRONG>");
+		return;
+	} 
+	
+	//Set optional scope - speeds up this tremendously!
+	
+	if(lgm.href.param["scope"] != null) {
+		if (lgm.href.param["scope"].indexOf("FIN") > -1) {
+			lgmDataContext.includeList = lgmDataContext.includeList + "musw__fee__c,musw__receipt__c,musw__fee_payment__c,musw__work_item__c,musw__fund__c,";
+		}
+		if (lgm.href.param["scope"].indexOf("BUS") > -1) {
+					lgmDataContext.includeList = lgmDataContext.includeList + "musw__condition__c,task,attachment,";
+		}
+	}
+	//include any custom tables to query for (comma delimited)
+	if(lgm.href.param["extraobjects"] != null) {
+		lgmDataContext.includeList = lgmDataContext.includeList + lgm.href.param["extraobjects"];
+	}
+	
+	levelCounter[0] = 1;
+	queryBuilder.Queries[0] = new lgmSFDCObjectQuery(lgmDataContext.tableName, null, ["WHERE Id = '", lgmDataContext.recordID, "'"].join(""), 0, "parent", false);
+	queryBuilder.ProcessIncompleteQueries();
+	
+	//throw("e");
+	sforce.connection.query(queryBuilder.Queries[0].Query, 
+		{onSuccess:lgmDataContext.processQuery,
+		onFailure:lgmDataContext.failureQuery,
+		source:queryBuilder.Queries[0]});	
+	queryBuilder.Queries[0].Processed = true;								       	
+};
+
+
+lgmDataContext.processQuery = function(queryResults, source) {
+	var recs = null;
+	
+	if (queryResults != null) {
+		//Add the Query Records to the DataSet (even if no records)
+		var tableName = source.Table; 
+		recs = queryResults.getArray("records");	
+		
+		if (lgmDataContext.objectRecord[tableName] == null)
+			lgmDataContext.objectRecord[tableName] = recs;
+		else {
+			for (var i = 0; i < recs.length; i++) {
+				lgmDataContext.objectRecord[tableName][lgmDataContext.objectRecord[tableName].length] = recs[i];
+			}
+		}
+		
+		if (lgmDataContext.createFlatFile) {
+			//TODO: Execute Flat output
+		}
+		
+		if (recs != null) {	//DO NOT PROCESS ANY DATASETS WITH NO DATA!!
+			if (recs.length > 0) {
+				var tableDefinition = queryBuilder.Definitions[tableName];  //Load the table definition
+				lgm.debug.addMessage([new Date(), " : <STRONG>Added ", recs.length, " records from ", tableDefinition.name.toLowerCase(), " to context at level ", source.Level, ".</STRONG>"].join(""));
+			
+				// Do not process tables in the Exclusion List any further and process if in the process only list (non-empty)
+				if ((lgmDataContext.endAtList.toLowerCase().indexOf(tableDefinition.name.toLowerCase()) == -1)){  
+					var recordIds = lgmDataContext.getRecordIds(queryResults, "Id"); //Gather Id of the Records
+					//if there are child relationships
+					if (tableDefinition.get("childRelationships") != null && source.Level < lgmDataContext.dwnLevels) {
+						// Loop through all of the children from tableDefinition
+						for (var i = 0; i < tableDefinition.childRelationships.length; i++) {		
+							var relation = tableDefinition.childRelationships[i];
+							var relationshipKey = ["fk:", tableDefinition.name.toLowerCase(), ":", relation.childSObject.toLowerCase(), ":", relation.field.toLowerCase()].join("");	// create a key name for the relationship
+
+							if ((relation != null) && (lgmDataContext.toProcess(relation.childSObject.toLowerCase())) && (tablesProcessed[relationshipKey] == null) && (relation.childSObject.toLowerCase() != tableDefinition.name.toLowerCase()) && (lgmDataContext.exclusionList.indexOf(relation.childSObject.toLowerCase()) == -1) && (relation.childSObject.toLowerCase().indexOf("history") == -1) && ((lgm.href.param["scope"] == null) || (lgmDataContext.includeList.indexOf(relation.childSObject.toLowerCase()) > -1))) {														
+								// Ensure the following 1) we haven't prcessed this relationship earlier, 2) the parent and child are not the same, 3) the table isn't in the exclude list 4)table not a history table 5)it's in scope if in use
+								if (true) {
+									//Build the query to see if we need to go into the next branch
+									var queryWhere = lgmDataContext.buildWhereFromIds(recordIds, relation.field.toLowerCase());
+			
+									// Associate record Ids to this relationship and mark query for processing
+									lgmDataContext.associateRecordIds(recordIds, tableDefinition.name.toLowerCase(), relation.childSObject.toLowerCase(), relation.field.toLowerCase());
+									if (queryWhere.length > 0) { // query only when there is a valid filter
+										// Process the next Query
+										recursionCounter++;										
+										var targetTable = relation.childSObject; 									
+										queryBuilder.Queries[queryBuilder.Queries.length] = new lgmSFDCObjectQuery(targetTable, null, queryWhere, source.Level+1, relationshipKey, false);
+									}
+								}				
+							}							
+							tablesProcessed[relationshipKey] = true; // Mark relationship as processed
+						}
+					}
+					
+					if (source.Level < lgmDataContext.upLevels) {  // Loop through all of the parent lookups from tableDefinition
+						for (var i = 0; i < tableDefinition.fields.length; i++) {
+							
+							if ( tableDefinition.fields[i].type == "reference" ) {
+								var relatedTableName = tableDefinition.fields[i].referenceTo.toString().toLowerCase();
+								var relationshipKey = ["fk:", relatedTableName.toLowerCase(), ":", tableDefinition.name.toLowerCase(), ":", tableDefinition.fields[i].name.toLowerCase()].join("");	// create a key name for the relationship
+				
+								// Old Code							
+								if ((typeof(tableDefinition.fields[i].referenceTo) == "object" && tableDefinition.fields[i].referenceTo.length == 1) || (typeof(tableDefinition.fields[i].referenceTo) == "string" && tableDefinition.fields[i].referenceTo.length > 0))
+								{
+									if (tableDefinition.fields[i].referenceTo.length > 0) {
+										// Ensure the following 1) we haven't prcessed this relationship earlier, 2) the field is a lookup, 3) the parent and child are not the same, 4) the table isn't in the exclude list 5)table is not a history table 6)table is in optional scope
+										if ((tablesProcessed[relationshipKey] == null) && (tableDefinition.fields[i].type == "reference") && (lgmDataContext.exclusionList.indexOf([relatedTableName.toLowerCase(),","].join("")) == -1) && (relatedTableName.toLowerCase().indexOf("history") == -1) && ((lgm.href.param["scope"] == null) || (lgmDataContext.includeList.indexOf(relatedTableName.toLowerCase()) > -1))) {
+											// Build the query to see if we need to go into the next branch								
+											recordIds = lgmDataContext.getRecordIds(queryResults, tableDefinition.fields[i].name);			
+											var queryWhere = lgmDataContext.buildWhereFromIds(recordIds, "Id");
+					
+											// Associate record Ids to this relationship and mark query for processing
+											lgmDataContext.associateRecordIds(recordIds, relatedTableName, tableDefinition.name, tableDefinition.fields[i].name);
+											if (queryWhere.length > 0) {  // query only when there is a valid filter
+												recursionCounter++;
+					
+												// Process the next Query
+												var targetTable = tableDefinition.fields[i].referenceTo; 									
+												queryBuilder.Queries[queryBuilder.Queries.length] = new lgmSFDCObjectQuery(targetTable, null, queryWhere, source.Level+1, relationshipKey, false);
+											}
+										}				
+										
+										// Mark relationship as processed
+										tablesProcessed[relationshipKey] = true;
+									}	
+								}
+								// Old Code	
+							}
+						}						
+					}				
+				}
+			}
+		}
+	}
+	levelCounter[source.Level]--;
+	recursionCounter--;
+	
+	// Process all queries once the level is finished
+	if (levelCounter[source.Level] == 0) {
+		queryBuilder.ProcessIncompleteQueries();
+		for(var i=0; i<queryBuilder.Queries.length; i++) {
+			if (queryBuilder.Queries[i].Processed == false) {
+				levelCounter[queryBuilder.Queries[i].Level] = levelCounter[queryBuilder.Queries[i].Level] == null ? 1 : levelCounter[queryBuilder.Queries[i].Level]+1;
+				lgm.debug.addMessage([new Date(), " : ", queryBuilder.Queries[i].Relationship, " level ", queryBuilder.Queries[i].Level, ":", levelCounter[queryBuilder.Queries[i].Level]].join(""));							
+				sforce.connection.query(queryBuilder.Queries[i].Query, 
+					{onSuccess:lgmDataContext.processQuery,
+					onFailure:lgmDataContext.failureQuery,
+					source:queryBuilder.Queries[i]});	
+					queryBuilder.Queries[i].Processed = true;								       	
+			}												 						
+		}
+	}	
+	
+	if (recursionCounter == -1) {  // If == to 0, I am the last one, so clean up
+		lgm.debug.addMessage(["<STRONG>DC END TIME:", new Date(), "</STRONG>"].join(""));
+		lgmDataContext.continueFunc(lgmDataContext.objectRecord);  //context finished, so continue
+	}
+}
+
+//get value of the field given the table and it's record Id
+lgmDataContext.getFieldValue = function(table, field, recordId) {
+	for (var i = 0; i < lgmDataContext.objectRecord[table].length; i++) {
+		if (lgmDataContext.objectRecord[table][i].get("Id") == recordId) {
+			return(lgmDataContext.objectRecord[table][i].get(field));
+		}
+	
+	}
+}
+
+//get record id when given the table, file, and value that uniquely identifies that record
+//useful for user names/aliases, contact full names, parcel numbers, foreing id's, etc.
+//if value is not unique, it will return the first record Id that it finds.
+lgmDataContext.getRecordId = function(table, field, value) {
+	for (var i = 0; i < lgmDataContext.objectRecord[table].length; i++) {
+		if (lgmDataContext.objectRecord[table][i].get(field) == value) {
+			return(lgmDataContext.objectRecord[table][i].get("Id"));
+		}
+	}
+}
+
+lgmDataContext.getRecordIds = function(queryResults, field) {
+	var retVal = new Array();
+	var recs = queryResults.getArray("records");
+	for(var i = 0; i < recs.length; i++) {
+		if (recs[i].get(field) != null)
+			retVal[i] = recs[i].get(field);
+	}
+	
+	return retVal;
+}
+
+lgmDataContext.addRecordsToRetrievedList = function(records) {
+	for(var i=0; i < records.length; i++) {
+		lgmDataContext.retrievedRecordList[records[i]] = true;
+	}
+}
+
+//append additional records to data model
+//query on table where field = value
+//store results in DM
+//returns array of recordIds of all records it found
+lgmDataContext.appendRecords = function(table, field, fieldValue) {
+	var temp = new Array();
+
+
+	//if fields is a string or ID, wrap in quotes
+	var tableDefinition = sforce.connection.describeSObject(table);
+	var fields =tableDefinition.fields;
+	for (var i=0; i < fields.length; i++) {
+		if (fields[i].name == field) {
+			if ((fields[i].type == 'ID')||(fields[i].type == 'string'))
+				fieldValue = ["'", fieldValue, "'"].join("");
+		}
+	}
+	
+	var queryNumber = queryBuilder.Queries.length;
+	queryBuilder.Queries[queryNumber] = new lgmSFDCObjectQuery(table, null, ["WHERE ", field, " = ", fieldValue].join(""), 0, "parent", true);
+	queryBuilder.ProcessIncompleteQueries();
+	
+	recs = sforce.connection.query(queryBuilder.Queries[queryNumber].Query);	
+
+	//var sql = ["SELECT ", lgmDataContext.getFields(table), " FROM ", table, " where ", field, " = ", fieldValue].join("");
+	//var qr = lgm.connection2.query(sql);
+	
+	//recs = qr.getArray("records");
+	if (recs.length > 0) {
+		if (lgmDataContext.objectRecord[table] != null) {
+			temp = recs.concat(lgmDataContext.objectRecord[table]);
+			lgmDataContext.objectRecord[table] = temp;
+		} else {
+			lgmDataContext.objectRecord[table] =recs;
+		}
+		return lgmDataContext.getRecordIds(qr,"Id");
+	}
+	return null;					
+}
+
+//retrieve the name of the child object that is shared between the given two tables with the related field name, and it's field label
+//relationType parameter options: MANYTOMANY - specifies that the common child must be a many to many lookup table 
+//ONETOMANY - standard single lookup reference eg. User, contact, etc.
+//ALL - both MANYTOMANY and ONETOMANY
+//If more than one child is found it will return a list of relations comma delimited 
+//If none are found, returns a blank string
+lgmDataContext.getCommonChildNames = function(table1, table2, relationType ) {
+//return class: list - children tables separated by comma's
+//				relations - array containing list of childrelationship classes: table (of child), field1, label1, field2, label2
+//							*fieldname2, fieldLabel2 are only populated if MANYTOMANY is specified
+//							*fieldLabels refer to label the parent gives to the lookup field label having the relationship
+
+var children = new Array();
+var list = [];
+var commonChildren = [];
+
+if (table1 != table2) {
+	//get children of first table
+	var tableDefinitions = sforce.connection.describeSObjects([table1,table2])
+	//var tableDefinition = queryBuilder.Definitions[table1];  //Load the table definition
+	var tableDefinition = tableDefinitions[0];
+	//if there are child relationships
+	if (tableDefinition.get("childRelationships") != null ) {
+		// Loop through all of the children from tableDefinition
+		for (var i = 0; i < tableDefinition.childRelationships.length; i++) {		
+			var relation = tableDefinition.childRelationships[i];
+			//var relationshipKey = ["fk:", tableDefinition.name.toLowerCase(), ":", relation.childSObject.toLowerCase(), ":", relation.field.toLowerCase()].join("");	// create a key name for the relationship
+	
+			children[relation.childSObject] = {field:relation.field, label:relation.relationshipName};							
+			
+		}
+		
+	}
+	
+	//get children of second table
+	//var tableDefinition = queryBuilder.Definitions[table2];  //Load the table definition
+	var tableDefinition = tableDefinitions[1];
+	//if there are child relationships
+	if (tableDefinition.get("childRelationships") != null ) {
+		// Loop through all of the children from tableDefinition
+		for (var i = 0; i < tableDefinition.childRelationships.length; i++) {		
+			var relation = tableDefinition.childRelationships[i];
+			//var relationshipKey = ["fk:", tableDefinition.name.toLowerCase(), ":", relation.childSObject.toLowerCase(), ":", relation.field.toLowerCase()].join("");	// create a key name for the relationship
+	
+			//is this table also a child of the first table?
+			if (children[relation.childSObject] != null) {
+				if (relationType == "MANYTOMANY") {
+					if (children[relation.childSObject].field != relation.field) {
+						return {list: relation.childSObject, relations:{table:relation.childSObject, field1:children[relation.childSObject].field, label1:children[relation.childSObject].label, field2:relation.field, label2:relation.relationshipName}};
+					}
+				} else {
+					commonChildren.push({table:relation.childSObject, field1:relation.field, label1:relation.relationshipName});
+					list.push(relation.childSObject+", "); 
+				}	
+			}
+		}
+		
+		//chop off last comma
+		if (list[list.length])
+			list[list.length] = list[list.length].substring(0, list[list.length].length-2);
+	}
+}
+
+list = list.join("");
+
+return {list:list,relations:commonChildren};
+
+};
+
+
+lgmDataContext.findRelationships = function(table1, table2) {
+	var children = new Array();
+	var commonChildren = new Array();
+	var list = "";
+	var mmList = "";
+	
+	if (table1 != table2) {
+		// get the definitions for the two tables
+		var tableDefinitions = sforce.connection.describeSObjects([table1, table2])
+
+		// find child relationships for table 1
+		var tableDefinition = tableDefinitions[0];
+		if (tableDefinition.get("childRelationships") != null ) {
+			for (var i = 0; i < tableDefinition.childRelationships.length; i++) {		
+				var relation = tableDefinition.childRelationships[i];		
+				var relationshipKey = ["fk:", tableDefinition.name.toLowerCase(), ":", relation.childSObject.toLowerCase(), ":", relation.field.toLowerCase()].join("");	// create a key name for the relationship
+				
+				if (relation.field != "WhoId" && relation.field != "WhatId" && relation.field != "ParentId" && relation.field != "TargetObjectId") {
+					if (list.indexOf(relation.childSObject) == -1) {
+						children[children.length] = {Name:relationshipKey, ParentTable:tableDefinition.name, ParentLabel:tableDefinition.label, ChildTable:relation.childSObject, ForeignKeyField:relation.field, Type:null};				
+						list = list + relation.childSObject + ",";
+					} else if (table2 == relation.childSObject) {
+						children[children.length] = {Name:relationshipKey, ParentTable:tableDefinition.name, ParentLabel:tableDefinition.label, ChildTable:relation.childSObject, ForeignKeyField:relation.field, Type:"1:M"};				
+					} else {
+						children[children.length] = {Name:relationshipKey, ParentTable:tableDefinition.name, ParentLabel:tableDefinition.label, ChildTable:relation.childSObject, ForeignKeyField:relation.field, Type:"M:M"};
+						mmList = mmList + relation.childSObject + ",";
+					}
+				}
+			}
+		}
+		
+		// find child relationships for table 2
+		var tableDefinition = tableDefinitions[1];
+		if (tableDefinition.get("childRelationships") != null ) {
+			for (var i = 0; i < tableDefinition.childRelationships.length; i++) {		
+				var relation = tableDefinition.childRelationships[i];
+				var relationshipKey = ["fk:", tableDefinition.name.toLowerCase(), ":", relation.childSObject.toLowerCase(), ":", relation.field.toLowerCase()].join("");	// create a key name for the relationship		
+
+				if (relation.field != "WhoId" && relation.field != "WhatId" && relation.field != "ParentId" && relation.field != "TargetObjectId") {
+					if (list.indexOf(relation.childSObject) == -1) {
+						children[children.length] = {Name:relationshipKey, ParentTable:tableDefinition.name, ParentLabel:tableDefinition.label, ChildTable:relation.childSObject, ForeignKeyField:relation.field, Type:null};				
+						list = list + relation.childSObject + ",";
+					} else if (table1 == relation.childSObject) {
+						children[children.length] = {Name:relationshipKey, ParentTable:tableDefinition.name, ParentLabel:tableDefinition.label, ChildTable:relation.childSObject, ForeignKeyField:relation.field, Type:"1:M"};
+					} else {
+						children[children.length] = {Name:relationshipKey, ParentTable:tableDefinition.name, ParentLabel:tableDefinition.label, ChildTable:relation.childSObject, ForeignKeyField:relation.field, Type:"M:M"};
+						mmList = mmList + relation.childSObject + ",";
+					}
+				}
+			}			
+		}
+		
+		// Match Relationships
+		for (var i = 0; i < children.length; i++) {
+			if (children[i].Type == "M:M") {
+				if (commonChildren[children[i].ChildTable] == null)
+					commonChildren[children[i].ChildTable] = new Array();
+					
+				commonChildren[children[i].ChildTable][commonChildren[children[i].ChildTable].length] = children[i];
+			} else if (children[i].Type == "1:M") {
+				if (commonChildren[children[i].ParentTable] == null)
+					commonChildren[children[i].ParentTable] = new Array();
+					
+				commonChildren[children[i].ParentTable][commonChildren[children[i].ChildTable].length] = children[i];
+			} else if (mmList.indexOf(children[i].ChildTable) > -1) {
+				children[i].Type = "M:M";
+				if (commonChildren[children[i].ChildTable] == null)
+					commonChildren[children[i].ChildTable] = new Array();
+					
+				commonChildren[children[i].ChildTable][commonChildren[children[i].ChildTable].length] = children[i];
+			}
+		}
+	}
+	
+	return commonChildren;
+};
+
+
+
+//insert or update a record and append to datacontext
+//expect table to update/insert into and 
+//hash table of field and fieldvalues to set in the new record object
+lgmDataContext.genericUpsert = function(destTable, fieldValues) {
+
+	//create record object and set values
+	var destinationTable = new sforce.SObject(destTable); 
+	for (var field in fieldValues) {
+		destinationTable.set(field,fieldValues[field]);
+	}
+	
+	//save to database
+	if (destinationTable["Id"] != null) 
+		var error = sforce.connection.update([destinationTable]);
+	else
+		var error = sforce.connection.create([destinationTable]);
+	if (error.toString().indexOf("errors") != -1 ) {
+		throw "Result Save Error: " + error.toString();
+	}
+	
+	//update data context
+	if (lgmDataContext.objectRecord[destTable] != null) {
+		var temp = destinationTable.concat(lgmDataContext.objectRecord[destTable]);
+		lgmDataContext.objectRecord[destTable] = temp;
+	} else {
+		lgmDataContext.objectRecord[destTable] =destinationTable;
+	}
+	
+};
+
+
+//is this table in an non-empty processOnly list? If so, then return true
+lgmDataContext.toProcess = function (table) {
+	var process = true;
+	if (lgmDataContext.processOnly !=null) {
+		if (lgmDataContext.processOnly.toLowerCase().indexOf(table.toLowerCase()) == -1 ) {
+			return false;
+		}
+	}
+	return process;
+}
+
+lgmDataContext.associateRecordIds = function(records, parentTable, childTable, foreignKeyField) {
+	var assoc = {Parent:parentTable, Child:childTable, ForeignKey:foreignKeyField};
+
+	for(var i=0; i < records.length; i++) {
+		if (lgmDataContext.masterRecordList[records[i]] == null) {
+			lgmDataContext.masterRecordList[records[i]] = new Array();
+			lgmDataContext.masterRecordList[records[i]][0] = assoc;
+		} else {
+			lgmDataContext.masterRecordList[records[i]][lgmDataContext.masterRecordList[records[i]].length] = assoc;			
+		}
+	}
+}
+
+lgmDataContext.buildWhereFromIds = function (records, field, start, end) {
+	if (start == null) start = 1;
+	if (start == null) end = 1;
+	var recordsAdded = 0;
+	var retVal = "";
+	
+	if (records.length > 0) {
+		var retVal = "";
+		for (var i = 0; i < records.length; i++) {
+			if (!lgmDataContext.exists(records[i])) {
+				retVal = [retVal, field, " = '", records[i], "' OR "].join("");
+				recordsAdded++;
+			}
+			else { 
+				if (field != "Id") { 
+					retVal = [retVal, field, " = '", records[i], "' OR "].join("");
+					recordsAdded++;
+				}
+			}
+		}
+		
+		retVal = ["WHERE ", retVal.substring(0, retVal.length - 3)].join("");	
+	}
+	
+	// Add records to the retrieve list
+	if (start == end)
+		lgmDataContext.addRecordsToRetrievedList(records);
+	
+	if (recordsAdded > 0) {
+		return retVal;
+	} else {
+		return "";
+	}
+}
+
+lgmDataContext.failureQuery = function(error, source) {
+    lgm.debug.addMessage([source, " : ", error].join(""));
+  }
+
+
+lgmDataContext.exists = function(recordId) {
+	if (recordId != null) {
+		if (lgmDataContext.retrievedRecordList[recordId] != null) {
+			return true;
+		}
+	}
+	return false;
+}
+
+lgmDataContext.notify = function(message) {
+	window.status = message;
+}
+//-->
+</script>

@@ -1,0 +1,196 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html>
+	<head>
+		<title>Update Alerts</title>
+		<link href="/dCSS/Theme2/default/common.css" type="text/css" media="handheld,print,projection,screen,tty,tv" rel="stylesheet">
+	    <script src="/soap/ajax/8.0/connection.js"></script>
+		<script id="clientEventHandlersJS" language="javascript">	
+<!-- 
+var parentAPIName = null;
+var recordID = null;
+
+//Use this function as the entry point for your DHTML and JAVASCRIPT processing
+function setup() {
+	//lid is always before the parameters we care about
+	var startTagStartPos= window.location.href.indexOf("?") + 1;
+	var startTagEndPos = window.location.href.length;
+	var paramList = window.location.href.substring(startTagStartPos, startTagEndPos);   
+
+	paramList = paramList + "&";
+	var param = new Array();
+
+	//build hash table of parameters
+ 	while (paramList.indexOf("&") != -1) {
+    	startTagStartPos = paramList.indexOf("=");
+    	startTagEndPos = paramList.indexOf("&");
+    
+    	var paramKey = paramList.substring(0,startTagStartPos);
+    	var paramValue = paramList.substring(startTagStartPos+1,startTagEndPos);
+    
+    	param[paramKey] = paramValue;
+    	paramList = paramList.substring(paramList.indexOf("&")+1, paramList.length);
+	}
+	
+	if ({!$User.Debug__c}) {
+		//turn on debug
+		lgm.debug(document.getElementById("divDebug"));
+	}
+	
+	if ({!$User.Step_Through__c}) { 
+		//throw uncaught exception so can step through in managed client environment
+		throw "e";
+	}
+	
+	parentAPIName = param["tableName"];
+	recordID = param["eid"];
+
+	var tableNameFields = getFields (parentAPIName, true);
+	var result = sforce.connection.query("SELECT " + tableNameFields + " FROM " + parentAPIName + " WHERE Id = '" + recordID + "'");	
+	table = result.getArray("records");
+	
+	updateAlertResult();
+}
+
+function updateAlertResult() {
+	var tableRecordError;
+	var activity;
+	var activeAlerts = false;
+	var status;
+	
+	var tableNameFields = getFields ("Task", false);
+	if (parentAPIName == "Contact") {
+		result = sforce.connection.query("SELECT " + tableNameFields + " FROM Task WHERE WhoId = '" + recordID + "' AND Subject = 'Alert' AND IsClosed = false");	//
+		activity = result.getArray("records");
+	}
+	else {
+		result = sforce.connection.query("SELECT " + tableNameFields + " FROM Task WHERE WhatId = '" + recordID + "' AND Subject ='Alert' AND IsClosed = false");	//
+		activity = result.getArray("records");
+	}
+	
+	var i = 0;
+	while (!activeAlerts && i < activity.length) {
+		status = activity[i]["Status"];
+		
+		if (status != "Completed") {
+			activeAlerts = true;
+		}
+		i++;
+	}
+	
+	var parent = new sforce.SObject(parentAPIName)
+	parent["Id"] = recordID;
+	if (!activeAlerts) {
+		parent["MUSW__AlertCode__c"] = 0;
+		tableRecordError = sforce.connection.update([parent]);
+		
+		opener.location.reload();
+		window.close();
+	}
+	else { //active alerts - so list them
+		var table = document.getElementById("contentTable").getElementsByTagName("TBODY")[0];
+		for (var i=0;i<activity.length;i++) {
+			var row = document.createElement("tr");
+			row.className = "dataRow even first";
+			row.appendChild(createCell("td", "row", "dataCell", activity[i]["Description"]));
+			table.appendChild(row);
+		}
+	}
+	
+	
+	
+}
+
+function createCell(type, scope, className, innerHTML) {
+	var retVal = document.createElement(type);
+	retVal.scope = scope;
+	retVal.className = className;
+	retVal.innerHTML = innerHTML;
+	return retVal;
+}
+
+function getFields(sobject, forUpdate) {
+	var fields = sforce.connection.describeSObject(sobject).fields;
+	var fieldList = "";
+	
+	if (!forUpdate) {
+		for (var i=0; i<fields.length; i++) {
+			fieldList = fieldList + fields[i].name + ", ";
+		}
+	} else {
+		fieldList = "Id, ";
+		for (var i=0; i<fields.length; i++) {
+			if (fields[i].updateable == true || fields[i].updateable == "true") {
+				fieldList = fieldList + fields[i].name + ", ";
+			}
+		}
+	}
+	
+	//chop off last comma
+	fieldList = fieldList.substring(0, fieldList.length-2);
+	return fieldList;
+}
+
+//***
+//DEBUG helper functions (normally in Common, but want quick load)
+
+lgm = function() {
+};
+lgm.debug = function(control) {
+
+	// Enable Debugging
+	if (control != null) {
+		lgm.debug.flag = true;
+		lgm.debug.control = control;
+		lgm.debug.control.style.display = "block";
+		lgm.debug.addMessage ("<strong>Debug Mode</strong>");
+	} else {
+		lgm.debug.flag = false;
+	}
+	
+};
+
+lgm.debug.control = null;
+lgm.debug.flag = false;
+
+lgm.debug.addMessage = function(msg, clazz, newline) {
+	if (lgm.debug.flag)
+		if (clazz != null)
+			lgm.debug.control.innerHTML += "<p class='"+clazz+"'>"+msg+"</p>";
+		else
+		{
+			if (newline == null)
+				lgm.debug.control.innerHTML += msg + "<br/>";
+			else
+				lgm.debug.control.innerHTML += msg;
+		}
+};
+
+//-->
+		</script>
+	</head>
+	<body onload="setup();" class=" LookupSearchFrame">	
+		<form id = "myform" name = "myform">
+			<div class="lookup">
+				<div class="bPageTitle">
+					<div class="ptBody primaryPalette">
+						<div class="content">
+							<img src="/s.gif" alt="Lookup"  class="pageTitleIcon">
+							<h1>Active Alerts</h1>
+						</div>
+					</div>
+				</div>
+				<div class="pBody" align = center>
+					<form id = "records">
+					<table id = "contentTable" class="list" border="0" cellspacing="0" cellpadding="0">
+					</table>
+					</form>	
+					<br>
+					<!--<input id = "update" Name = "update" class="btn" type=button value="Update Alerts" onClick="javascript:updateAlertResult();" disable = "false">-->
+					<input id = "cancel" Name = "cancel" class="btn" type=button value="Close" onClick="javascript:window.close();" disable = "false">
+				</div>	
+								
+			</div>	
+			<DIV id="divDebug"></DIV>
+		</form>	
+	</body>
+</html>

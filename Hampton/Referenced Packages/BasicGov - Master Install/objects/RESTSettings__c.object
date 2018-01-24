@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <customSettingsType>List</customSettingsType>
+    <enableEnhancedLookup>false</enableEnhancedLookup>
+    <enableFeeds>false</enableFeeds>
+    <fields>
+        <fullName>Field_Map__c</fullName>
+        <deprecated>false</deprecated>
+        <description>The expected BasicGov name to (:) the external REST Service parameter name. e.g. city:City, street:Address, ... The current supported fields are street, city, state, country, and zip.</description>
+        <externalId>false</externalId>
+        <inlineHelpText>The expected BasicGov field name to (:) the external REST Service parameter name. Multiple mappings are separated by a comma. e.g. city:City, street:Address, ... The current supported fields are street, city, state, country, and zip.</inlineHelpText>
+        <label>Request Field Map</label>
+        <length>100</length>
+        <required>false</required>
+        <trackTrending>false</trackTrending>
+        <type>Text</type>
+        <unique>false</unique>
+    </fields>
+    <fields>
+        <fullName>Password__c</fullName>
+        <deprecated>false</deprecated>
+        <description>AES-128 encrypted password</description>
+        <externalId>false</externalId>
+        <label>Password</label>
+        <length>100</length>
+        <required>false</required>
+        <trackTrending>false</trackTrending>
+        <type>Text</type>
+        <unique>false</unique>
+    </fields>
+    <fields>
+        <fullName>Token__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>Token</label>
+        <length>100</length>
+        <required>false</required>
+        <trackTrending>false</trackTrending>
+        <type>Text</type>
+        <unique>false</unique>
+    </fields>
+    <fields>
+        <fullName>Traverse_Instructions__c</fullName>
+        <deprecated>false</deprecated>
+        <description>A Traverse Instruction contains key names to JSON paths. e.g. x$candidates[*].location.x. Multiple Instructions are separated using a semi-colon. Refer to the Wiki for details.</description>
+        <externalId>false</externalId>
+        <inlineHelpText>A Traverse Instruction contains key names to JSONpaths. e.g. x,y$candidates[*].location[&quot;x&quot;,&quot;y&quot;]. Multiple Instructions are separated using a ; symbol. Refer to the Wiki for details.</inlineHelpText>
+        <label>Response Traverse Instructions</label>
+        <length>255</length>
+        <required>false</required>
+        <trackTrending>false</trackTrending>
+        <type>Text</type>
+        <unique>false</unique>
+    </fields>
+    <fields>
+        <fullName>URL__c</fullName>
+        <deprecated>false</deprecated>
+        <description>The URL for the REST Server. Important: You need to use https whenever possible, especially if the service is protected (eg. token-based).</description>
+        <externalId>false</externalId>
+        <inlineHelpText>The URL for the REST Server</inlineHelpText>
+        <label>URL</label>
+        <required>true</required>
+        <trackTrending>false</trackTrending>
+        <type>Url</type>
+    </fields>
+    <fields>
+        <fullName>Username__c</fullName>
+        <deprecated>false</deprecated>
+        <description>AES-128 encrypted username</description>
+        <externalId>false</externalId>
+        <label>Username</label>
+        <length>100</length>
+        <required>false</required>
+        <trackTrending>false</trackTrending>
+        <type>Text</type>
+        <unique>false</unique>
+    </fields>
+    <label>REST Settings</label>
+    <visibility>Public</visibility>
+</CustomObject>

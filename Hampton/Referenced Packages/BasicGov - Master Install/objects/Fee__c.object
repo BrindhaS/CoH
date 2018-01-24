@@ -1,0 +1,1049 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <actionOverrides>
+        <actionName>Accept</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>CancelEdit</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>Clone</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>Delete</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>Edit</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>Follow</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>List</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>New</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>SaveEdit</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>Tab</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>View</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <allowInChatterGroups>false</allowInChatterGroups>
+    <compactLayoutAssignment>SYSTEM</compactLayoutAssignment>
+    <customHelp>HelpInterface</customHelp>
+    <deploymentStatus>Deployed</deploymentStatus>
+    <deprecated>false</deprecated>
+    <description>Fees/Fines associated to Permits, Complaints, Planning Applications</description>
+    <enableActivities>false</enableActivities>
+    <enableBulkApi>true</enableBulkApi>
+    <enableEnhancedLookup>true</enableEnhancedLookup>
+    <enableFeeds>false</enableFeeds>
+    <enableHistory>true</enableHistory>
+    <enableReports>true</enableReports>
+    <enableSearch>true</enableSearch>
+    <enableSharing>true</enableSharing>
+    <enableStreamingApi>true</enableStreamingApi>
+    <fieldSets>
+        <fullName>New_Edit_Fees</fullName>
+        <availableFields>
+            <field>Amount_Paid__c</field>
+            <isFieldManaged>false</isFieldManaged>
+            <isRequired>false</isRequired>
+        </availableFields>
+        <availableFields>
+            <field>Description__c</field>
+            <isFieldManaged>false</isFieldManaged>
+            <isRequired>false</isRequired>
+        </availableFields>
+        <availableFields>
+            <field>Fee_Paid_By__c</field>
+            <isFieldManaged>false</isFieldManaged>
+            <isRequired>false</isRequired>
+        </availableFields>
+        <availableFields>
+            <field>Fee_Paid_Date2__c</field>
+            <isFieldManaged>false</isFieldManaged>
+            <isRequired>false</isRequired>
+        </availableFields>
+        <availableFields>
+            <field>Fee_Paid__c</field>
+            <isFieldManaged>false</isFieldManaged>
+            <isRequired>false</isRequired>
+        </availableFields>
+        <availableFields>
+            <field>Group__c</field>
+            <isFieldManaged>false</isFieldManaged>
+            <isRequired>false</isRequired>
+        </availableFields>
+        <availableFields>
+            <field>Name</field>
+            <isFieldManaged>false</isFieldManaged>
+            <isRequired>false</isRequired>
+        </availableFields>
+        <availableFields>
+            <field>Outstanding_Fee__c</field>
+            <isFieldManaged>false</isFieldManaged>
+            <isRequired>false</isRequired>
+        </availableFields>
+        <availableFields>
+            <field>Paid_By__c</field>
+            <isFieldManaged>false</isFieldManaged>
+            <isRequired>false</isRequired>
+        </availableFields>
+        <availableFields>
+            <field>Payment_Comment__c</field>
+            <isFieldManaged>false</isFieldManaged>
+            <isRequired>false</isRequired>
+        </availableFields>
+        <availableFields>
+            <field>Payment_Method__c</field>
+            <isFieldManaged>false</isFieldManaged>
+            <isRequired>false</isRequired>
+        </availableFields>
+        <availableFields>
+            <field>Price_Per_Unit__c</field>
+            <isFieldManaged>false</isFieldManaged>
+            <isRequired>false</isRequired>
+        </availableFields>
+        <availableFields>
+            <field>Receipt_Number__c</field>
+            <isFieldManaged>false</isFieldManaged>
+            <isRequired>false</isRequired>
+        </availableFields>
+        <description>New/Edit Fees screen</description>
+        <displayedFields>
+            <field>Type__c</field>
+            <isFieldManaged>false</isFieldManaged>
+            <isRequired>false</isRequired>
+        </displayedFields>
+        <displayedFields>
+            <field>Quantity__c</field>
+            <isFieldManaged>false</isFieldManaged>
+            <isRequired>false</isRequired>
+        </displayedFields>
+        <displayedFields>
+            <field>Amount__c</field>
+            <isFieldManaged>false</isFieldManaged>
+            <isRequired>false</isRequired>
+        </displayedFields>
+        <label>New/Edit Fees</label>
+    </fieldSets>
+    <fields>
+        <fullName>Amount_Paid__c</fullName>
+        <defaultValue>0</defaultValue>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>Amount Paid</label>
+        <precision>13</precision>
+        <required>false</required>
+        <scale>2</scale>
+        <trackHistory>true</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Currency</type>
+    </fields>
+    <fields>
+        <fullName>Amount_Waived__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>Waived Amount</label>
+        <precision>12</precision>
+        <required>false</required>
+        <scale>2</scale>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Currency</type>
+    </fields>
+    <fields>
+        <fullName>Amount__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <inlineHelpText>Leave blank for default value (set after Save)</inlineHelpText>
+        <label>Amount</label>
+        <precision>11</precision>
+        <required>false</required>
+        <scale>2</scale>
+        <trackHistory>true</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Currency</type>
+    </fields>
+    <fields>
+        <fullName>Application2__c</fullName>
+        <deleteConstraint>SetNull</deleteConstraint>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>Application</label>
+        <referenceTo>Application2__c</referenceTo>
+        <relationshipLabel>Fees</relationshipLabel>
+        <relationshipName>Fees</relationshipName>
+        <required>false</required>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Lookup</type>
+    </fields>
+    <fields>
+        <fullName>Check_Number__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>Check Number</label>
+        <length>25</length>
+        <required>false</required>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Text</type>
+        <unique>false</unique>
+    </fields>
+    <fields>
+        <fullName>Complaint2__c</fullName>
+        <deleteConstraint>SetNull</deleteConstraint>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>Complaint</label>
+        <referenceTo>Complaint2__c</referenceTo>
+        <relationshipLabel>Fees</relationshipLabel>
+        <relationshipName>Fees</relationshipName>
+        <required>false</required>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Lookup</type>
+    </fields>
+    <fields>
+        <fullName>Complaint__c</fullName>
+        <deleteConstraint>SetNull</deleteConstraint>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>Complaint</label>
+        <referenceTo>Complaint__c</referenceTo>
+        <relationshipName>Fees</relationshipName>
+        <required>false</required>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Lookup</type>
+    </fields>
+    <fields>
+        <fullName>Description__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>Description</label>
+        <required>false</required>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>TextArea</type>
+    </fields>
+    <fields>
+        <fullName>Effective_Date__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>Effective Date</label>
+        <required>false</required>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Date</type>
+    </fields>
+    <fields>
+        <fullName>Fee_Paid_By__c</fullName>
+        <deleteConstraint>SetNull</deleteConstraint>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>Fee Paid By</label>
+        <referenceTo>Contact</referenceTo>
+        <relationshipLabel>Fees Paid</relationshipLabel>
+        <relationshipName>Fees_Paid</relationshipName>
+        <required>false</required>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Lookup</type>
+    </fields>
+    <fields>
+        <fullName>Fee_Paid_Date2__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>Fee Paid Date</label>
+        <required>false</required>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Date</type>
+    </fields>
+    <fields>
+        <fullName>Fee_Paid_Date__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>Fee Paid Date/Time</label>
+        <required>false</required>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>DateTime</type>
+    </fields>
+    <fields>
+        <fullName>Fee_Paid__c</fullName>
+        <defaultValue>false</defaultValue>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>Paid in Full</label>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Checkbox</type>
+    </fields>
+    <fields>
+        <fullName>Group__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>Group</label>
+        <picklist>
+            <picklistValues>
+                <fullName>Group 1</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Group 2</fullName>
+                <default>false</default>
+            </picklistValues>
+            <sorted>false</sorted>
+        </picklist>
+        <required>false</required>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Picklist</type>
+    </fields>
+    <fields>
+        <fullName>License1__c</fullName>
+        <deleteConstraint>SetNull</deleteConstraint>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>License</label>
+        <referenceTo>License1__c</referenceTo>
+        <relationshipLabel>Fees</relationshipLabel>
+        <relationshipName>Fees</relationshipName>
+        <required>false</required>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Lookup</type>
+    </fields>
+    <fields>
+        <fullName>License2__c</fullName>
+        <deleteConstraint>SetNull</deleteConstraint>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>License</label>
+        <referenceTo>License2__c</referenceTo>
+        <relationshipLabel>Fees</relationshipLabel>
+        <relationshipName>Fees</relationshipName>
+        <required>false</required>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Lookup</type>
+    </fields>
+    <fields>
+        <fullName>License__c</fullName>
+        <deleteConstraint>SetNull</deleteConstraint>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>License</label>
+        <referenceTo>License__c</referenceTo>
+        <relationshipLabel>Fees</relationshipLabel>
+        <relationshipName>Fees</relationshipName>
+        <required>false</required>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Lookup</type>
+    </fields>
+    <fields>
+        <fullName>Outstanding_Fee__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <formula>Amount__c - Amount_Waived__c - Amount_Paid__c</formula>
+        <formulaTreatBlanksAs>BlankAsZero</formulaTreatBlanksAs>
+        <label>Amount Outstanding</label>
+        <precision>18</precision>
+        <required>false</required>
+        <scale>2</scale>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Currency</type>
+    </fields>
+    <fields>
+        <fullName>Paid_By__c</fullName>
+        <deleteConstraint>SetNull</deleteConstraint>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>Paid By</label>
+        <referenceTo>Account</referenceTo>
+        <relationshipLabel>Fees Paid</relationshipLabel>
+        <relationshipName>Fees</relationshipName>
+        <required>false</required>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Lookup</type>
+    </fields>
+    <fields>
+        <fullName>Payment_Comment__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>Payment Comments</label>
+        <required>false</required>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>TextArea</type>
+    </fields>
+    <fields>
+        <fullName>Payment_Method__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>Payment Method</label>
+        <picklist>
+            <picklistValues>
+                <fullName>Cash</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Check</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Credit Card</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Debit</fullName>
+                <default>false</default>
+            </picklistValues>
+            <sorted>false</sorted>
+        </picklist>
+        <required>false</required>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Picklist</type>
+    </fields>
+    <fields>
+        <fullName>Permit2__c</fullName>
+        <deleteConstraint>SetNull</deleteConstraint>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>Permit</label>
+        <referenceTo>Permit2__c</referenceTo>
+        <relationshipLabel>Fees</relationshipLabel>
+        <relationshipName>Fees</relationshipName>
+        <required>false</required>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Lookup</type>
+    </fields>
+    <fields>
+        <fullName>Permit__c</fullName>
+        <deleteConstraint>SetNull</deleteConstraint>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>Permit</label>
+        <referenceTo>Permit__c</referenceTo>
+        <relationshipName>Fees</relationshipName>
+        <required>false</required>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Lookup</type>
+    </fields>
+    <fields>
+        <fullName>Planning_Application__c</fullName>
+        <deleteConstraint>SetNull</deleteConstraint>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>Planning Application</label>
+        <referenceTo>Planning_Application__c</referenceTo>
+        <relationshipName>Fees</relationshipName>
+        <required>false</required>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Lookup</type>
+    </fields>
+    <fields>
+        <fullName>Price_Per_Unit__c</fullName>
+        <deprecated>false</deprecated>
+        <description>Flex fee unit price (multiplied by quantity for the amount)</description>
+        <externalId>false</externalId>
+        <inlineHelpText>Price per Quantity</inlineHelpText>
+        <label>Price Per Unit</label>
+        <precision>16</precision>
+        <required>false</required>
+        <scale>2</scale>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Currency</type>
+    </fields>
+    <fields>
+        <fullName>Quantity__c</fullName>
+        <defaultValue>1</defaultValue>
+        <deprecated>false</deprecated>
+        <description>For simple fees that multiply a certain amount by the indicated quantity. eg. 35$ per inspection. Default is 1(flat fee).</description>
+        <externalId>false</externalId>
+        <inlineHelpText>For fees per hours, lots, inspections, etc.</inlineHelpText>
+        <label>Quantity</label>
+        <precision>12</precision>
+        <required>false</required>
+        <scale>2</scale>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Number</type>
+        <unique>false</unique>
+    </fields>
+    <fields>
+        <fullName>Receipt_Number__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>Receipt Number</label>
+        <length>50</length>
+        <required>false</required>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Text</type>
+        <unique>false</unique>
+    </fields>
+    <fields>
+        <fullName>Type__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>Type</label>
+        <picklist>
+            <picklistValues>
+                <fullName>Amusement Permit Fee</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Application</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Boundary Line Adjustment Fee</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Building Permit Fee</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Building Permit Fee - Pool</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Burial Permit Fee</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Dedication Deed or Plat</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Delinquent Account Fee</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Demolition Permit Fee</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Early Start Fee</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Electrical Permit Fee</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Fine</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Gas Connection Inspection</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Major Water Quality Impact Assessment</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Map Sales</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Mechanical Permit Fee</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Minor Water Quality Impact Assessment</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Mobile Home Setup Fee</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Modification Fee - Change in scope of work</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Modification Fee - Change of Address</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Modification Fee - Change of Lien Agent</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Modification Fee - Other</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Modification Fee - To complete</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Operating without a Permit Fee</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Other</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Plan Review Fee</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Plumbing Permit Fee</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Private Easement</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Property Line Vacation Fee</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Reinspection Fee</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Resubmission - Preliminary or Final Plat</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Revision of Approved Preliminary or Final Plat</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Sewer Connection Fee</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Sign Permit Fee</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Site Plan Fee - Initial Submittal</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Site Plan - Resubmission or Revision</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>State Levy - 2%</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Structure Encroachment Permit Fee</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Subdivision Plat Fee - Final - 3+ Lots w/o Infrastructure</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Subdivision Plat Fee - Final - any size with Infrastructure</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Subdivision Plat Fee - Preliminary - 2 Lot w/o Infrastructure</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Subdivision Plat Fee - Preliminary - 3+ Lots w/o Infrastructure</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Subdivision Plat Fee - Preliminary - any size with Infrastructure</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Technology Fee</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Temporary Occupancy Permit Fee</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Yard Sale Permit Fee</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Zoning Determination Letter Fee</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Zoning Permit Fee</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Promotional Permit Fee</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Modification of a Plan Review Fee</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Easement Agreement Fee</fullName>
+                <default>false</default>
+            </picklistValues>
+            <sorted>false</sorted>
+        </picklist>
+        <required>false</required>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Picklist</type>
+    </fields>
+    <label>Fee</label>
+    <nameField>
+        <displayFormat>{0000000}</displayFormat>
+        <label>Number</label>
+        <trackHistory>false</trackHistory>
+        <type>AutoNumber</type>
+    </nameField>
+    <pluralLabel>Fees</pluralLabel>
+    <recordTypeTrackHistory>false</recordTypeTrackHistory>
+    <recordTypes>
+        <fullName>All</fullName>
+        <active>true</active>
+        <label>All</label>
+        <picklistValues>
+            <picklist>Group__c</picklist>
+            <values>
+                <fullName>Group 1</fullName>
+                <default>true</default>
+            </values>
+            <values>
+                <fullName>Group 2</fullName>
+                <default>false</default>
+            </values>
+        </picklistValues>
+        <picklistValues>
+            <picklist>Payment_Method__c</picklist>
+            <values>
+                <fullName>Cash</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Check</fullName>
+                <default>true</default>
+            </values>
+            <values>
+                <fullName>Credit Card</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Debit</fullName>
+                <default>false</default>
+            </values>
+        </picklistValues>
+        <picklistValues>
+            <picklist>Type__c</picklist>
+            <values>
+                <fullName>Amusement Permit Fee</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Application</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Boundary Line Adjustment Fee</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Building Permit Fee</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Building Permit Fee - Pool</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Burial Permit Fee</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Dedication Deed or Plat</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Delinquent Account Fee</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Demolition Permit Fee</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Early Start Fee</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Easement Agreement Fee</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Electrical Permit Fee</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Fine</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Gas Connection Inspection</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Major Water Quality Impact Assessment</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Map Sales</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Mechanical Permit Fee</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Minor Water Quality Impact Assessment</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Mobile Home Setup Fee</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Modification Fee - Change in scope of work</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Modification Fee - Change of Address</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Modification Fee - Change of Lien Agent</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Modification Fee - Other</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Modification Fee - To complete</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Modification of a Plan Review Fee</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Operating without a Permit Fee</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Other</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Plan Review Fee</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Plumbing Permit Fee</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Private Easement</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Promotional Permit Fee</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Property Line Vacation Fee</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Reinspection Fee</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Resubmission - Preliminary or Final Plat</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Revision of Approved Preliminary or Final Plat</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Sewer Connection Fee</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Sign Permit Fee</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Site Plan - Resubmission or Revision</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Site Plan Fee - Initial Submittal</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>State Levy - 2%25</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Structure Encroachment Permit Fee</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Subdivision Plat Fee - Final - 3%2B Lots w%2Fo Infrastructure</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Subdivision Plat Fee - Final - any size with Infrastructure</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Subdivision Plat Fee - Preliminary - 2 Lot w%2Fo Infrastructure</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Subdivision Plat Fee - Preliminary - 3%2B Lots w%2Fo Infrastructure</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Subdivision Plat Fee - Preliminary - any size with Infrastructure</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Technology Fee</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Temporary Occupancy Permit Fee</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Yard Sale Permit Fee</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Zoning Determination Letter Fee</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>Zoning Permit Fee</fullName>
+                <default>false</default>
+            </values>
+        </picklistValues>
+    </recordTypes>
+    <searchLayouts>
+        <customTabListAdditionalFields>Type__c</customTabListAdditionalFields>
+        <customTabListAdditionalFields>Amount__c</customTabListAdditionalFields>
+        <customTabListAdditionalFields>Fee_Paid__c</customTabListAdditionalFields>
+        <customTabListAdditionalFields>Fee_Paid_Date__c</customTabListAdditionalFields>
+        <customTabListAdditionalFields>Receipt_Number__c</customTabListAdditionalFields>
+        <lookupDialogsAdditionalFields>Type__c</lookupDialogsAdditionalFields>
+        <lookupDialogsAdditionalFields>Amount__c</lookupDialogsAdditionalFields>
+        <lookupDialogsAdditionalFields>Fee_Paid__c</lookupDialogsAdditionalFields>
+        <lookupDialogsAdditionalFields>Fee_Paid_Date2__c</lookupDialogsAdditionalFields>
+        <lookupDialogsAdditionalFields>Receipt_Number__c</lookupDialogsAdditionalFields>
+        <searchResultsAdditionalFields>Type__c</searchResultsAdditionalFields>
+        <searchResultsAdditionalFields>Amount__c</searchResultsAdditionalFields>
+        <searchResultsAdditionalFields>Fee_Paid__c</searchResultsAdditionalFields>
+        <searchResultsAdditionalFields>Fee_Paid_Date__c</searchResultsAdditionalFields>
+        <searchResultsAdditionalFields>Receipt_Number__c</searchResultsAdditionalFields>
+    </searchLayouts>
+    <sharingModel>ReadWrite</sharingModel>
+    <validationRules>
+        <fullName>Fee_Amount_Paid_Over_Amount</fullName>
+        <active>true</active>
+        <description>Can overpay an fee amount</description>
+        <errorConditionFormula>Amount_Paid__c &gt;  Amount__c</errorConditionFormula>
+        <errorMessage>Cannot overpay Fee Amount</errorMessage>
+    </validationRules>
+    <validationRules>
+        <fullName>Waived_Amount_greater_than_Amount</fullName>
+        <active>true</active>
+        <errorConditionFormula>Amount__c &lt;  Amount_Waived__c</errorConditionFormula>
+        <errorMessage>Can not waive more than Amount</errorMessage>
+    </validationRules>
+    <webLinks>
+        <fullName>Add_Multiple_Fees</fullName>
+        <availability>online</availability>
+        <displayType>massActionButton</displayType>
+        <encodingKey>UTF-8</encodingKey>
+        <linkType>url</linkType>
+        <masterLabel>New/Edit Fees</masterLabel>
+        <openType>replace</openType>
+        <protected>false</protected>
+        <requireRowSelection>true</requireRowSelection>
+        <url>/apex/musw__bulkAddEdit?id={!Permit__c.Id}{!Planning_Application__c.Id}{!Complaint__c.Id}{!License1__c.Id}{!Permit2__c.Id}{!Application2__c.Id}{!Complaint2__c.Id}{!License2__c.Id}&amp;subject=Fee&amp;minrows=5</url>
+    </webLinks>
+    <webLinks>
+        <fullName>Pay_Fees</fullName>
+        <availability>online</availability>
+        <displayType>massActionButton</displayType>
+        <height>600</height>
+        <linkType>sControl</linkType>
+        <masterLabel>Pay Fees</masterLabel>
+        <openType>sidebar</openType>
+        <protected>false</protected>
+        <requireRowSelection>true</requireRowSelection>
+        <scontrol>FeePayment</scontrol>
+    </webLinks>
+    <webLinks>
+        <fullName>UpdatePayment</fullName>
+        <availability>online</availability>
+        <displayType>massActionButton</displayType>
+        <height>600</height>
+        <linkType>sControl</linkType>
+        <masterLabel>Update Payment</masterLabel>
+        <openType>sidebar</openType>
+        <protected>false</protected>
+        <requireRowSelection>true</requireRowSelection>
+        <scontrol>FeeMassChange</scontrol>
+    </webLinks>
+</CustomObject>

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<DocumentFolder xmlns="http://soap.sforce.com/2006/04/metadata">
+    <accessType>Shared</accessType>
+    <name>LGM - Code Enforcement Letter Templates</name>
+    <publicFolderAccess>ReadOnly</publicFolderAccess>
+    <sharedTo>
+        <group>All_except_Codes</group>
+        <group>Attach_Permit</group>
+        <group>Codes_Inspections_Area_1</group>
+        <group>Codes_Inspections_Area_2</group>
+        <group>Codes_Inspections_Area_3</group>
+        <group>Codes_Zoning</group>
+        <group>Construction_Inspectors</group>
+        <group>DSA</group>
+        <group>Deleting_Articles</group>
+        <group>Fire_and_Rescue</group>
+        <group>Occupancy_Permit_Coordinators</group>
+        <group>Permits</group>
+        <group>Planning</group>
+        <group>Public_Works</group>
+        <group>Publishing_Articles</group>
+        <group>View_all_Inspections</group>
+    </sharedTo>
+</DocumentFolder>

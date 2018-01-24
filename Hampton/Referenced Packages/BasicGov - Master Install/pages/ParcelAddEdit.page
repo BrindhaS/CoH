@@ -1,0 +1,58 @@
+<apex:page controller="MUSW.ParcelAddEditController">
+    <apex:form >
+        <apex:sectionHeader title="{!parentObjectLabel}" subtitle="{!trackno}">
+            <apex:pageMessages ></apex:pageMessages>
+            <apex:commandLink action="{!cancel}" value="{!parentObjectLabel}: {!trackno}" id="backToParent" immediate="true" />
+        </apex:sectionHeader>
+        <apex:pageblock title="Add Parcels">
+            <apex:pageblockbuttons >
+                <apex:commandbutton action="{!save}" value="Save" />
+                <apex:commandbutton action="{!cancel}" value="Cancel" immediate="true" />
+            </apex:pageblockbuttons>
+            
+            <apex:pageBlockTable value="{!pp}" var="item" id="projectParcelList" rendered="{!displayProjectParcel}" >
+                <apex:repeat value="{!$ObjectType.MUSW__Project_Parcel__c.FieldSets.MUSW__New_Edit_Parcels}" var="parcelField">
+                    <apex:column > 
+                        <apex:facet name="header">{!parcelField.label}</apex:facet>
+                        <apex:inputField value="{!item[parcelField]}"/>
+                    </apex:column>
+                </apex:repeat>
+            </apex:pageBlockTable>
+                
+            <apex:pageBlockTable value="{!cp}" var="item" id="complaintParcelList" rendered="{!displayComplaintParcel}" >
+                <apex:repeat value="{!$ObjectType.MUSW__Complaint_Parcel__c.FieldSets.MUSW__New_Edit_Parcels}" var="parcelField">
+                    <apex:column >
+                        <apex:facet name="header">{!parcelField.label}</apex:facet>
+                        <apex:inputField value="{!item[parcelField]}"/>
+                    </apex:column>
+                </apex:repeat>
+            </apex:pageBlockTable>
+            
+            <apex:pageBlockTable value="{!permp}" var="item" id="permitParcelList" rendered="{!displayPermitParcel}" >
+                <apex:repeat value="{!$ObjectType.MUSW__Permit_Parcel__c.FieldSets.MUSW__New_Edit_Parcels}" var="parcelField">
+                    <apex:column >
+                        <apex:facet name="header">{!parcelField.label}</apex:facet>
+                        <apex:inputField value="{!item[parcelField]}"/>
+                    </apex:column>
+                </apex:repeat>
+            </apex:pageBlockTable>
+            <apex:pageBlockTable value="{!lp}" var="item" id="licenseParcelList" rendered="{!displayLicenseParcel}" >
+                <apex:repeat value="{!$ObjectType.MUSW__License_Parcel__c.FieldSets.MUSW__New_Edit_Parcels}" var="parcelField">
+                    <apex:column >
+                        <apex:facet name="header">{!parcelField.label}</apex:facet>
+                        <apex:inputField value="{!item[parcelField]}" required="false"/>
+                    </apex:column>
+                </apex:repeat>
+            </apex:pageBlockTable>
+            
+            <apex:commandButton action="{!addRow}" value="Add Rows"
+                title="Click for more defaulted rows to add" id="addRowButton"
+                rerender="projectParcelList,complaintParcelList,permitParcelList,licenseParcelList" immediate="false"/>
+            <apex:inputText value="{!addRowCount}" id="addRowCount" size="2"
+                maxlength="2" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            <apex:commandButton action="{!hideRow}"
+                value="Hide Row" title="Click to hide last row (does not delete)"
+                id="hideRowButton" rerender="projectParcelList,complaintParcelList,permitParcelList,licenseParcelList" immediate="false"/>
+        </apex:pageblock>
+    </apex:form>
+</apex:page>

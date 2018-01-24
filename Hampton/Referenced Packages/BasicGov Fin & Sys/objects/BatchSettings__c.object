@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <customSettingsType>List</customSettingsType>
+    <enableEnhancedLookup>false</enableEnhancedLookup>
+    <enableFeeds>false</enableFeeds>
+    <fields>
+        <fullName>Batch_Object__c</fullName>
+        <deprecated>false</deprecated>
+        <description>The object name corresponding to this batch (e.g. MUSW__Permit__c)</description>
+        <externalId>false</externalId>
+        <label>Batch Object</label>
+        <length>40</length>
+        <required>true</required>
+        <trackTrending>false</trackTrending>
+        <type>Text</type>
+        <unique>false</unique>
+    </fields>
+    <fields>
+        <fullName>Default_Filters__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>Default Filters</label>
+        <length>255</length>
+        <required>false</required>
+        <trackTrending>false</trackTrending>
+        <type>Text</type>
+        <unique>false</unique>
+    </fields>
+    <fields>
+        <fullName>ScheduledJobIds__c</fullName>
+        <deprecated>false</deprecated>
+        <description>List of comma-delimited Apex Scheduled Job ID&apos;s for this batch</description>
+        <externalId>false</externalId>
+        <label>ScheduledJobIds</label>
+        <length>255</length>
+        <required>false</required>
+        <trackTrending>false</trackTrending>
+        <type>Text</type>
+        <unique>false</unique>
+    </fields>
+    <label>Batch Settings</label>
+    <visibility>Public</visibility>
+</CustomObject>

@@ -1,0 +1,233 @@
+<apex:page standardController="Case" extensions="LocationVerifyController" id="p" action="{!checkAndRedirect}" docType="html-5.0">
+  <apex:sectionHeader title="Location Validation" subtitle="{!cas.CaseNumber}">
+      <apex:pagemessages id="msg"/>
+  </apex:sectionHeader>
+  
+  <!-- <h1>Choose from a set of valid matches OR</h1>-->
+  
+  <apex:form id="addressChoice">
+  <apex:pageBlock mode="maindetail">
+      <apex:pageBlockSection columns="1">
+        <!--<apex:inputCheckbox label="Do NOT Validate" />-->
+      </apex:pageBlockSection>
+      </apex:pageBlock>
+      <apex:tabPanel switchType="client" selectedTab="{!SelectedTab}" id="tp" value="{!SelectedTab}" >
+        <apex:tab label="Street Address" name="street" id="tsa" rerender="msg" >
+          <apex:pageBlock mode="maindetail" id="pbsa">
+            <apex:pageBlockSection columns="1" >
+                <apex:inputText id="sasn" label="Street Number" html-placeholder="" value="{!cas.Street_Number__c}" maxlength="6" />
+                <apex:inputText id="sasr" label="Street Name" value="{!cas.Street_Name__c}"  size="50">
+                </apex:inputText>
+                <!--
+                <apex:inputText id="sasc" label="City" html-placeholder="Hampton"/>
+                <apex:inputText id="sast" label="State" html-placeholder="VA"/>
+                <apex:inputText id="sazp" label="Zip" html-placeholder="53897"/>
+                -->
+                <apex:commandButton value="Search" action="{!searchStreet}" rerender="pblsa,msg"/><!--action="{!search}"-->
+            </apex:pageBlockSection>
+          
+          </apex:pageBlock>
+<!--          <apex:pageBlock title="Address Matches" mode="detail" id="pblsa" >-->
+          <apex:pageBlock title="{!IF(addresses!= null && addresses.size > 0,'Address Matches','')}" mode="detail" id="pblsa" >
+            <apex:pageBlockSection columns="1" >
+                <apex:variable var="i" value="{!0}"/>
+                <apex:outputText value=" {!totalStreet}" id="streetTotal"/>
+                <apex:pageBlockTable value="{!addresses}" var="a" id="addresses" rendered="{!addresses!= null && addresses.size > 0}">
+                    <apex:column headerValue="Select Address" >
+                        <!--<input type="radio" name="selectRadio" id="radio">
+                            <apex:actionSupport event="onclick" action="{!getSelected}" rerender="pblsa">
+                                <apex:param name = "selectIndex" assignTo="{!selectIndex}" value =""/>
+                            </apex:actionSupport>
+                        </input>-->
+                        <!--<input type="radio" name="selectRadio" id="radio" onclick="i={!i};"/>-->
+                        <apex:selectRadio onclick="setIndexJS({!i});checkOne(this);" id="rb"/>
+                        <apex:variable var="i" value="{!i+1}"/>
+                    </apex:column>
+                    <apex:column value="{!a.streetNumber}" headerValue=" Street Number"/>
+<!--                    <apex:column value="{!a.streetAlpha}" headerValue=" Street Alpha"/>-->
+                    <apex:column value="{!a.street}" headerValue=" Street Name"/>
+<!--                    <apex:column value="{!a.streetTypeAbbr}" headerValue=" Street Type ABBR"/>-->
+                    <apex:column value="{!a.city}" headerValue=" City"/>
+                    <apex:column value="{!a.state}" headerValue=" State"/>
+                    <apex:column value="{!a.zip}" headerValue=" Zip"/>
+                    <apex:column value="{!a.latitude}" headerValue=" Longitude"  styleclass="hidden" headerClass="hidden" />
+                    <apex:column value="{!a.longitude}" headerValue=" Latitude"  styleclass="hidden" headerClass="hidden"/>
+                </apex:pageBlockTable>
+                                    
+            </apex:pageBlockSection>
+          </apex:pageBlock>
+        </apex:tab>
+              
+        <apex:tab label="Place" name="place" id="tpl">
+          <apex:pageBlock mode="maindetail" id="pbpl">
+            <apex:pageBlockSection columns="1">
+                <apex:inputText id="sasn" label="Place Name" value="{!cas.Place__c}" html-placeholder="" size="75"/>
+                <apex:commandButton value="Search" action="{!searchPlace}" rerender="pblpl,msg"/><!--action="{!search}"-->
+            </apex:pageBlockSection>
+                
+          </apex:pageBlock>
+          <apex:pageBlock title="{!IF(places!= null && places.size > 0 && placeName != null,'Place Matches','')}" mode="detail" id="pblpl">
+            <apex:pageBlockSection columns="1" >
+                <apex:variable var="i" value="{!0}"/>
+                <apex:outputText value=" {!totalPlace}" id="placeTotal"/>
+                <apex:pageBlockTable value="{!places}" var="a" id="places" rendered="{!places!= null && places.size > 0}">
+                    <apex:column headerValue="Select Address" >
+                        <apex:selectRadio onclick="setIndexJS({!i});checkOne(this);" id="rb"/>
+                        <apex:variable var="i" value="{!i+1}"/>
+                    </apex:column>
+                    <apex:column value="{!a.placeName}" headerValue=" Place Name" />
+                    <apex:column value="{!a.streetNumber}" headerValue=" Street Number"/>
+<!--                    <apex:column value="{!a.streetAlpha}" headerValue=" Street Alpha"/>-->
+                    <apex:column value="{!a.street}" headerValue=" Street Name"/>
+<!--                    <apex:column value="{!a.streetTypeAbbr}" headerValue=" Street Type ABBR"/> -->
+                    <apex:column value="{!a.city}" headerValue=" City"/>
+                    <apex:column value="{!a.state}" headerValue=" State"/>
+                    <apex:column value="{!a.zip}" headerValue=" Zip"/>
+                    <apex:column value="{!a.latitude}" headerValue=" Longitude"  styleclass="hidden" headerClass="hidden" />
+                    <apex:column value="{!a.longitude}" headerValue=" Latitude"  styleclass="hidden" headerClass="hidden"/>
+                </apex:pageBlockTable>
+                                    
+            </apex:pageBlockSection>
+          </apex:pageBlock>
+        </apex:tab>
+        <apex:tab label="Intersection" name="intersection" id="tin" rerender="msg" >
+          <apex:pageBlock mode="maindetail" id="pbin">
+            <apex:pageBlockSection columns="1">
+                <apex:inputText label="Street 1" value="{!cas.Intersection_Street_1__c}" size="50" html-placeholder=""/>
+                <apex:inputText label="Street 2" value="{!cas.Intersection_Street_2__c}" size="50" html-placeholder=""/>
+                <apex:commandButton value="Search" action="{!searchIntersection}" rerender="pblin,msg"/><!--action="{!search}"-->
+            </apex:pageBlockSection>
+                
+          </apex:pageBlock>
+          <apex:pageBlock title="{!IF(intersections!= null && intersections.size > 0,'Intersection Matches','')}" mode="detail" id="pblin">
+            <apex:pageBlockSection columns="1">
+                <apex:variable var="i" value="{!0}"/>
+                <apex:outputText value=" {!totalIntersection}" id="intersectionTotal"/>
+                <apex:pageBlockTable value="{!intersections}" var="is" id="intersections" rendered="{!intersections!= null && intersections.size > 0}">
+                    <apex:column headerValue="Choose" >
+                        <apex:selectRadio onclick="setIndexJS({!i});checkOne(this);" id="rb"/>
+                        <apex:variable var="i" value="{!i+1}"/>
+                    </apex:column>
+                    <apex:column value="{!is.street1}" headerValue=" Intersection" />
+                    <apex:column value="{!is.street2}" headerValue=" Street 2" styleclass="hidden" headerClass="hidden"/>
+                    <apex:column value="{!is.streetFrom}" headerValue=" From "  styleclass="hidden" headerClass="hidden"/>
+                    <apex:column value="{!is.streetTo}" headerValue=" To "  styleclass="hidden" headerClass="hidden"/>                     
+                    <apex:column value="{!is.latitude}" headerValue=" Latitude "  styleclass="hidden" headerClass="hidden"/>
+                    <apex:column value="{!is.longitude}" headerValue=" Longitude "  styleclass="hidden" headerClass="hidden"/>                    
+                </apex:pageBlockTable>            
+            <!--
+              <table style="width:100%">
+                <tr>
+                  <td style="width:10%"><b>Choose</b></td>
+                  <td><b>Street 1</b></td> 
+                  <td><b>Street 2</b></td>
+                </tr>
+                <tr>
+                  <td><input type="radio" name="pick" value=""/></td>
+                  <td>First Ave</td>
+                  <td>Main Street</td> 
+                </tr>
+                </table>
+               -->
+            </apex:pageBlockSection>
+          </apex:pageBlock>
+        </apex:tab>
+       <!-- <apex:tab label="Block" name="block" id="tbk">
+          <apex:pageBlock mode="maindetail" id="pbbk">
+            <apex:pageBlockSection columns="1">
+                <apex:inputText id="sasn1" label="From Street Number"/>
+                <apex:inputText id="sasn2" label="To Street Number"/>
+                <apex:inputField value="{!case.street__c}"/>
+                <apex:commandButton value="Search"/><!--action="{!search}"
+            </apex:pageBlockSection>
+                
+          </apex:pageBlock>
+          <apex:pageBlock title="Intersection Matches" mode="detail" id="pblbk">
+            <apex:pageBlockSection columns="5">
+              <apex:selectRadio/>
+              <apex:outputText value="Main"/>
+              <apex:outputText value="Street"/>
+              <apex:outputText value="First"/>
+              <apex:outputText value="Ave"/>
+            </apex:pageBlockSection>
+          </apex:pageBlock>
+         
+        </apex:tab>-->
+      </apex:tabPanel>
+     
+      <apex:pageBlock mode="maindetail">
+        <apex:pageBlockSection columns="1">
+            <apex:inputCheckbox label="Missing GIS Address" value="{!isMissingGISAddress}" onclick="unCheckAll(this);" id="chk"/>
+            <apex:actionFunction name="setIndexJS" reRender="debug">
+                <apex:param name="selectionIndex" assignTo="{!selectionIndex}" value=""/>
+            </apex:actionFunction>
+            <apex:actionFunction name="setTabJS" reRender="debug">
+                <apex:param name="SelectedTab" assignTo="{!SelectedTab}" value=""/>
+            </apex:actionFunction>            
+            <!--
+            <apex:commandButton value="Continue" action="{!save}"/>
+            <apex:commandButton value="Cancel" action="{!cancel}"/>
+            
+            <apex:outputText value=" Total: {!totalRecords}" id="debug"/>
+            -->
+        </apex:pageBlockSection>
+        <apex:pageBlockSection columns="2">
+            <apex:commandButton value="Continue" action="{!save}" onclick="return confirmNonGISAddress();"/>
+            <apex:commandButton value="Cancel" action="{!redirect}"/>
+        </apex:pageBlockSection>        
+      </apex:pageBlock>
+  </apex:form>
+    <script>
+        function checkOne(obj){
+            var element = document.getElementsByTagName('INPUT');
+            //var isCheckBox = false;
+            for (i=0; i<element.length; i++) {
+                var myInput = element[i];
+                if (myInput.type == 'checkbox'&& myInput.checked){
+                  // isCheckBox  = true;
+                  // alert('Missing GIS Address is already chose.')
+                  myInput.checked = false;
+                }
+                if (myInput.type == 'radio'){
+                   myInput.checked = false; 
+                }
+            }
+            document.getElementById(obj.id).checked = true;
+            /*
+            if(isCheckBox != true){
+                document.getElementById(obj.id).checked = true;
+            } 
+            */   
+        }   
+        function unCheckAll(obj){
+            var element = document.getElementsByTagName('INPUT');
+            var chkBox = document.getElementById(obj.id).checked;
+            if(chkBox){
+                for (i=0; i<element.length; i++) {
+                    var myInput = element[i];
+                    if (myInput.type == 'radio'){
+                       myInput.checked = false; 
+                    }
+                }
+            }
+        }
+        function confirmNonGISAddress(){
+            var element = document.getElementsByTagName('INPUT');
+            var isMissingGISChecked = false;
+            for (i=0; i<element.length; i++) {
+                var myInput = element[i];
+                if (myInput.type == 'checkbox'&& myInput.checked){
+                   isMissingGISChecked = true;
+                   break;
+                }
+            }        
+            if(isMissingGISChecked ){
+                return confirm('Are you sure to choose Missing GIS Address?');      
+            }else{
+                return true;
+            }
+        }
+    
+          
+    </script> 
+</apex:page>

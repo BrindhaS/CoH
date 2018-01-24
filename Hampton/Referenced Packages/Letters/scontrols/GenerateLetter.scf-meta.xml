@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Scontrol xmlns="http://soap.sforce.com/2006/04/metadata">
+    <contentSource>HTML</contentSource>
+    <description>Used by buttons to generate a singe merge letter using the Batch Letter app architecture</description>
+    <encodingKey>UTF-8</encodingKey>
+    <name>LetterGenerate</name>
+    <supportsCaching>true</supportsCaching>
+</Scontrol>

@@ -1,0 +1,293 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Workflow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <alerts>
+        <fullName>Completed_Batch_Letter_Job_Notification</fullName>
+        <description>Completed Batch Letter Job Notification</description>
+        <protected>false</protected>
+        <recipients>
+            <type>owner</type>
+        </recipients>
+        <senderType>CurrentUser</senderType>
+        <template>Batch_Letter_Notifications/Batch_Letter_Notification_General</template>
+    </alerts>
+    <fieldUpdates>
+        <fullName>Letter_Job_Set_HasChildIds_False</fullName>
+        <field>HasChildIds__c</field>
+        <literalValue>0</literalValue>
+        <name>Letter Job - Set HasChildIds (False)</name>
+        <notifyAssignee>false</notifyAssignee>
+        <operation>Literal</operation>
+        <protected>false</protected>
+    </fieldUpdates>
+    <fieldUpdates>
+        <fullName>Letter_Job_Set_HasChildIds_True</fullName>
+        <field>HasChildIds__c</field>
+        <literalValue>1</literalValue>
+        <name>Letter Job - Set HasChildIds (True)</name>
+        <notifyAssignee>false</notifyAssignee>
+        <operation>Literal</operation>
+        <protected>false</protected>
+    </fieldUpdates>
+    <fieldUpdates>
+        <fullName>Set_End_Time</fullName>
+        <field>End_Time__c</field>
+        <formula>NOW()</formula>
+        <name>Set End Time</name>
+        <notifyAssignee>false</notifyAssignee>
+        <operation>Formula</operation>
+        <protected>false</protected>
+    </fieldUpdates>
+    <fieldUpdates>
+        <fullName>Set_Output_Type</fullName>
+        <field>Output_Type__c</field>
+        <formula>IF
+(
+CONTAINS(TEXT( Batch_Letter__r.Output_Type__c ), &quot;.pdf&quot;) , 
+&quot;pdf&quot;, 
+ IF
+(
+CONTAINS(TEXT( Batch_Letter__r.Output_Type__c ), &quot;.docx&quot;) , 
+&quot;docx&quot;, 
+&quot;doc&quot;
+) 
+)</formula>
+        <name>Set Output Type</name>
+        <notifyAssignee>false</notifyAssignee>
+        <operation>Formula</operation>
+        <protected>false</protected>
+    </fieldUpdates>
+    <outboundMessages>
+        <fullName>Letter_Job_Send_Single</fullName>
+        <apiVersion>22.0</apiVersion>
+        <description>when job record is created, send info to single letter job service</description>
+        <endpointUrl>https://lettersingle.mybasicgov.com/OBMHandlerWS/SingleLetterJobNotificationService.asmx</endpointUrl>
+        <fields>Batch_Letter_Name__c</fields>
+        <fields>Batch_Letter__c</fields>
+        <fields>Child_Iterate_Ids__c</fields>
+        <fields>CreatedById</fields>
+        <fields>CreatedDate</fields>
+        <fields>End_Time__c</fields>
+        <fields>HasChildIds__c</fields>
+        <fields>Id</fields>
+        <fields>IsDeleted</fields>
+        <fields>LastModifiedById</fields>
+        <fields>LastModifiedDate</fields>
+        <fields>Name</fields>
+        <fields>Output_Type__c</fields>
+        <fields>Override_Parameters__c</fields>
+        <fields>OwnerId</fields>
+        <fields>Print_File_Location__c</fields>
+        <fields>Print_File_Name__c</fields>
+        <fields>Print_File__c</fields>
+        <fields>Recipients__c</fields>
+        <fields>Single_Letter_Job__c</fields>
+        <fields>Start_Time__c</fields>
+        <fields>Status__c</fields>
+        <fields>SystemModstamp</fields>
+        <fields>TemplateId__c</fields>
+        <fields>debug__c</fields>
+        <includeSessionId>true</includeSessionId>
+        <integrationUser>hamptonva@basicgov.com</integrationUser>
+        <name>Letter Job - Send Single</name>
+        <protected>false</protected>
+        <useDeadLetterQueue>false</useDeadLetterQueue>
+    </outboundMessages>
+    <outboundMessages>
+        <fullName>Letter_Job_Send_Single_EBS</fullName>
+        <apiVersion>27.0</apiVersion>
+        <description>when job record is created, send info to single letter job service</description>
+        <endpointUrl>https://lettersingle.mybasicgov.com/OBMHandlerWS/SingleLetterJobNotificationService.asmx</endpointUrl>
+        <fields>Batch_Letter_Name__c</fields>
+        <fields>Batch_Letter__c</fields>
+        <fields>Child_Iterate_Ids__c</fields>
+        <fields>CreatedById</fields>
+        <fields>CreatedDate</fields>
+        <fields>End_Time__c</fields>
+        <fields>HasChildIds__c</fields>
+        <fields>Id</fields>
+        <fields>IsDeleted</fields>
+        <fields>LastModifiedById</fields>
+        <fields>LastModifiedDate</fields>
+        <fields>Name</fields>
+        <fields>Output_Type__c</fields>
+        <fields>Override_Parameters__c</fields>
+        <fields>OwnerId</fields>
+        <fields>Print_File_Location__c</fields>
+        <fields>Print_File_Name__c</fields>
+        <fields>Print_File__c</fields>
+        <fields>Recipients__c</fields>
+        <fields>Single_Letter_Job__c</fields>
+        <fields>Start_Time__c</fields>
+        <fields>Status__c</fields>
+        <fields>SystemModstamp</fields>
+        <fields>TemplateId__c</fields>
+        <fields>debug__c</fields>
+        <includeSessionId>true</includeSessionId>
+        <integrationUser>hamptonva@basicgov.com</integrationUser>
+        <name>Letter Job - Send Single - EBS</name>
+        <protected>false</protected>
+        <useDeadLetterQueue>false</useDeadLetterQueue>
+    </outboundMessages>
+    <outboundMessages>
+        <fullName>Send_Batch_Letter_Job</fullName>
+        <apiVersion>8.0</apiVersion>
+        <endpointUrl>https://letterbatch.mybasicgov.com/OBMHandlerWS/BatchLetterJobNotificationService.asmx</endpointUrl>
+        <fields>Batch_Letter_Name__c</fields>
+        <fields>Batch_Letter__c</fields>
+        <fields>CreatedById</fields>
+        <fields>Id</fields>
+        <fields>Name</fields>
+        <fields>Output_Type__c</fields>
+        <fields>OwnerId</fields>
+        <fields>Status__c</fields>
+        <fields>TemplateId__c</fields>
+        <includeSessionId>true</includeSessionId>
+        <integrationUser>hamptonva@basicgov.com</integrationUser>
+        <name>Send Batch Letter Job</name>
+        <protected>false</protected>
+        <useDeadLetterQueue>false</useDeadLetterQueue>
+    </outboundMessages>
+    <outboundMessages>
+        <fullName>Send_Batch_Letter_Job_EBS</fullName>
+        <apiVersion>27.0</apiVersion>
+        <endpointUrl>https://letterbatch.mybasicgov.com/OBMHandlerWS/BatchLetterJobNotificationService.asmx</endpointUrl>
+        <fields>Batch_Letter_Name__c</fields>
+        <fields>Batch_Letter__c</fields>
+        <fields>Child_Iterate_Ids__c</fields>
+        <fields>CreatedById</fields>
+        <fields>CreatedDate</fields>
+        <fields>End_Time__c</fields>
+        <fields>HasChildIds__c</fields>
+        <fields>Id</fields>
+        <fields>IsDeleted</fields>
+        <fields>LastModifiedById</fields>
+        <fields>LastModifiedDate</fields>
+        <fields>Name</fields>
+        <fields>Output_Type__c</fields>
+        <fields>Override_Parameters__c</fields>
+        <fields>OwnerId</fields>
+        <fields>Print_File_Location__c</fields>
+        <fields>Print_File_Name__c</fields>
+        <fields>Print_File__c</fields>
+        <fields>Recipients__c</fields>
+        <fields>Single_Letter_Job__c</fields>
+        <fields>Start_Time__c</fields>
+        <fields>Status__c</fields>
+        <fields>SystemModstamp</fields>
+        <fields>TemplateId__c</fields>
+        <fields>debug__c</fields>
+        <includeSessionId>true</includeSessionId>
+        <integrationUser>hamptonva@basicgov.com</integrationUser>
+        <name>Send Batch Letter Job - EBS</name>
+        <protected>false</protected>
+        <useDeadLetterQueue>false</useDeadLetterQueue>
+    </outboundMessages>
+    <rules>
+        <fullName>Completed Batch Letter Job - Send Notification</fullName>
+        <actions>
+            <name>Completed_Batch_Letter_Job_Notification</name>
+            <type>Alert</type>
+        </actions>
+        <active>true</active>
+        <criteriaItems>
+            <field>Batch_Letter_Job__c.Print_File__c</field>
+            <operation>notEqual</operation>
+        </criteriaItems>
+        <criteriaItems>
+            <field>Batch_Letter_Job__c.Status__c</field>
+            <operation>equals</operation>
+            <value>Completed</value>
+        </criteriaItems>
+        <criteriaItems>
+            <field>Batch_Letter_Job__c.Single_Letter_Job__c</field>
+            <operation>equals</operation>
+            <value>False</value>
+        </criteriaItems>
+        <triggerType>onCreateOrTriggeringUpdate</triggerType>
+    </rules>
+    <rules>
+        <fullName>Completed Batch Letter Job - Set End Date</fullName>
+        <actions>
+            <name>Set_End_Time</name>
+            <type>FieldUpdate</type>
+        </actions>
+        <active>true</active>
+        <criteriaItems>
+            <field>Batch_Letter_Job__c.Print_File__c</field>
+            <operation>notEqual</operation>
+        </criteriaItems>
+        <criteriaItems>
+            <field>Batch_Letter_Job__c.Status__c</field>
+            <operation>equals</operation>
+            <value>Completed</value>
+        </criteriaItems>
+        <triggerType>onCreateOrTriggeringUpdate</triggerType>
+    </rules>
+    <rules>
+        <fullName>Letter Job - Child Ids is Required</fullName>
+        <actions>
+            <name>Letter_Job_Set_HasChildIds_True</name>
+            <type>FieldUpdate</type>
+        </actions>
+        <active>true</active>
+        <formula>AND(NOT(HasChildIds__c  ), NOT(ISBLANK(Child_Iterate_Ids__c)))</formula>
+        <triggerType>onAllChanges</triggerType>
+    </rules>
+    <rules>
+        <fullName>Letter Job - Child Ids not Required</fullName>
+        <actions>
+            <name>Letter_Job_Set_HasChildIds_False</name>
+            <type>FieldUpdate</type>
+        </actions>
+        <active>true</active>
+        <formula>AND(HasChildIds__c, ISBLANK(Child_Iterate_Ids__c))</formula>
+        <triggerType>onAllChanges</triggerType>
+    </rules>
+    <rules>
+        <fullName>Letter Job - Single %28New%29</fullName>
+        <actions>
+            <name>Set_Output_Type</name>
+            <type>FieldUpdate</type>
+        </actions>
+        <actions>
+            <name>Letter_Job_Send_Single_EBS</name>
+            <type>OutboundMessage</type>
+        </actions>
+        <active>false</active>
+        <criteriaItems>
+            <field>Batch_Letter_Job__c.Status__c</field>
+            <operation>equals</operation>
+            <value>In Queue (verifying...)</value>
+        </criteriaItems>
+        <criteriaItems>
+            <field>Batch_Letter_Job__c.Single_Letter_Job__c</field>
+            <operation>equals</operation>
+            <value>True</value>
+        </criteriaItems>
+        <description>When letter job is created is Single and status is &apos;In Queue (verifying), create outbound message to single letter service. Used for automatically requesting a letter via DRE.</description>
+        <triggerType>onCreateOnly</triggerType>
+    </rules>
+    <rules>
+        <fullName>New Batch Letter Job</fullName>
+        <actions>
+            <name>Set_Output_Type</name>
+            <type>FieldUpdate</type>
+        </actions>
+        <actions>
+            <name>Send_Batch_Letter_Job_EBS</name>
+            <type>OutboundMessage</type>
+        </actions>
+        <active>true</active>
+        <criteriaItems>
+            <field>Batch_Letter_Job__c.Status__c</field>
+            <operation>equals</operation>
+            <value>In Queue (verifying...)</value>
+        </criteriaItems>
+        <criteriaItems>
+            <field>Batch_Letter_Job__c.Single_Letter_Job__c</field>
+            <operation>equals</operation>
+            <value>False</value>
+        </criteriaItems>
+        <triggerType>onCreateOnly</triggerType>
+    </rules>
+</Workflow>

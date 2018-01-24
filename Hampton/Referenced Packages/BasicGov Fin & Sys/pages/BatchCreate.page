@@ -1,0 +1,199 @@
+<apex:page Controller="BGBK.BatchController">
+<apex:includeScript value="{!URLFOR($Resource.BGBK__jQuery172,'jquery-1.3.2.js')}"/>
+<apex:form >
+    <apex:sectionHeader title="Batches" subtitle="Create New Batch"/>
+    <apex:messages />
+    <apex:pageblock >
+        <apex:pageblockbuttons id="buttons" >
+            <apex:outputPanel onclick="processJS();" styleClass="btn" id="btnStart">
+                Run Batch
+            </apex:outputPanel>
+            <apex:outputPanel onclick="scheduleJS();" styleClass="btn" id="btnSchedule">
+                Schedule
+            </apex:outputPanel>
+        </apex:pageblockbuttons>
+        
+        Please use the filter below to determine what data needs to be batched and against which Automation Rules, then press the <b>Run Batch</b> button to start your batch.<br/><br/>
+        
+        <apex:pageBlockSection title="Choose Batch" columns="2" collapsible="false">
+            <apex:panelGrid columns="1">
+                <apex:outputText value="Batch Type" style="font-weight:bold"/>
+                <apex:selectList value="{!selectedBatchTypeId}" multiselect="false" size="1" onchange="updateAllJS();">
+                    <apex:selectOptions value="{!batchTypes}"/>
+                </apex:selectList>
+            </apex:panelGrid>
+            
+            <apex:panelGrid columns="4">
+                <apex:outputText value="Field" style="font-weight:bold"/>
+                <apex:outputText value="Condition" style="font-weight:bold"/>
+                <apex:outputText value="Value" style="font-weight:bold"/>
+                <apex:outputText />
+                
+                <apex:pageBlockSectionItem >
+                    <apex:selectList value="{!filterField}" multiselect="false" size="1" id="fields">
+                        <apex:selectOptions value="{!filterFields}"/>
+                    </apex:selectList>
+                </apex:pageBlockSectionItem>
+                
+                <apex:pageBlockSectionItem >
+                    <apex:selectList value="{!filterCondition}" multiselect="false" size="1">
+                        <apex:selectOptions value="{!filterConditions}"/>
+                    </apex:selectList>
+                </apex:pageBlockSectionItem>
+                
+                <apex:inputText value="{!filterValue}"/>
+                
+                <apex:commandButton action="{!addFilter}" value="Add Filter" reRender="filters"/>
+            </apex:panelGrid>
+        </apex:pageBlockSection>
+
+
+        <!---- Filters ---->
+        <apex:pageBlockSection title="Filters" collapsible="false">
+        
+            <!---- Default Filters ---->
+            <apex:panelGrid columns="2">
+                <apex:outputText value="Default Filters" style="font-weight:bold"/>
+                <apex:outputText />
+                <apex:dataList value="{!defaultFilters}" var="d" id="defaultFilters">
+                    <apex:commandLink action="{!removeDefaultFilter}" value="Remove" rerender="defaultFilters">
+                        <apex:param name="delete" assignTo="{!defaultFilterToRemove}" value="{!d}"/>
+                    </apex:commandLink>
+                    <apex:outputText value=" {!d}"/>
+                </apex:dataList>
+            </apex:panelGrid>
+            
+            
+            <!---- User Filters ---->
+            <apex:panelGrid columns="2">
+                <apex:outputText value="Additional User-Defined Filters" style="font-weight:bold"/>
+                <apex:outputText />
+                <apex:dataList value="{!filters}" var="f" id="filters">
+                    <apex:commandLink action="{!removeFilter}" value="Remove" rerender="filters">
+                        <apex:param name="delete" assignTo="{!filterToRemove}" value="{!f}"/>
+                    </apex:commandLink>
+                    <apex:outputText value=" {!f}"/>
+                </apex:dataList>
+            </apex:panelGrid>
+        </apex:pageBlockSection>
+        
+        
+        <!---- Schedule Batches ---->
+        
+        <apex:pageBlockSection title="Schedule Batch">
+            <apex:panelGrid columns="3" width="100%">
+                <apex:outputText value="Frequency" style="font-weight:bold"/>
+                <apex:selectRadio onchange="showFreqTable(this.value);" value="{!frequencyType}">
+                    <apex:selectOption itemvalue="Weekly" itemlabel="Weekly"></apex:selectOption>
+                    <apex:selectOption itemvalue="Monthly" itemlabel="Monthly"></apex:selectOption>
+                </apex:selectRadio>
+                
+                <table id="weeklyTable" style="width=100%;background-color:white;">
+                    <apex:outputText value="Recurs every week on"></apex:outputText>
+                    <apex:selectCheckboxes value="{!selectedWeekdays}">
+                        <apex:selectOption itemvalue="SUN" itemlabel="Sunday"></apex:selectOption>
+                        <apex:selectOption itemvalue="MON" itemlabel="Monday"></apex:selectOption>
+                        <apex:selectOption itemvalue="TUE" itemlabel="Tuesday"></apex:selectOption>
+                        <apex:selectOption itemvalue="WED" itemlabel="Wednesday"></apex:selectOption>
+                        <apex:selectOption itemvalue="THU" itemlabel="Thursday"></apex:selectOption>
+                        <apex:selectOption itemvalue="FRI" itemlabel="Friday"></apex:selectOption>
+                        <apex:selectOption itemvalue="SAT" itemlabel="Saturday"></apex:selectOption>
+                    </apex:selectCheckboxes>
+                </table>
+                
+                <table id="monthlyTable" style="width=100%;background-color:white;">
+                    <apex:outputText >On day </apex:outputText>
+                    <apex:selectList value="{!selectedDayOfMonth}" size="1">
+                        <apex:selectOption itemLabel="1" itemvalue="1"></apex:selectOption>
+                        <apex:selectOption itemLabel="2" itemvalue="2"></apex:selectOption>
+                        <apex:selectOption itemLabel="3" itemvalue="3"></apex:selectOption>
+                        <apex:selectOption itemLabel="4" itemvalue="4"></apex:selectOption>
+                        <apex:selectOption itemLabel="5" itemvalue="5"></apex:selectOption>
+                        <apex:selectOption itemLabel="6" itemvalue="6"></apex:selectOption>
+                        <apex:selectOption itemLabel="7" itemvalue="7"></apex:selectOption>
+                        <apex:selectOption itemLabel="8" itemvalue="8"></apex:selectOption>
+                        <apex:selectOption itemLabel="9" itemvalue="9"></apex:selectOption>
+                        <apex:selectOption itemLabel="10" itemvalue="10"></apex:selectOption>
+                        <apex:selectOption itemLabel="11" itemvalue="11"></apex:selectOption>
+                        <apex:selectOption itemLabel="12" itemvalue="12"></apex:selectOption>
+                        <apex:selectOption itemLabel="13" itemvalue="13"></apex:selectOption>
+                        <apex:selectOption itemLabel="14" itemvalue="14"></apex:selectOption>
+                        <apex:selectOption itemLabel="15" itemvalue="15"></apex:selectOption>
+                        <apex:selectOption itemLabel="16" itemvalue="16"></apex:selectOption>
+                        <apex:selectOption itemLabel="17" itemvalue="17"></apex:selectOption>
+                        <apex:selectOption itemLabel="18" itemvalue="18"></apex:selectOption>
+                        <apex:selectOption itemLabel="19" itemvalue="19"></apex:selectOption>
+                        <apex:selectOption itemLabel="20" itemvalue="20"></apex:selectOption>
+                        <apex:selectOption itemLabel="21" itemvalue="21"></apex:selectOption>
+                        <apex:selectOption itemLabel="22" itemvalue="22"></apex:selectOption>
+                        <apex:selectOption itemLabel="23" itemvalue="23"></apex:selectOption>
+                        <apex:selectOption itemLabel="24" itemvalue="24"></apex:selectOption>
+                        <apex:selectOption itemLabel="25" itemvalue="25"></apex:selectOption>
+                        <apex:selectOption itemLabel="26" itemvalue="26"></apex:selectOption>
+                        <apex:selectOption itemLabel="27" itemvalue="27"></apex:selectOption>
+                        <apex:selectOption itemLabel="28" itemvalue="28"></apex:selectOption>
+                        <apex:selectOption itemLabel="29" itemvalue="29"></apex:selectOption>
+                        <apex:selectOption itemLabel="30" itemvalue="30"></apex:selectOption>
+                        <apex:selectOption itemLabel="31" itemvalue="31"></apex:selectOption>
+                        <apex:selectOption itemLabel="Last" itemvalue="L"></apex:selectOption>
+                    </apex:selectList>
+                    of every month
+                </table>
+                
+                <apex:outputLabel style="font-weight:bold">Time</apex:outputLabel>
+                <apex:inputText value="{!scheduleTime}"/> (Use 24 hour format in hh:mm. Hour can be between 0-23)
+                <apex:outputLabel style="font-weight:bold">Schedule Name</apex:outputLabel>
+                <apex:inputText value="{!scheduleName}" id="scheduleName"/> (This name must not have been used by another active scheduled batch)
+            </apex:panelGrid>
+            
+            <apex:outputText />
+            
+            <a href="{!scheduleUrl}">See Current Scheduled Jobs</a><br/>
+            <a href="{!scheduleStatusUrl}">See the Status of Already Executed Jobs</a>
+        </apex:pageBlockSection>
+        
+        
+        <br/>
+        <hr/>
+        <apex:pageBlockSection showHeader="false" columns="1">
+            <apex:outputText value="{!progress}" id="progressTxt"/>
+            <c:ProgressBar percentComplete="{!progressInt}" id="progress"/>
+        </apex:pageBlockSection>
+    </apex:pageblock>
+    
+    
+    <!---- FUNCTIONS ---->
+    
+    <!--<apex:actionPoller interval="5" onsubmit="if ({!isBatchRunning}) {updateJS();}" rendered="{!isBatchRunning}" enabled="{!isBatchRunning}"/>-->
+    <apex:actionFunction action="{!scheduleBatch}" name="scheduleJS"/>
+    <apex:actionFunction action="{!processBatch}" name="processJS" oncomplete="if ({!isBatchRunning}) {updateJS();}" rerender="progressTxt, progress, processStatus"/>
+    <apex:actionFunction action="{!updateProgress}" name="updateJS" status="processStatus" oncomplete="if ({!isBatchRunning}) {updateJS();}" rerender="progressTxt, progress"/>
+    <apex:actionFunction action="{!updateFilters}" name="updateAllJS" rerender="fields, filters, defaultFilters, progress, progressTxt, scheduleName"/>
+    <apex:actionStatus id="processStatus">
+        <apex:facet name="start">
+            <c:LightBox BackColor="#efefef" borderColor="#336699" borderSize="3" height="50px" width="300px" Message="{!progress}" messageStyle="color:darkblue;font-size:11pt;font-weight:bold;text-align:center;" imageUrl="{!$Resource.BGBK__notify_icon}"/>
+        </apex:facet>
+    </apex:actionStatus>
+
+</apex:form>
+
+<script>
+window.onload = function() {
+    updateJS();
+    showFreqTable("Weekly");
+}
+
+function showFreqTable(t) {
+
+    if (t == "Weekly") {
+        $("#weeklyTable").show();
+        $("#monthlyTable").hide();
+    }
+    else {
+        $("#weeklyTable").hide();
+        $("#monthlyTable").show();
+    }
+}
+
+</script>
+</apex:page>

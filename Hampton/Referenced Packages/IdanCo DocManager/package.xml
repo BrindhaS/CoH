@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Package xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>IdanCo DocManager</fullName>
+    <apiAccessLevel>Unrestricted</apiAccessLevel>
+    <description>IdanCo DocManager - document management application for Salesforce.com.</description>
+    <namespacePrefix>idan_dm</namespacePrefix>
+    <types>
+        <members>DocMan</members>
+        <members>DocManTest</members>
+        <members>DocManUploadControllerExtension</members>
+        <name>ApexClass</name>
+    </types>
+    <types>
+        <members>DocMan</members>
+        <name>ApexComponent</name>
+    </types>
+    <types>
+        <members>DocMan</members>
+        <members>DocManConfirm</members>
+        <members>DocManUpload</members>
+        <name>ApexPage</name>
+    </types>
+    <types>
+        <members>Folder__c.ParentFolderId__c</members>
+        <members>Folder__c.SFDC_ParentFolderId__c</members>
+        <members>Folder__c.Title__c</members>
+        <members>Link__c.DocumentId__c</members>
+        <members>Link__c.FolderId__c</members>
+        <name>CustomField</name>
+    </types>
+    <types>
+        <members>Folder__c</members>
+        <members>Link__c</members>
+        <name>CustomObject</name>
+    </types>
+    <types>
+        <members>DocMan</members>
+        <name>CustomTab</name>
+    </types>
+    <types>
+        <members>Folder__c-Folder Layout</members>
+        <members>Link__c-Link Layout</members>
+        <name>Layout</name>
+    </types>
+    <types>
+        <members>combine_dm</members>
+        <name>StaticResource</name>
+    </types>
+    <version>36.0</version>
+</Package>

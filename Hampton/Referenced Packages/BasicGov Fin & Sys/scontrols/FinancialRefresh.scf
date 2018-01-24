@@ -1,0 +1,344 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html>
+<head>
+<title></title>
+<link href="/dCSS/Theme2/default/common.css" type="text/css" media="handheld,print,projection,screen,tty,tv" rel="stylesheet">
+<script src="/soap/ajax/8.0/connection.js"></script>
+<script id="clientEventHandlersJS" language="javascript">
+<!-- 
+
+var permitID = "{!MUSW__Permit__c.Id}";
+var complaintID = "{!MUSW__Complaint__c.Id}";
+var applicationID = "{!MUSW__Planning_Application__c.Id}";
+var licenseID = "{!MUSW__License1__c.Id}";
+var permit2ID = "{!MUSW__Permit2__c.Id}";
+var complaint2ID = "{!MUSW__Complaint2__c.Id}";
+var application2ID = "{!MUSW__Application2__c.Id}";
+var license2ID = "{!MUSW__License2__c.Id}";
+
+var parent = "";
+var parentId = "";
+
+//Use this function as the entry point for your DHTML and JAVASCRIPT processing
+function setup() {
+
+	isDebug = {!$User.MUSW__Debug__c};
+
+	if (isDebug) {
+		document.getElementById("divDebugHeader").style.display = "block";
+		document.getElementById("divDebug").style.display = "block";
+	}
+	
+	if ({!$User.MUSW__Step_Through__c}) {
+		//throw uncaught exception so can step through in managed client environment
+		throw "e";
+	}
+
+
+	if (permitID != "") {
+		var sqlModule = " MUSW__Permit__c = '" + permitID + "'";
+		parent = "MUSW__Permit__c";
+		parentId = permitID;
+	} else if (complaintID != "") {
+		var sqlModule = " MUSW__Complaint__c = '" + complaintID + "'";
+		parent = "MUSW__Complaint__c";
+		parentId = complaintID;
+	} else if (applicationID != "") {
+		var sqlModule = " MUSW__Planning_Application__c = '" + applicationID + "'";
+		parent = "MUSW__Planning_Application__c";
+		parentId = applicationID;
+	} else if (licenseID != "") {
+		var sqlModule = " MUSW__License1__c = '" + licenseID + "'";
+		parent = "MUSW__License1__c";
+		parentId = licenseID;
+	} else if (permit2ID != "") {
+		var sqlModule = " MUSW__Permit2__c = '" + permit2ID + "'";
+		parent = "MUSW__Permit2__c";
+		parentId = permit2ID;
+	} else if (complaint2ID != "") {
+		var sqlModule = " MUSW__Complaint2__c = '" + complaint2ID + "'";
+		parent = "MUSW__Complaint2__c";
+		parentId = complaint2ID;
+	} else if (application2ID != "") {
+		var sqlModule = " MUSW__Application2__c = '" + application2ID + "'";
+		parent = "MUSW__Application2__c";
+		parentId = application2ID;
+	} else if (license2ID != "") {
+		var sqlModule = " MUSW__License2__c = '" + license2ID + "'";
+		parent = "MUSW__License2__c";
+		parentId = license2ID;
+	} else 
+		var sqlModule = " 0=1"; //get nothing
+
+	if (parent == "MUSW__Permit__c" || parent == "MUSW__Permit2__c") {
+		//Calculate Permit Valuation based on total work item Value ($)
+		recordCounter = 0;
+		
+		// Grab nessesary tables from the server
+		var obj = sforce.connection.describeSObject("MUSW__Work_Item__c");
+		var tableNameFields = getFields ("MUSW__Work_Item__c", false);
+		var result = sforce.connection.query("SELECT " + tableNameFields + " FROM MUSW__Work_Item__c WHERE " + parent + " = '" + parentId + "'");
+		workItem = result.getArray("records");
+		
+		var totalValuation = 0;
+		var totalUnits=0;
+		
+		var itemValue=0;
+		var itemUnits=0;
+		
+		var itemUnit="";
+		
+		//total only work item values of square footage
+		//both valuation and sq are required when totaling valuation and area
+		if (workItem!=null){
+			if (workItem.length > 0) {
+				for (var i=0;i<workItem.length;i++) 
+				{
+					itemValue = workItem[i].getFloat("MUSW__Total_Item_Value__c");
+
+					itemUnit = workItem[i]["MUSW__Unit__c"];
+					if (itemUnit != null ) {
+						if ((itemValue != 0) && (itemUnit.substring(0,2)=="SQ")) {
+
+							itemUnits = ((nvl(workItem[i]["MUSW__Quantity__c"],1) -0 ) * (nvl(workItem[i]["MUSW__Quantity2__c"],1) - 0));
+							totalUnits = totalUnits + itemUnits; //total only sq footage that impacts valuations
+							totalValuation = totalValuation + itemValue; //total only sq footage valuations
+						} 
+					}
+				}
+			} else {
+				totalValuation = null;
+			}
+		} else {
+			totalValuation = null;
+		}
+	}
+	
+	//total fees
+	var result = sforce.connection.query("SELECT MUSW__Amount__c, MUSW__Amount_Waived__c FROM MUSW__Fee__c WHERE " +parent+" = '"+parentId+"'");
+	var fees = result.getArray("records");
+	var totalFees = 0;
+	var feeAmount = 0;
+	var feeAmountWaived = 0;
+	if (fees !=null){
+		if (fees.length > 0) {
+			for (var i=0;i<fees.length;i++) 
+			{
+				feeAmount = (fees[i]["MUSW__Amount__c"] != null) ? round(fees[i].getFloat("MUSW__Amount__c"),2) : 0 ;
+				feeAmountWaived = (fees[i]["MUSW__Amount_Waived__c"] != null) ? round(fees[i].getFloat("MUSW__Amount_Waived__c"),2) : 0 ;
+				
+				totalFees = totalFees + feeAmount - feeAmountWaived;
+			}
+		} else {
+			totalFees = null;
+		}
+	} else {
+		totalFees = null;
+	}
+	
+	totalFees = ( totalFees == 0 ? null : totalFees );
+	
+	
+	//JAW Review - though direct receipts are no longer used, this will blank out the total receipts field
+	//total non-refunded receipts
+	if (parent.indexOf('2') == -1) //only for old style parents
+	{
+		var result = sforce.connection.query("SELECT MUSW__Amount_Tendered__c FROM MUSW__Receipt__c where " +parent + " = '"+parentId+ "' and MUSW__Refunded__c = FALSE");
+		var receipts = result.getArray("records");
+		var totalReceipts = 0;
+		if (receipts !=null){
+			if (receipts.length > 0) {
+				for (var i=0;i<receipts.length;i++) 
+				{
+					if (receipts[i]["MUSW__Amount_Tendered__c"] != null) {
+						totalReceipts = round(totalReceipts + round (receipts[i].getFloat("MUSW__Amount_Tendered__c"),2),2);
+					}
+				}
+			} else {
+				totalReceipts = null;
+			}
+		} else {
+			totalReceipts = null;
+		}
+	}
+	
+	//total non-refunded payments
+	var result = sforce.connection.query("SELECT BGBK__Amount__c, BGBK__Refunded_Amount__c FROM BGBK__Payment__c where " +parent.replace("MUSW","BGBK") + " = '"+parentId+"'");
+	var payments = result.getArray("records");
+	var totalPayments = 0;
+	var paymentAmount = 0;
+	var refundAmount = 0;
+	if (payments !=null){
+		if (payments.length > 0) {
+			for (var i=0;i<payments.length;i++) 
+			{
+				if (payments[i]["BGBK__Amount__c"] != null) {
+					paymentAmount = round (payments[i].getFloat("BGBK__Amount__c"),2);
+				} else {
+					paymentAmount = 0;
+				}
+
+				if (payments[i]["BGBK__Refunded_Amount__c"] != null) {
+					refundAmount = round (payments[i].getFloat("BGBK__Refunded_Amount__c"),2);
+				} else {
+					refundAmount = 0;
+				}
+
+				totalPayments = round(totalPayments + paymentAmount - refundAmount,2);
+			}
+		} else {
+			totalPayments = null;
+		}
+	} else {
+		totalPayments = null;
+	}
+	
+	if (totalPayments == 0 ) {
+		totalPayments = null;
+	}
+	
+	var obj = sforce.connection.describeSObject(parent);
+	var tableNameFields = getFields (parent, true);
+	var result = sforce.connection.query("SELECT " + tableNameFields + " From "+parent+" WHERE Id = '"+parentId+"'"); 
+	var parentRec = result.getArray("records");
+
+	var description = "";
+
+
+	for (var ii=0;ii<parentRec.length;ii++) 
+	{	
+
+		if (totalValuation > 0 ) {
+			parentRec[ii]["MUSW__Valuation__c"] = totalValuation;
+			parentRec[ii]["MUSW__Construction_Area__c"] = totalUnits;
+			description = description + "Valuation updated to: " + formatCurrency(totalValuation) + "<br>Construction area to: " + totalUnits+"<br>";
+		}
+		
+		parentRec[ii]["MUSW__Total_Fees__c"] = totalFees;
+		description = description + "Total Fees updated to: " + formatCurrency(totalFees)+"<br>";
+		
+		parentRec[ii]["MUSW__Total_Payments__c"] = totalPayments;
+		description = description + "Total Payments updated to: " + formatCurrency(totalPayments)+"<br>";
+
+		//JAW Review - though direct receipts are no longer used, this will blank out the total receipts field
+		if (parent.indexOf('2') == -1) //only for old style parents
+		{
+			parentRec[ii]["MUSW__Total_Receipts__c"] = totalReceipts;
+			description = description + "Total Receipts updated to: " + formatCurrency(totalReceipts)+"<br>";
+		}
+		
+		sforce.connection.update(parentRec);
+	}
+
+	document.getElementById("response").innerHTML = description;
+	
+	document.forms.myform.close.disable = true;
+}
+
+function getFields(sobject, forUpdate) {
+	var fields = sforce.connection.describeSObject(sobject).fields;
+	var fieldList = "";
+	
+	if (!forUpdate) {
+		for (var i=0; i<fields.length; i++) {
+			fieldList = fieldList + fields[i].name + ", ";
+		}
+	} else {
+		fieldList = "Id, ";
+		for (var i=0; i<fields.length; i++) {
+			if (fields[i].updateable == true || fields[i].updateable == "true") {
+				fieldList = fieldList + fields[i].name + ", ";
+			}
+		}
+	}
+
+	//chop off last comma
+	fieldList = fieldList.substring(0, fieldList.length-2);
+	return fieldList;
+}
+
+function closeWindow() 
+{ 
+	opener.location.reload();
+	window.close();
+}
+
+formatCurrency = function(num) {
+	
+	if (num != null) {
+		num = num.toString().replace(/\$|\,/g,'');
+		if(isNaN(num)) {
+			num = "0";}
+		sign = (num == (num = Math.abs(num)));
+		num = Math.floor(num*100+0.50000000001);
+		cents = num%100;
+		num = Math.floor(num/100).toString();
+		if(cents<10) {
+			cents = "0" + cents;}
+		for (var i = 0; i < Math.floor((num.length-(1+i))/3); i++)
+		num = num.substring(0,num.length-(4*i+3))+','+ num.substring(num.length-(4*i+3));
+		return (((sign)?'':'-') + '$' + num + '.' + cents);
+	} else {
+		return "";
+	}
+}
+
+round = function(x,i) {
+	if (i == null) 
+		i = 0;
+	var result = Math.round(x*Math.pow(10,i))/Math.pow(10,i);
+ 	return result;
+}
+
+nvl = function(value, defaultvalue) {
+	if (value == null) {
+		return defaultvalue;
+	} else {
+		return value;
+	}
+}
+
+//-->
+</script>
+</head>
+<body onload="setup()" onblur="opener.location.reload();self.close();">
+<form id = "myform" name = "myform">
+<div class="lookup">
+<div class="bPageTitle">
+<div class="ptBody primaryPalette">
+<div class="content">
+<img src="/s.gif" alt="Lookup" class="pageTitleIcon">
+<h1>Refesh Financials</h1>
+</div>
+</div>
+</div>
+<table cellspacing = 0 cellpadding = 0 border = 0>
+<tr>
+<td width = 5>&nbsp;</td>
+<td width = 100%>&nbsp;</td>
+<td width = 5>&nbsp;</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td align = center><span id = "response" name = "response">Processing...</span></td>
+<td>&nbsp;</td>
+</tr> 
+<tr>
+<td>&nbsp;</td>
+<td align = center>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+</table>
+<br>
+<div class="pBody" align = center>
+<input id = "close" Name = "close" class="btn" type=button value="Close Window" onClick="opener.location.reload();window.close();" disable = "true"> 
+</div> 
+</div>
+</form> 
+<DIV id="divDebugHeader" style="display: none">
+	<hr/>
+	<b>Debug Mode</b>
+</DIV>
+<DIV id="divDebug" style="display: none"></DIV>
+</body>
+</html>

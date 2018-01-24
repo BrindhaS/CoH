@@ -1,0 +1,318 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <actionOverrides>
+        <actionName>Accept</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>CancelEdit</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>Clone</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>Delete</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>Edit</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>Follow</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>List</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>New</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>SaveEdit</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>Tab</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>View</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <allowInChatterGroups>false</allowInChatterGroups>
+    <compactLayoutAssignment>SYSTEM</compactLayoutAssignment>
+    <customHelp>HelpInterface</customHelp>
+    <deploymentStatus>Deployed</deploymentStatus>
+    <deprecated>false</deprecated>
+    <description>Reset-able numbers and formats for tracking anything visible to constituents</description>
+    <enableActivities>false</enableActivities>
+    <enableBulkApi>true</enableBulkApi>
+    <enableEnhancedLookup>true</enableEnhancedLookup>
+    <enableFeeds>false</enableFeeds>
+    <enableHistory>true</enableHistory>
+    <enableReports>false</enableReports>
+    <enableSearch>true</enableSearch>
+    <enableSharing>true</enableSharing>
+    <enableStreamingApi>true</enableStreamingApi>
+    <fields>
+        <fullName>Control__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <inlineHelpText>is the number issued permanent (ie. locked), or overwritten? If overwritten, can it be only done once more by a permanent number or overwritten many times over?</inlineHelpText>
+        <label>Control</label>
+        <picklist>
+            <picklistValues>
+                <fullName>Permanent</fullName>
+                <default>true</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Overwrite Once</fullName>
+                <default>false</default>
+            </picklistValues>
+            <sorted>false</sorted>
+        </picklist>
+        <required>false</required>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Picklist</type>
+    </fields>
+    <fields>
+        <fullName>Date_Field__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <inlineHelpText>blank/today, or name of a date field on record getting number. Value of date field will be used when formatting date masks eg. yymmdd. Date field must be not null</inlineHelpText>
+        <label>Date Field</label>
+        <length>30</length>
+        <required>false</required>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Text</type>
+        <unique>false</unique>
+    </fields>
+    <fields>
+        <fullName>Format__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>Number Format</label>
+        <length>30</length>
+        <required>true</required>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Text</type>
+        <unique>false</unique>
+    </fields>
+    <fields>
+        <fullName>Last_Manual_Entry__c</fullName>
+        <deprecated>false</deprecated>
+        <description>The last entered manual text. Use as reference when prompting for a new manual text/number. Used only when the track number format includes a {manual} prompt</description>
+        <externalId>false</externalId>
+        <inlineHelpText>The last manually-entered text when issuing this tracking number</inlineHelpText>
+        <label>Last Manual Entry</label>
+        <length>25</length>
+        <required>false</required>
+        <trackHistory>true</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Text</type>
+        <unique>false</unique>
+    </fields>
+    <fields>
+        <fullName>Last_Year_Issued__c</fullName>
+        <deprecated>false</deprecated>
+        <description>4 digit year when the last number was issued. Used by yearly reset to determine when to reset the number.</description>
+        <externalId>false</externalId>
+        <label>Last Year Issued</label>
+        <length>4</length>
+        <required>false</required>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Text</type>
+        <unique>false</unique>
+    </fields>
+    <fields>
+        <fullName>Mode__c</fullName>
+        <deprecated>false</deprecated>
+        <description>Automatic or User requested</description>
+        <externalId>false</externalId>
+        <inlineHelpText>Number is automatically issued or user requested</inlineHelpText>
+        <label>Mode</label>
+        <picklist>
+            <picklistValues>
+                <fullName>Request</fullName>
+                <default>true</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Auto</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Auto/Request</fullName>
+                <default>false</default>
+            </picklistValues>
+            <sorted>false</sorted>
+        </picklist>
+        <required>false</required>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Picklist</type>
+    </fields>
+    <fields>
+        <fullName>Next_Number__c</fullName>
+        <defaultValue>1</defaultValue>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>Next Number</label>
+        <precision>10</precision>
+        <required>true</required>
+        <scale>0</scale>
+        <trackHistory>true</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Number</type>
+        <unique>false</unique>
+    </fields>
+    <fields>
+        <fullName>Object__c</fullName>
+        <deprecated>false</deprecated>
+        <description>Name of object having sequence number field that gets set</description>
+        <externalId>false</externalId>
+        <label>Track Object</label>
+        <length>35</length>
+        <required>true</required>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Text</type>
+        <unique>false</unique>
+    </fields>
+    <fields>
+        <fullName>Sequence_Field__c</fullName>
+        <defaultValue>&quot;MUSW__Tracking_Number__c&quot;</defaultValue>
+        <deprecated>false</deprecated>
+        <description>Name of Sequence field that contains the sequence number to be updated</description>
+        <externalId>false</externalId>
+        <label>Sequence Field</label>
+        <length>35</length>
+        <required>true</required>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Text</type>
+        <unique>false</unique>
+    </fields>
+    <fields>
+        <fullName>Source_Type_Fields__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <inlineHelpText>The field(s) containing the Source Type value</inlineHelpText>
+        <label>Source Type Fields</label>
+        <picklist>
+            <picklistValues>
+                <fullName>MUSW__Type__c</fullName>
+                <default>true</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>MUSW__Permit_Type__c</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>MUSW__Status__c</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>MUSW__Current_Status__c</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Type__c</fullName>
+                <default>false</default>
+            </picklistValues>
+            <sorted>false</sorted>
+        </picklist>
+        <required>false</required>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>MultiselectPicklist</type>
+        <visibleLines>3</visibleLines>
+    </fields>
+    <fields>
+        <fullName>Type__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>Type</label>
+        <length>8</length>
+        <required>false</required>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Text</type>
+        <unique>false</unique>
+    </fields>
+    <fields>
+        <fullName>Yearly_Reset__c</fullName>
+        <defaultValue>true</defaultValue>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>Yearly Reset</label>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Checkbox</type>
+    </fields>
+    <label>Sequence Number</label>
+    <listViews>
+        <fullName>All</fullName>
+        <columns>NAME</columns>
+        <columns>Next_Number__c</columns>
+        <columns>Format__c</columns>
+        <columns>Object__c</columns>
+        <columns>Type__c</columns>
+        <columns>Control__c</columns>
+        <columns>Mode__c</columns>
+        <columns>UPDATEDBY_USER</columns>
+        <filterScope>Everything</filterScope>
+        <label>All</label>
+    </listViews>
+    <nameField>
+        <label>Source Type</label>
+        <trackHistory>false</trackHistory>
+        <type>Text</type>
+    </nameField>
+    <pluralLabel>Sequence Numbers</pluralLabel>
+    <searchLayouts>
+        <customTabListAdditionalFields>Next_Number__c</customTabListAdditionalFields>
+        <customTabListAdditionalFields>Format__c</customTabListAdditionalFields>
+        <customTabListAdditionalFields>Sequence_Field__c</customTabListAdditionalFields>
+        <customTabListAdditionalFields>Object__c</customTabListAdditionalFields>
+        <customTabListAdditionalFields>UPDATEDBY_USER</customTabListAdditionalFields>
+        <lookupDialogsAdditionalFields>Next_Number__c</lookupDialogsAdditionalFields>
+        <lookupDialogsAdditionalFields>Format__c</lookupDialogsAdditionalFields>
+        <lookupDialogsAdditionalFields>Sequence_Field__c</lookupDialogsAdditionalFields>
+        <lookupDialogsAdditionalFields>Object__c</lookupDialogsAdditionalFields>
+        <lookupDialogsAdditionalFields>UPDATEDBY_USER</lookupDialogsAdditionalFields>
+        <searchFilterFields>NAME</searchFilterFields>
+        <searchFilterFields>Next_Number__c</searchFilterFields>
+        <searchFilterFields>Format__c</searchFilterFields>
+        <searchFilterFields>Sequence_Field__c</searchFilterFields>
+        <searchFilterFields>Object__c</searchFilterFields>
+        <searchFilterFields>UPDATEDBY_USER</searchFilterFields>
+        <searchResultsAdditionalFields>Next_Number__c</searchResultsAdditionalFields>
+        <searchResultsAdditionalFields>Format__c</searchResultsAdditionalFields>
+        <searchResultsAdditionalFields>Sequence_Field__c</searchResultsAdditionalFields>
+        <searchResultsAdditionalFields>Object__c</searchResultsAdditionalFields>
+        <searchResultsAdditionalFields>UPDATEDBY_USER</searchResultsAdditionalFields>
+    </searchLayouts>
+    <sharingModel>ReadWrite</sharingModel>
+    <validationRules>
+        <fullName>Auto_Rule_requires_Source_Type_Field</fullName>
+        <active>true</active>
+        <errorConditionFormula>AND( ISPICKVAL(Mode__c, &apos;Auto&apos;), ISNULL(Source_Type_Fields__c),Name!=&apos;DEFAULT&apos;)</errorConditionFormula>
+        <errorMessage>Auto Numbers require at least one Source Type Field</errorMessage>
+    </validationRules>
+    <validationRules>
+        <fullName>Type_not_required_if_not_in_Format_mask</fullName>
+        <active>true</active>
+        <description>If type mask is not included in mask format do not fill in the Type field</description>
+        <errorConditionFormula>AND(NOT(CONTAINS(Format__c,&apos;{type}&apos;)) ,  Type__c != null)</errorConditionFormula>
+        <errorMessage>Type not required if Format mask does not contain &apos;{type}&apos;. Clear Type field</errorMessage>
+    </validationRules>
+</CustomObject>

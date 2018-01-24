@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Scontrol xmlns="http://soap.sforce.com/2006/04/metadata">
+    <contentSource>HTML</contentSource>
+    <description>List field names when a table is picked. Both table and field names can be copied to clipboard.</description>
+    <encodingKey>UTF-8</encodingKey>
+    <name>SchemaFieldLookup</name>
+    <supportsCaching>false</supportsCaching>
+</Scontrol>

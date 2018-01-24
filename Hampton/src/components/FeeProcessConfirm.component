@@ -1,0 +1,59 @@
+<apex:component controller="FeeProcessConfirmController" >
+    <apex:attribute name="receipts" description="This is the list of receipts." type="MUSW__Receipt__c[]" required="true" assignTo="{!rs}"/>
+    <apex:attribute name="processResultCode" description="This is the process result code code from Payment Gateway." type="String" required="false" assignTo="{!processResultCode}"/>
+    <apex:attribute name="cart" description="This is the value for the cart." type="Cart__c" required="true" assignTo="{!c}"/>
+    <apex:attribute name="fees" description="This is the value for the cart." type="MUSW__Fee__c[]" required="true" assignTo="{!fs}"/>
+    <apex:attribute name="emailAddress" description="This is the value for the email address." type="String" required="false" assignTo="{!email}"/>
+    
+    <apex:variable value="{!receipts[0]}" var="receipt"/>
+    <apex:pageBlock >
+        {!confirmMsg}
+        <br/><br/>
+        <apex:pageBlockSection columns="1" id="t">
+            <apex:panelGrid columns="2" style="width:300px;">
+                    <apex:outputlabel value="Order Status" for="status" />
+                    <apex:outputText value="{!processStatus}" id="status"/>
+                  
+                    <apex:outputlabel value="Total Amount " for="amount" />  
+                    <apex:outputText value="${!cart.Fee_Total__c}" id="amount"/>
+                  
+                    <apex:outputlabel value="Account" for="account"/>
+                    <apex:outputField value="{!cart.Account__c}" id="account"/>
+                   
+                    <apex:outputlabel value="Process Date" for="date"/>
+                    <apex:outputText style="width:200px;" value="{!cart.Process_DateTime__c}" id="date"/>
+            </apex:panelGrid>
+        </apex:pageBlockSection>
+        <hr/>
+        <apex:pageBlockSection columns="1" id="c">
+           <apex:repeat value="{!receipts}" var="receipt">
+                <apex:panelGrid columns="2" style="width:100%;" columnClasses="colstyle">
+                    <apex:outputlabel value="Payment" for="payment" />
+                    <apex:outputText value="{!receipt.MUSW__Payment_Method__c}" id="payment"/>
+                    
+                    <apex:outputlabel value="Card Number" for="confirmCreditCard" rendered="{!receipt.MUSW__Payment_Method__c = 'Credit Card'}"/>
+                    <apex:outputText value="{!receipt.Card_Number__c}" rendered="{!receipt.MUSW__Payment_Method__c = 'Credit Card'}" id="confirmCreditCard"/>
+                    
+                    <apex:outputlabel value="Reference Number" for="trans" rendered="{!receipt.MUSW__Payment_Method__c = 'Credit Card'}" />
+                    <apex:outputText value="{!receipt.MUSW__Payment_Gateway_Transaction_Number__c}" rendered="{!receipt.MUSW__Payment_Method__c = 'Credit Card'}" id="trans"/> 
+                    
+                    <apex:outputlabel value="Amount" for="amountr" />  
+                    <apex:outputText value="${!receipt.MUSW__Amount_Tendered__c}" id="amountr"/>
+                </apex:panelGrid>
+                 <br/>
+            </apex:repeat>
+            
+            <br/><br/>
+            <apex:outputPanel >
+                <apex:pageBlocktable value="{!fs}" var="f" style="width:100%">
+                   <apex:repeat value="{!$ObjectType.MUSW__Fee__c.FieldSets.BGBK__Fee_Basic}" var="ff">                
+                       <apex:column styleclass="feesStyle" headerValue="{!ff.label}">
+                            <apex:outputField value="{!f[ff]}" />
+                        </apex:column>                       
+                    </apex:repeat>              
+                </apex:pageBlocktable>
+            </apex:outputPanel>
+            
+        </apex:pageBlockSection>        
+    </apex:pageBlock> 
+</apex:component>

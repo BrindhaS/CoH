@@ -1,0 +1,1516 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <actionOverrides>
+        <actionName>Accept</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>CancelEdit</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>Clone</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>Delete</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>Edit</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>Follow</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>List</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>New</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>SaveEdit</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>Tab</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>View</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <allowInChatterGroups>false</allowInChatterGroups>
+    <compactLayoutAssignment>SYSTEM</compactLayoutAssignment>
+    <customHelp>HelpInterface</customHelp>
+    <deploymentStatus>Deployed</deploymentStatus>
+    <deprecated>false</deprecated>
+    <description>Breakdown of work and items on a Permit that impacts the total construction valuation</description>
+    <enableActivities>false</enableActivities>
+    <enableBulkApi>true</enableBulkApi>
+    <enableEnhancedLookup>true</enableEnhancedLookup>
+    <enableFeeds>false</enableFeeds>
+    <enableHistory>true</enableHistory>
+    <enableReports>true</enableReports>
+    <enableSearch>true</enableSearch>
+    <enableSharing>true</enableSharing>
+    <enableStreamingApi>true</enableStreamingApi>
+    <fieldSets>
+        <fullName>New_Edit_Work_Items</fullName>
+        <availableFields>
+            <field>CreatedById</field>
+            <isFieldManaged>false</isFieldManaged>
+            <isRequired>false</isRequired>
+        </availableFields>
+        <availableFields>
+            <field>LastModifiedById</field>
+            <isFieldManaged>false</isFieldManaged>
+            <isRequired>false</isRequired>
+        </availableFields>
+        <availableFields>
+            <field>Name</field>
+            <isFieldManaged>false</isFieldManaged>
+            <isRequired>false</isRequired>
+        </availableFields>
+        <availableFields>
+            <field>OwnerId</field>
+            <isFieldManaged>false</isFieldManaged>
+            <isRequired>false</isRequired>
+        </availableFields>
+        <availableFields>
+            <field>Total_Item_Value__c</field>
+            <isFieldManaged>false</isFieldManaged>
+            <isRequired>false</isRequired>
+        </availableFields>
+        <availableFields>
+            <field>Value_Per_Unit__c</field>
+            <isFieldManaged>false</isFieldManaged>
+            <isRequired>false</isRequired>
+        </availableFields>
+        <description>New/Edit Work Items</description>
+        <displayedFields>
+            <field>Modification__c</field>
+            <isFieldManaged>false</isFieldManaged>
+            <isRequired>false</isRequired>
+        </displayedFields>
+        <displayedFields>
+            <field>Type__c</field>
+            <isFieldManaged>false</isFieldManaged>
+            <isRequired>false</isRequired>
+        </displayedFields>
+        <displayedFields>
+            <field>Unit__c</field>
+            <isFieldManaged>false</isFieldManaged>
+            <isRequired>false</isRequired>
+        </displayedFields>
+        <displayedFields>
+            <field>Quantity2__c</field>
+            <isFieldManaged>false</isFieldManaged>
+            <isRequired>false</isRequired>
+        </displayedFields>
+        <displayedFields>
+            <field>Quantity__c</field>
+            <isFieldManaged>false</isFieldManaged>
+            <isRequired>false</isRequired>
+        </displayedFields>
+        <displayedFields>
+            <field>Ride_Name__c</field>
+            <isFieldManaged>false</isFieldManaged>
+            <isRequired>false</isRequired>
+        </displayedFields>
+        <displayedFields>
+            <field>Serial_Number__c</field>
+            <isFieldManaged>false</isFieldManaged>
+            <isRequired>false</isRequired>
+        </displayedFields>
+        <label>New/Edit Work Items</label>
+    </fieldSets>
+    <fields>
+        <fullName>Permit2__c</fullName>
+        <deleteConstraint>SetNull</deleteConstraint>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>Permit</label>
+        <referenceTo>Permit2__c</referenceTo>
+        <relationshipLabel>Work Items</relationshipLabel>
+        <relationshipName>Work_Items</relationshipName>
+        <required>false</required>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Lookup</type>
+    </fields>
+    <fields>
+        <fullName>Permit__c</fullName>
+        <deleteConstraint>SetNull</deleteConstraint>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>Permit</label>
+        <referenceTo>Permit__c</referenceTo>
+        <relationshipName>Work_Items</relationshipName>
+        <required>false</required>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Lookup</type>
+    </fields>
+    <fields>
+        <fullName>Quantity2__c</fullName>
+        <defaultValue>1</defaultValue>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <inlineHelpText>Area, length or volume of item</inlineHelpText>
+        <label>Size</label>
+        <precision>13</precision>
+        <required>false</required>
+        <scale>3</scale>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Number</type>
+        <unique>false</unique>
+    </fields>
+    <fields>
+        <fullName>Quantity__c</fullName>
+        <defaultValue>1</defaultValue>
+        <deprecated>false</deprecated>
+        <description>Count or Number of Items.</description>
+        <externalId>false</externalId>
+        <inlineHelpText>Number of Items. Used for &quot;EACH&quot; or for multiple dwellings eg. No. of Condo Units</inlineHelpText>
+        <label>Quantity</label>
+        <precision>6</precision>
+        <required>false</required>
+        <scale>1</scale>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Number</type>
+        <unique>false</unique>
+    </fields>
+    <fields>
+        <fullName>Total_Item_Value__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <formula>(NULLVALUE(Quantity__c,1) *  NULLVALUE(Quantity2__c,1) )  *  NULLVALUE(Value_Per_Unit__c,1)</formula>
+        <label>Total Item Value</label>
+        <precision>18</precision>
+        <required>false</required>
+        <scale>2</scale>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Currency</type>
+    </fields>
+    <fields>
+        <fullName>Type__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>Type</label>
+        <picklist>
+            <controllingField>Group__c</controllingField>
+            <picklistValues>
+                <fullName>10th Floor</fullName>
+                <default>false</default>
+                <controllingFieldValues>Building - Commercial</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>11th Floor</fullName>
+                <default>false</default>
+                <controllingFieldValues>Building - Commercial</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>12th Floor</fullName>
+                <default>false</default>
+                <controllingFieldValues>Building - Commercial</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>13th Floor</fullName>
+                <default>false</default>
+                <controllingFieldValues>Building - Commercial</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>14th Floor</fullName>
+                <default>false</default>
+                <controllingFieldValues>Building - Commercial</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>15th Floor</fullName>
+                <default>false</default>
+                <controllingFieldValues>Building - Commercial</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>16th Floor</fullName>
+                <default>false</default>
+                <controllingFieldValues>Building - Commercial</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>17th Floor</fullName>
+                <default>false</default>
+                <controllingFieldValues>Building - Commercial</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>18th Floor</fullName>
+                <default>false</default>
+                <controllingFieldValues>Building - Commercial</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>19th Floor</fullName>
+                <default>false</default>
+                <controllingFieldValues>Building - Commercial</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>1 Bdrm Units</fullName>
+                <default>false</default>
+                <controllingFieldValues>Building - Commercial</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>1st Floor</fullName>
+                <default>false</default>
+                <controllingFieldValues>Building - Commercial</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>1st Floor - Habitable</fullName>
+                <default>false</default>
+                <controllingFieldValues>Building - Residential</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>20th Floor</fullName>
+                <default>false</default>
+                <controllingFieldValues>Building - Commercial</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>2 Bdrm Units</fullName>
+                <default>false</default>
+                <controllingFieldValues>Building - Commercial</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>2nd Floor</fullName>
+                <default>false</default>
+                <controllingFieldValues>Building - Commercial</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>2nd Floor - Habitable</fullName>
+                <default>false</default>
+                <controllingFieldValues>Building - Residential</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>3 Bdrm Units</fullName>
+                <default>false</default>
+                <controllingFieldValues>Building - Commercial</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>3 Comp Sink</fullName>
+                <default>false</default>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>3rd Floor</fullName>
+                <default>false</default>
+                <controllingFieldValues>Building - Commercial</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>3rd Floor - Habitable</fullName>
+                <default>false</default>
+                <controllingFieldValues>Building - Residential</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>4th Floor</fullName>
+                <default>false</default>
+                <controllingFieldValues>Building - Commercial</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>5th Floor</fullName>
+                <default>false</default>
+                <controllingFieldValues>Building - Commercial</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>6th Floor</fullName>
+                <default>false</default>
+                <controllingFieldValues>Building - Commercial</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>7th Floor</fullName>
+                <default>false</default>
+                <controllingFieldValues>Building - Commercial</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>8th Floor</fullName>
+                <default>false</default>
+                <controllingFieldValues>Building - Commercial</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>9th Floor</fullName>
+                <default>false</default>
+                <controllingFieldValues>Building - Commercial</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>A.C. Units</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Accessory - Barns</fullName>
+                <default>false</default>
+                <controllingFieldValues>Encroachment</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Accessory - Carport</fullName>
+                <default>false</default>
+                <controllingFieldValues>Encroachment</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Accessory - Deck</fullName>
+                <default>false</default>
+                <controllingFieldValues>Encroachment</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Accessory - Detached Garage</fullName>
+                <default>false</default>
+                <controllingFieldValues>Encroachment</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Accessory - Gazebo</fullName>
+                <default>false</default>
+                <controllingFieldValues>Encroachment</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Accessory - Greenhouses</fullName>
+                <default>false</default>
+                <controllingFieldValues>Encroachment</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Accessory - Other</fullName>
+                <default>false</default>
+                <controllingFieldValues>Encroachment</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Accessory - Pool</fullName>
+                <default>false</default>
+                <controllingFieldValues>Encroachment</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Accessory - Retaining Wall</fullName>
+                <default>false</default>
+                <controllingFieldValues>Encroachment</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Accessory - Shed</fullName>
+                <default>false</default>
+                <controllingFieldValues>Encroachment</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Accessory - Stables</fullName>
+                <default>false</default>
+                <controllingFieldValues>Encroachment</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Accessory - Towers</fullName>
+                <default>false</default>
+                <controllingFieldValues>Encroachment</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Additional Circuits</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Appliances</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Back Flow Preventer</fullName>
+                <default>false</default>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Baseboard Units</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Basement - Habitable</fullName>
+                <default>false</default>
+                <controllingFieldValues>Building - Residential</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Bathtubs</fullName>
+                <default>false</default>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Bidet</fullName>
+                <default>false</default>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Blow Down Line</fullName>
+                <default>false</default>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Boiler - High Pressure</fullName>
+                <default>false</default>
+                <controllingFieldValues>Mechanical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Boiler - Low Pressure</fullName>
+                <default>false</default>
+                <controllingFieldValues>Mechanical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Building Drain</fullName>
+                <default>false</default>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Building Sewer</fullName>
+                <default>false</default>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Capacity</fullName>
+                <default>false</default>
+                <controllingFieldValues>Capacity</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Choose Record Type First</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Clean-Outs</fullName>
+                <default>false</default>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Clothes Washer</fullName>
+                <default>false</default>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Combo Heat/AC</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+                <controllingFieldValues>Mechanical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Communication Systems</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Compactor</fullName>
+                <default>false</default>
+                <controllingFieldValues>Mechanical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Connect Mobile Home</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Controllers</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Cooling</fullName>
+                <default>false</default>
+                <controllingFieldValues>Mechanical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Deck</fullName>
+                <default>false</default>
+                <controllingFieldValues>Building - Residential</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>De-Icing</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Dental Unit</fullName>
+                <default>false</default>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Dishwashers</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Disposal</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Domestic Sink</fullName>
+                <default>false</default>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Drop Inlet</fullName>
+                <default>false</default>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Dryers</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Dumbwaiters</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Elevators</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+                <controllingFieldValues>Mechanical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Emergency Lights</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Escalator</fullName>
+                <default>false</default>
+                <controllingFieldValues>Mechanical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Exhaust Fans</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Exit Lights</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Fire/Smoke Alarms</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Fire Hydrants</fullName>
+                <default>false</default>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Fire Pumps</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Fire Site</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Flammable Fuel Dispensers</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Floor Drain</fullName>
+                <default>false</default>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Floor Sink</fullName>
+                <default>false</default>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Fountains</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Fuel Supply Piping</fullName>
+                <default>false</default>
+                <controllingFieldValues>Mechanical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Furnaces</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>G.F.I.</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Garage</fullName>
+                <default>false</default>
+                <controllingFieldValues>Building - Residential</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Generators</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Heating</fullName>
+                <default>false</default>
+                <controllingFieldValues>Mechanical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Heat Pump</fullName>
+                <default>false</default>
+                <controllingFieldValues>Mechanical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Hoists</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Hood</fullName>
+                <default>false</default>
+                <controllingFieldValues>Mechanical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Hose Bib</fullName>
+                <default>false</default>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Hotel/Motel Sleeping Rooms</fullName>
+                <default>false</default>
+                <controllingFieldValues>Building - Commercial</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Hot Tubs</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Humidifier</fullName>
+                <default>false</default>
+                <controllingFieldValues>Mechanical</controllingFieldValues>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Ice Maker</fullName>
+                <default>false</default>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Impervious Surface - Driveway</fullName>
+                <default>false</default>
+                <controllingFieldValues>Encroachment</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Impervious Surface - Other</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Impervious Surface - Patio</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Incinerator</fullName>
+                <default>false</default>
+                <controllingFieldValues>Mechanical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Interceptor - Grease</fullName>
+                <default>false</default>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Interceptor - Oil</fullName>
+                <default>false</default>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Interceptor - Sand</fullName>
+                <default>false</default>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Irrigation</fullName>
+                <default>false</default>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Kiddie Rides</fullName>
+                <default>false</default>
+                <controllingFieldValues>Amusement</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Laundry Tray</fullName>
+                <default>false</default>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Lavatory</fullName>
+                <default>false</default>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Lift</fullName>
+                <default>false</default>
+                <controllingFieldValues>Mechanical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Light Fixtures</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Lofts</fullName>
+                <default>false</default>
+                <controllingFieldValues>Building - Commercial</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Main Building</fullName>
+                <default>false</default>
+                <controllingFieldValues>Encroachment</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Major Rides</fullName>
+                <default>false</default>
+                <controllingFieldValues>Amusement</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Manhole</fullName>
+                <default>false</default>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Meter Base</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Mini Split</fullName>
+                <default>false</default>
+                <controllingFieldValues>Mechanical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Mobile Units</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Motors</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Other - Electrical</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Other - Habitable</fullName>
+                <default>false</default>
+                <controllingFieldValues>Building - Residential</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Other - Non-Habitable - Uncovered</fullName>
+                <default>false</default>
+                <controllingFieldValues>Building - Residential</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Other - Non-Habitable - Under Roof</fullName>
+                <default>false</default>
+                <controllingFieldValues>Building - Residential</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Outlets</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Poles</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Porch - Uncovered</fullName>
+                <default>false</default>
+                <controllingFieldValues>Building - Residential</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Porch - Under Roof</fullName>
+                <default>false</default>
+                <controllingFieldValues>Building - Residential</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Process Piping</fullName>
+                <default>false</default>
+                <controllingFieldValues>Mechanical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Pumps</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Ranges, Ovens</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+                <controllingFieldValues>Mechanical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Refrig. Equipment</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+                <controllingFieldValues>Mechanical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Replace or Repair existing sign face</fullName>
+                <default>false</default>
+                <controllingFieldValues>Sign</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Roof Drain</fullName>
+                <default>false</default>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Septic Tank Connection</fullName>
+                <default>false</default>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Service Drop</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Service Sink</fullName>
+                <default>false</default>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Sewage Disposal System</fullName>
+                <default>false</default>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Sewer Ejector</fullName>
+                <default>false</default>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Shower</fullName>
+                <default>false</default>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Sign 10 sq ft or larger</fullName>
+                <default>false</default>
+                <controllingFieldValues>Sign</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Signs</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Sign under 10 sq ft</fullName>
+                <default>false</default>
+                <controllingFieldValues>Sign</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Single Phase Service - Increase</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Single Phase Service - New</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Smoke Vents</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Solar</fullName>
+                <default>false</default>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Spas</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Spectacular Rides</fullName>
+                <default>false</default>
+                <controllingFieldValues>Amusement</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Spray Booth</fullName>
+                <default>false</default>
+                <controllingFieldValues>Mechanical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Storm Sewer</fullName>
+                <default>false</default>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Sub Panels</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Sump Pump</fullName>
+                <default>false</default>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Swimming Pools</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>T.P. Valve</fullName>
+                <default>false</default>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Tank - Flammable Liquid</fullName>
+                <default>false</default>
+                <controllingFieldValues>Mechanical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Tank - LPG</fullName>
+                <default>false</default>
+                <controllingFieldValues>Mechanical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Tanks</fullName>
+                <default>false</default>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Temp Service</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Three Phase Service - Increase</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Three Phase Service - New</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Transformers</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Trench Drain - Exterior</fullName>
+                <default>false</default>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Trench Drain - Interior</fullName>
+                <default>false</default>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Underground</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Urinal</fullName>
+                <default>false</default>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Vacuum Breaker</fullName>
+                <default>false</default>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Vent</fullName>
+                <default>false</default>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Water Closet</fullName>
+                <default>false</default>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Water Distribution</fullName>
+                <default>false</default>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Water Heater - Electric</fullName>
+                <default>false</default>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Water Heater - Gas</fullName>
+                <default>false</default>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Water Heaters</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Water Heater - Solar</fullName>
+                <default>false</default>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Water Service</fullName>
+                <default>false</default>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Welding</fullName>
+                <default>false</default>
+                <controllingFieldValues>Electrical</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Well - Potable Water System</fullName>
+                <default>false</default>
+                <controllingFieldValues>Plumbing</controllingFieldValues>
+            </picklistValues>
+            <sorted>false</sorted>
+        </picklist>
+        <required>false</required>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Picklist</type>
+    </fields>
+    <fields>
+        <fullName>Unit__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>Unit</label>
+        <picklist>
+            <controllingField>Type__c</controllingField>
+            <picklistValues>
+                <fullName>SQ FT</fullName>
+                <default>true</default>
+                <controllingFieldValues>1 Bdrm Units</controllingFieldValues>
+                <controllingFieldValues>1st Floor - Habitable</controllingFieldValues>
+                <controllingFieldValues>2 Bdrm Units</controllingFieldValues>
+                <controllingFieldValues>2nd Floor - Habitable</controllingFieldValues>
+                <controllingFieldValues>3 Bdrm Units</controllingFieldValues>
+                <controllingFieldValues>3rd Floor - Habitable</controllingFieldValues>
+                <controllingFieldValues>Basement - Habitable</controllingFieldValues>
+                <controllingFieldValues>Deck</controllingFieldValues>
+                <controllingFieldValues>Fire Site</controllingFieldValues>
+                <controllingFieldValues>Garage</controllingFieldValues>
+                <controllingFieldValues>Lofts</controllingFieldValues>
+                <controllingFieldValues>Other - Habitable</controllingFieldValues>
+                <controllingFieldValues>Other - Non-Habitable - Uncovered</controllingFieldValues>
+                <controllingFieldValues>Other - Non-Habitable - Under Roof</controllingFieldValues>
+                <controllingFieldValues>Porch - Uncovered</controllingFieldValues>
+                <controllingFieldValues>Porch - Under Roof</controllingFieldValues>
+                <controllingFieldValues>Sign 10 sq ft or larger</controllingFieldValues>
+                <controllingFieldValues>Sign under 10 sq ft</controllingFieldValues>
+                <controllingFieldValues>Signs</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>FT</fullName>
+                <default>false</default>
+                <controllingFieldValues>Fuel Supply Piping</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>EACH</fullName>
+                <default>false</default>
+                <controllingFieldValues>3 Comp Sink</controllingFieldValues>
+                <controllingFieldValues>A.C. Units</controllingFieldValues>
+                <controllingFieldValues>Additional Circuits</controllingFieldValues>
+                <controllingFieldValues>Appliances</controllingFieldValues>
+                <controllingFieldValues>Back Flow Preventer</controllingFieldValues>
+                <controllingFieldValues>Baseboard Units</controllingFieldValues>
+                <controllingFieldValues>Bathtubs</controllingFieldValues>
+                <controllingFieldValues>Bidet</controllingFieldValues>
+                <controllingFieldValues>Blow Down Line</controllingFieldValues>
+                <controllingFieldValues>Boiler - High Pressure</controllingFieldValues>
+                <controllingFieldValues>Boiler - Low Pressure</controllingFieldValues>
+                <controllingFieldValues>Building Drain</controllingFieldValues>
+                <controllingFieldValues>Building Sewer</controllingFieldValues>
+                <controllingFieldValues>Clean-Outs</controllingFieldValues>
+                <controllingFieldValues>Clothes Washer</controllingFieldValues>
+                <controllingFieldValues>Combo Heat/AC</controllingFieldValues>
+                <controllingFieldValues>Communication Systems</controllingFieldValues>
+                <controllingFieldValues>Compactor</controllingFieldValues>
+                <controllingFieldValues>Controllers</controllingFieldValues>
+                <controllingFieldValues>Cooling</controllingFieldValues>
+                <controllingFieldValues>De-Icing</controllingFieldValues>
+                <controllingFieldValues>Dental Unit</controllingFieldValues>
+                <controllingFieldValues>Dishwashers</controllingFieldValues>
+                <controllingFieldValues>Disposal</controllingFieldValues>
+                <controllingFieldValues>Domestic Sink</controllingFieldValues>
+                <controllingFieldValues>Drop Inlet</controllingFieldValues>
+                <controllingFieldValues>Dryers</controllingFieldValues>
+                <controllingFieldValues>Dumbwaiters</controllingFieldValues>
+                <controllingFieldValues>Elevators</controllingFieldValues>
+                <controllingFieldValues>Emergency Lights</controllingFieldValues>
+                <controllingFieldValues>Escalator</controllingFieldValues>
+                <controllingFieldValues>Exhaust Fans</controllingFieldValues>
+                <controllingFieldValues>Exit Lights</controllingFieldValues>
+                <controllingFieldValues>Fire Hydrants</controllingFieldValues>
+                <controllingFieldValues>Fire Pumps</controllingFieldValues>
+                <controllingFieldValues>Fire/Smoke Alarms</controllingFieldValues>
+                <controllingFieldValues>Flammable Fuel Dispensers</controllingFieldValues>
+                <controllingFieldValues>Floor Drain</controllingFieldValues>
+                <controllingFieldValues>Floor Sink</controllingFieldValues>
+                <controllingFieldValues>Fountains</controllingFieldValues>
+                <controllingFieldValues>Fuel Supply Piping</controllingFieldValues>
+                <controllingFieldValues>Furnaces</controllingFieldValues>
+                <controllingFieldValues>G.F.I.</controllingFieldValues>
+                <controllingFieldValues>Generators</controllingFieldValues>
+                <controllingFieldValues>Heat Pump</controllingFieldValues>
+                <controllingFieldValues>Heating</controllingFieldValues>
+                <controllingFieldValues>Hoists</controllingFieldValues>
+                <controllingFieldValues>Hood</controllingFieldValues>
+                <controllingFieldValues>Hose Bib</controllingFieldValues>
+                <controllingFieldValues>Hot Tubs</controllingFieldValues>
+                <controllingFieldValues>Humidifier</controllingFieldValues>
+                <controllingFieldValues>Ice Maker</controllingFieldValues>
+                <controllingFieldValues>Incinerator</controllingFieldValues>
+                <controllingFieldValues>Interceptor - Grease</controllingFieldValues>
+                <controllingFieldValues>Interceptor - Oil</controllingFieldValues>
+                <controllingFieldValues>Interceptor - Sand</controllingFieldValues>
+                <controllingFieldValues>Irrigation</controllingFieldValues>
+                <controllingFieldValues>Kiddie Rides</controllingFieldValues>
+                <controllingFieldValues>Laundry Tray</controllingFieldValues>
+                <controllingFieldValues>Lavatory</controllingFieldValues>
+                <controllingFieldValues>Lift</controllingFieldValues>
+                <controllingFieldValues>Light Fixtures</controllingFieldValues>
+                <controllingFieldValues>Major Rides</controllingFieldValues>
+                <controllingFieldValues>Manhole</controllingFieldValues>
+                <controllingFieldValues>Meter Base</controllingFieldValues>
+                <controllingFieldValues>Mini Split</controllingFieldValues>
+                <controllingFieldValues>Mobile Units</controllingFieldValues>
+                <controllingFieldValues>Motors</controllingFieldValues>
+                <controllingFieldValues>Other - Electrical</controllingFieldValues>
+                <controllingFieldValues>Outlets</controllingFieldValues>
+                <controllingFieldValues>Poles</controllingFieldValues>
+                <controllingFieldValues>Process Piping</controllingFieldValues>
+                <controllingFieldValues>Pumps</controllingFieldValues>
+                <controllingFieldValues>Ranges, Ovens</controllingFieldValues>
+                <controllingFieldValues>Refrig. Equipment</controllingFieldValues>
+                <controllingFieldValues>Replace or Repair existing sign face</controllingFieldValues>
+                <controllingFieldValues>Roof Drain</controllingFieldValues>
+                <controllingFieldValues>Septic Tank Connection</controllingFieldValues>
+                <controllingFieldValues>Service Drop</controllingFieldValues>
+                <controllingFieldValues>Service Sink</controllingFieldValues>
+                <controllingFieldValues>Sewage Disposal System</controllingFieldValues>
+                <controllingFieldValues>Sewer Ejector</controllingFieldValues>
+                <controllingFieldValues>Shower</controllingFieldValues>
+                <controllingFieldValues>Smoke Vents</controllingFieldValues>
+                <controllingFieldValues>Spas</controllingFieldValues>
+                <controllingFieldValues>Spectacular Rides</controllingFieldValues>
+                <controllingFieldValues>Spray Booth</controllingFieldValues>
+                <controllingFieldValues>Storm Sewer</controllingFieldValues>
+                <controllingFieldValues>Sub Panels</controllingFieldValues>
+                <controllingFieldValues>Sump Pump</controllingFieldValues>
+                <controllingFieldValues>Swimming Pools</controllingFieldValues>
+                <controllingFieldValues>T.P. Valve</controllingFieldValues>
+                <controllingFieldValues>Transformers</controllingFieldValues>
+                <controllingFieldValues>Trench Drain - Exterior</controllingFieldValues>
+                <controllingFieldValues>Trench Drain - Interior</controllingFieldValues>
+                <controllingFieldValues>Underground</controllingFieldValues>
+                <controllingFieldValues>Urinal</controllingFieldValues>
+                <controllingFieldValues>Vacuum Breaker</controllingFieldValues>
+                <controllingFieldValues>Vent</controllingFieldValues>
+                <controllingFieldValues>Water Closet</controllingFieldValues>
+                <controllingFieldValues>Water Distribution</controllingFieldValues>
+                <controllingFieldValues>Water Heater - Electric</controllingFieldValues>
+                <controllingFieldValues>Water Heater - Gas</controllingFieldValues>
+                <controllingFieldValues>Water Heater - Solar</controllingFieldValues>
+                <controllingFieldValues>Water Heaters</controllingFieldValues>
+                <controllingFieldValues>Water Service</controllingFieldValues>
+                <controllingFieldValues>Well - Potable Water System</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>1K BTU</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>FLAT</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>GAL</fullName>
+                <default>false</default>
+                <controllingFieldValues>Swimming Pools</controllingFieldValues>
+                <controllingFieldValues>Tank - Flammable Liquid</controllingFieldValues>
+                <controllingFieldValues>Tank - LPG</controllingFieldValues>
+                <controllingFieldValues>Tanks</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>HP</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>$</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>100 LI</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>1K CFM</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>AMP</fullName>
+                <default>false</default>
+                <controllingFieldValues>Additional Circuits</controllingFieldValues>
+                <controllingFieldValues>Single Phase Service - Increase</controllingFieldValues>
+                <controllingFieldValues>Single Phase Service - New</controllingFieldValues>
+                <controllingFieldValues>Temp Service</controllingFieldValues>
+                <controllingFieldValues>Three Phase Service - Increase</controllingFieldValues>
+                <controllingFieldValues>Three Phase Service - New</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>CU YD</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>SYSTEM</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>DEVICE</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>LIN FT</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>HEADS</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>HOUR</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>INCH</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>QTY</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>SQ YD</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Sq Feet</fullName>
+                <default>false</default>
+                <controllingFieldValues>Capacity</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>SQ FT in RPA/IDA</fullName>
+                <default>false</default>
+                <controllingFieldValues>Accessory - Barns</controllingFieldValues>
+                <controllingFieldValues>Accessory - Carport</controllingFieldValues>
+                <controllingFieldValues>Accessory - Deck</controllingFieldValues>
+                <controllingFieldValues>Accessory - Detached Garage</controllingFieldValues>
+                <controllingFieldValues>Accessory - Gazebo</controllingFieldValues>
+                <controllingFieldValues>Accessory - Greenhouses</controllingFieldValues>
+                <controllingFieldValues>Accessory - Other</controllingFieldValues>
+                <controllingFieldValues>Accessory - Pool</controllingFieldValues>
+                <controllingFieldValues>Accessory - Retaining Wall</controllingFieldValues>
+                <controllingFieldValues>Accessory - Shed</controllingFieldValues>
+                <controllingFieldValues>Accessory - Stables</controllingFieldValues>
+                <controllingFieldValues>Accessory - Towers</controllingFieldValues>
+                <controllingFieldValues>Impervious Surface - Driveway</controllingFieldValues>
+                <controllingFieldValues>Impervious Surface - Other</controllingFieldValues>
+                <controllingFieldValues>Impervious Surface - Patio</controllingFieldValues>
+                <controllingFieldValues>Main Building</controllingFieldValues>
+            </picklistValues>
+            <picklistValues>
+                <fullName>SEATS</fullName>
+                <default>false</default>
+                <controllingFieldValues>Capacity</controllingFieldValues>
+                <controllingFieldValues>Clean-Outs</controllingFieldValues>
+            </picklistValues>
+            <sorted>false</sorted>
+        </picklist>
+        <required>false</required>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Picklist</type>
+    </fields>
+    <fields>
+        <fullName>Value_Per_Unit__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>Value Per Unit</label>
+        <precision>12</precision>
+        <required>false</required>
+        <scale>2</scale>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Currency</type>
+    </fields>
+    <label>Work Item</label>
+    <nameField>
+        <displayFormat>{0000000}</displayFormat>
+        <label>Number</label>
+        <trackHistory>false</trackHistory>
+        <type>AutoNumber</type>
+    </nameField>
+    <pluralLabel>Work Items</pluralLabel>
+    <recordTypeTrackHistory>false</recordTypeTrackHistory>
+    <recordTypes>
+        <fullName>All</fullName>
+        <active>true</active>
+        <label>All</label>
+        <picklistValues>
+            <picklist>Type__c</picklist>
+            <values>
+                <fullName>Choose Record Type First</fullName>
+                <default>true</default>
+            </values>
+        </picklistValues>
+        <picklistValues>
+            <picklist>Unit__c</picklist>
+            <values>
+                <fullName>%24</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>100 LI</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>1K BTU</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>1K CFM</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>AMP</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>CU YD</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>DEVICE</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>EACH</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>FLAT</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>FT</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>GAL</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>HEADS</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>HOUR</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>HP</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>INCH</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>LIN FT</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>QTY</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>SQ FT</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>SQ YD</fullName>
+                <default>false</default>
+            </values>
+            <values>
+                <fullName>SYSTEM</fullName>
+                <default>false</default>
+            </values>
+        </picklistValues>
+    </recordTypes>
+    <searchLayouts>
+        <customTabListAdditionalFields>Type__c</customTabListAdditionalFields>
+        <customTabListAdditionalFields>Unit__c</customTabListAdditionalFields>
+        <customTabListAdditionalFields>Quantity__c</customTabListAdditionalFields>
+        <customTabListAdditionalFields>Value_Per_Unit__c</customTabListAdditionalFields>
+        <customTabListAdditionalFields>Total_Item_Value__c</customTabListAdditionalFields>
+        <lookupDialogsAdditionalFields>Type__c</lookupDialogsAdditionalFields>
+        <lookupDialogsAdditionalFields>Unit__c</lookupDialogsAdditionalFields>
+        <lookupDialogsAdditionalFields>Quantity__c</lookupDialogsAdditionalFields>
+        <lookupDialogsAdditionalFields>Value_Per_Unit__c</lookupDialogsAdditionalFields>
+        <lookupDialogsAdditionalFields>Total_Item_Value__c</lookupDialogsAdditionalFields>
+        <searchFilterFields>NAME</searchFilterFields>
+        <searchFilterFields>Type__c</searchFilterFields>
+        <searchFilterFields>Unit__c</searchFilterFields>
+        <searchFilterFields>Quantity__c</searchFilterFields>
+        <searchFilterFields>Value_Per_Unit__c</searchFilterFields>
+        <searchFilterFields>Total_Item_Value__c</searchFilterFields>
+        <searchResultsAdditionalFields>Type__c</searchResultsAdditionalFields>
+        <searchResultsAdditionalFields>Unit__c</searchResultsAdditionalFields>
+        <searchResultsAdditionalFields>Quantity__c</searchResultsAdditionalFields>
+        <searchResultsAdditionalFields>Value_Per_Unit__c</searchResultsAdditionalFields>
+    </searchLayouts>
+    <sharingModel>Read</sharingModel>
+    <webLinks>
+        <fullName>Add_Multiple_Work_Items</fullName>
+        <availability>online</availability>
+        <displayType>massActionButton</displayType>
+        <encodingKey>UTF-8</encodingKey>
+        <linkType>url</linkType>
+        <masterLabel>New/Edit Work Items</masterLabel>
+        <openType>replace</openType>
+        <protected>false</protected>
+        <requireRowSelection>true</requireRowSelection>
+        <url>/apex/musw__bulkAddEdit?id={!Permit__c.Id}{!Permit2__c.Id}&amp;subject=Work_Item&amp;minrows=5</url>
+    </webLinks>
+</CustomObject>

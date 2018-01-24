@@ -1,0 +1,37 @@
+<apex:page controller="MUSW.RecentItemController" sidebar="false" showHeader="false" >
+    <apex:stylesheet value="/sCSS/Theme3/allCustom.css"/><!--custom object themes-->
+    <apex:stylesheet value="/sCSS/Theme3/default/common.css"/>
+    <apex:stylesheet value="/sCSS/Theme3/dStandard.css"/><!--SF standard object themes-->
+    
+    <apex:form id="frm1" >
+        <apex:repeat value="{!recentItems}" var="item" id="lst1">
+            <!--<div onmouseover="MRUHoverDetail.getHover('a0N60000000pNRM').show();" onmouseout="MRUHoverDetail.getHover('a0N60000000pNRM').hide();" onfocus="MRUHoverDetail.getHover('a0N60000000pNRM').show();" onblur="MRUHoverDetail.getHover('a0N60000000pNRM').hide();" class="Custom42Block">
+                <div id="mrua0N60000000pNRM" class="mruItem"><a title="[Alt+1]" accesskey="1" class="Custom42Mru" href="/a0N60000000pNRM"><img title="Project: PR-000692" class="mruIcon" alt="Project: PR-000692" src="/s.gif"></img><span class="mruText">PR-000692</span></a>
+                </div>
+            </div>-->
+            <!--<div onmouseover="MRUHoverDetail.getHover('a0N60000000pNRM').show();" onmouseout="MRUHoverDetail.getHover('a0N60000000pNRM').hide();" onfocus="MRUHoverDetail.getHover('a0N60000000pNRM').show();" onblur="MRUHoverDetail.getHover('a0N60000000pNRM').hide();" class="Custom42Block">
+                
+            </div>-->
+            <div id="mrua{!item.Record_Id__c}" class="mruItem"><a title="{!item.label__c}: {!item.Name}" accesskey="1" class="{!item.style__c}Mru" href="/{!item.Record_Id__c}" target="_parent"><img title="{!item.label__c}: {!item.Name}" class="mruIcon" alt="{!item.label__c}: {!item.Name}" src="/s.gif"></img><span class="mruText">{!item.Name}</span></a>
+            </div>
+        </apex:repeat>
+        <!--https://na4.salesforce.com/a006000000Ez1Cq/m?isAjaxRequest=1&amp;nocache=1284412468943-->
+    
+        <apex:actionFunction name="nowPushURL" action="{!pushURL}" immediate="true" rerender="frm1">
+            <apex:param name="pCurrentURL" assignTo="{!currentURL}" value="" />
+        </apex:actionFunction>
+    </apex:form>
+    <BODY onLoad="init()" style="background: #CFEEF8;"/>
+    <script type="text/javascript">
+    
+    var detailURL= window.document.referrer;
+    detailURL = detailURL.substring(detailURL.lastIndexOf('/')+1);
+    function init() {
+        if ((detailURL > "" ) && (detailURL.length == 15)) {
+            //alert("pushing "+detailURL );
+            nowPushURL(detailURL);
+            
+        }
+    }
+    </script>
+</apex:page>

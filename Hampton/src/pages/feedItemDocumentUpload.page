@@ -1,0 +1,10 @@
+<apex:page controller="feedItemDocumentUploadController">
+    <apex:messages />
+    <apex:form >
+        <apex:sectionHeader title="Submission" subtitle="{!submissionTitle}"/>
+        <apex:pageBlock title="Upload Submission">
+            <apex:inputFile fileName="{!att.Name}" value="{!att.Body}" contentType="att.ContentType"/>
+            <apex:commandButton value="Upload" action="{!upload}"/>
+        </apex:pageBlock>
+    </apex:form>
+</apex:page>

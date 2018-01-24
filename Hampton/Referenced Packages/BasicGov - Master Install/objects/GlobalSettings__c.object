@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <customSettingsType>List</customSettingsType>
+    <enableEnhancedLookup>false</enableEnhancedLookup>
+    <enableFeeds>false</enableFeeds>
+    <fields>
+        <fullName>Attachment_Delete_Access__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <inlineHelpText>List of user names (comma separated) allowed to delete attachments. Leave blank if anyone is allowed to delete.</inlineHelpText>
+        <label>Attachment Delete Access</label>
+        <length>255</length>
+        <required>false</required>
+        <trackTrending>false</trackTrending>
+        <type>Text</type>
+        <unique>false</unique>
+    </fields>
+    <fields>
+        <fullName>ContactDistinctFields__c</fullName>
+        <defaultValue>&apos;lastname, mailingstreet&apos;</defaultValue>
+        <deprecated>false</deprecated>
+        <description>Determines which loaded contacts already exist in BG so no duplicates occur</description>
+        <externalId>false</externalId>
+        <inlineHelpText>Contact fields determining record uniqueness. Fieldname list (comma delimited)
+eg. lastname, mailingstreet</inlineHelpText>
+        <label>ContactDistinctFields</label>
+        <length>255</length>
+        <required>false</required>
+        <trackTrending>false</trackTrending>
+        <type>Text</type>
+        <unique>false</unique>
+    </fields>
+    <fields>
+        <fullName>Organization_Country__c</fullName>
+        <defaultValue>&quot;US&quot;</defaultValue>
+        <deprecated>false</deprecated>
+        <description>Allows Apex to reference the org&apos;s country without having to query the Organization table</description>
+        <externalId>false</externalId>
+        <inlineHelpText>eg US, CANADA, etc.</inlineHelpText>
+        <label>Organization Country</label>
+        <length>30</length>
+        <required>false</required>
+        <trackTrending>false</trackTrending>
+        <type>Text</type>
+        <unique>false</unique>
+    </fields>
+    <label>MUSW Global Settings</label>
+    <visibility>Public</visibility>
+</CustomObject>

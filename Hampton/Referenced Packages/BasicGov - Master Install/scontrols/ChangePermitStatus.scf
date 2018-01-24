@@ -1,0 +1,208 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html>
+	<head>
+		<title>Change Permit Status</title>
+		<link href="/dCSS/Theme2/default/common.css" type="text/css" media="handheld,print,projection,screen,tty,tv" rel="stylesheet">
+	    <script type="text/javascript" src="/js/functions.js"></script>
+	    <script src="/soap/ajax/8.0/connection.js"></script>
+	    {!INCLUDE($SControl.lgmCommon)}
+	    {!INCLUDE($SControl.lgmDataContext)}
+	    {!INCLUDE($SControl.lgmAutomationEngine)}
+		<script id="clientEventHandlersJS" language="javascript">		
+<!--JAW Review this code is deprecated and not needed anymore-->
+<!-- 
+
+var permit = null;
+var pickList = null;
+var fieldValue = "";
+var expiryDate;
+var issueDate;
+var dformat; 
+var l_textField = "";
+var alertCode = 0;
+
+function setup() { 
+
+	var uInfo = sforce.connection.getUserInfo();  // has the locale
+	dformat = lgm.date.parseDateFormat("{!Today}", uInfo.userLocale);
+	
+	var obj = sforce.connection.describeSObject("MUSW__Permit__c");			
+	pickList = document.getElementById('currentStatus');
+
+	result = sforce.connection.query("SELECT Id, MUSW__Current_Status__c, MUSW__Permit_Type__c, MUSW__Work_Type__c, MUSW__Use_Type__c, MUSW__Expiration_Date__c, MUSW__AlertCode__c FROM MUSW__Permit__c WHERE Id = '{!Permit__c.Id}'");
+	permit = result.getArray("records");
+	
+	if (permit.length > 0) {
+		fieldValue = permit[0]["MUSW__Current_Status__c"];
+		expiryDate = new Date(permit[0]["MUSW__Expiration_Date__c"]);	
+		issueDate = new Date(permit[0]["MUSW__Issued_Date__c"]);
+		alertCode = permit[0]["MUSW__AlertCode__c"];
+
+		for (var i=0;i<obj.fields.length;i++) {
+			if (obj.fields[i].name == "MUSW__Current_Status__c") {
+				for (var ii=0;ii<obj.fields[i].picklistValues.length;ii++) {
+					pickList[ii] = new Option(obj.fields[i].picklistValues[ii].label);
+					pickList[ii].label = obj.fields[i].picklistValues[ii].label;
+					pickList[ii].value = obj.fields[i].picklistValues[ii].value;
+						
+					if (pickList[ii].value == fieldValue)
+						pickList[ii].selected = true;				
+				}
+			}
+		}
+		currentStatus_onchange();	
+	}	
+}
+
+function saveResult() 
+{	
+	
+	var permitRecordError;
+	var permitStatusError;
+	var saveResult = true;
+
+	// Validation Branching
+	if (permit[0] == null) {
+		saveResult = false;
+	} else {
+		saveResult = true;
+	}
+	
+	// Save Results
+	if (saveResult) {
+		permit[0]["MUSW__Current_Status__c"] = pickList[pickList.selectedIndex].value;
+		if (pickList[pickList.selectedIndex].value == "Issued") {
+			expiryDate = lgm.date.formatDate (new Date (document.getElementById ('numDaysExpiry').value), dformat)
+			issueDate = lgm.date.formatDate (new Date (document.getElementById ('numDays').value), dformat)
+			permit[0]["MUSW__Expiration_Date__c"] = new Date(expiryDate);
+			permit[0]["MUSW__Issued_Date__c"] = new Date(issueDate);
+		}
+		else { 
+			permit[0]["MUSW__Issued_Date__c"] = null;
+			permit[0]["MUSW__Expiration_Date__c"] = null; 
+		}
+		
+		if (pickList[pickList.selectedIndex].value == "Finaled") {
+			permit[0]["MUSW__DateCompleted__c"] = new Date("{!Today}");
+		}
+		
+		permitRecordError = sforce.connection.update(permit);	
+	}	
+
+	//run rules engine if requested
+	if (document.getElementById ('runAutomation').checked) {
+		//turn on debug
+		//lgm.debug(document.getElementById("divDebug"));
+		window.status = "Running Automation...";
+		lgmAutomationEngine.parentTable = "MUSW__Permit__c";
+		lgmAutomationEngine.parentName = "Permit";
+		lgmAutomationEngine.recordID = "{!Permit__c.Id}";
+		lgmAutomationEngine.continueFunc = saveResult2;
+		lgmAutomationEngine.setApplicableRules();
+	} else {
+		opener.location.reload();
+		window.close();
+	}
+}
+
+//send changes to host
+function saveResult2() 
+{	 
+	lgmAutomationEngine.saveResult();
+	opener.location.reload();
+	window.close();
+}
+
+function currentStatus_onchange() {
+
+	if (alertCode > 0) {
+		var x = window.confirm("This permit is under alert. \nAre you sure you want to change the permit status?"); 
+		if (!x) { 
+			window.close();
+			return true;		
+		}
+	}
+	
+	var expiryDateString = "";
+	var issuedDateString = "";
+	
+	if (expiryDate.getYear() > 70)
+		expiryDateString = lgm.date.formatDate (expiryDate, dformat);
+	else
+		expiryDateString = lgm.date.formatDate (lgm.date.addDays(new Date(), 180), dformat);
+		
+	if (pickList[pickList.selectedIndex].value == "Issued") {
+		issuedDateString = lgm.date.formatDate (new Date(), dformat);
+		document.getElementById('numDays').value = issuedDateString;
+		document.getElementById('numDays').disabled = false;
+		document.getElementById('numDaysExpiry').value = expiryDateString;
+		document.getElementById('numDaysExpiry').disabled = false;
+	}
+	else {
+		document.getElementById('numDays').value = "";
+		document.getElementById('numDays').disabled = true;
+		document.getElementById('numDaysExpiry').value = "";
+		document.getElementById('numDaysExpiry').disabled = true;
+	}
+}
+
+//-->
+		</script>
+	</head>
+	<body onload="setup();" class=" LookupSearchFrame">	
+		<form id = "myform" name = "myform">
+			<div class="lookup">
+				<div class="bPageTitle">
+					<div class="ptBody primaryPalette">
+						<div class="content">
+							<img src="/s.gif" alt="Lookup"  class="pageTitleIcon">
+							<h1>Change Status</h1>
+						</div>
+					</div>
+				</div>
+				<table cellspacing = 0 cellpadding = 0 border = 0 class="detailList">
+					<tr>
+						<td width = 40%></td>
+						<td width = 60%></td>
+					</tr>
+					<tr>
+						<td style = "padding:2px 10px 2px 2px; text-align:right; font-size: 8pt; font-weight: bold; color:#333;">Permit Status</td>
+						<td style = "padding:2px 10px 2px 2px; text-align:left; font-size: 8pt; font-weight: bold; color:#333;"><select id = "currentStatus" name = "currentStatus" onchange="currentStatus_onchange()"></select></td>
+					</tr>
+					<tr>
+						<td style = "padding:2px 10px 2px 2px; text-align:right; font-size: 8pt; font-weight: bold; color:#333;">Issued Date</td>
+						<td style = "padding:2px 10px 2px 2px; text-align:left; font-size: 8pt; color:#333;" valign="top">
+							<input value="" tabindex="3" id="numDays" size="12" name="numDays" type="text" readonly="readonly">
+							<a href="javascript:openPopupFocus('/home/calendar.jsp?form=myform&field=numDays&mo=0', '_blank', 186, 170, 'width=186,height=170,resizable=yes,toolbar=no,status=no,scrollbars=no,menubar=no,directories=no,location=no,dependant=yes', true, true);" class="datePicker" tabindex="3" title="Pick A Date (New Window)" onclick="setLastMousePosition(event)" id="numDaysPopCal">
+								<img src="/s.gif" alt="Pick A Date (New Window)" class="datePickerIcon" height="100%">
+							</a>
+							<span class="dateFormat">[&nbsp;<a href="#" onclick="var inputField = getElementByIdCS('numDays'); if (inputField && inputField.disabled == false) { inputField.value = '{!Today}'; if (inputField.onchange) {inputField.onchange();}}return false;">{!Today}</a>&nbsp;]</span>
+						</td>
+					</tr>
+					<tr>
+						<td style = "padding:2px 10px 2px 2px; text-align:right; font-size: 8pt; font-weight: bold; color:#333;">Expiry Date</td>
+						<td style = "padding:2px 10px 2px 2px; text-align:left; font-size: 8pt; color:#333;" valign="top">
+							<input value="" tabindex="3" id="numDaysExpiry" size="12" name="numDaysExpiry" type="text" readonly="readonly">
+							<a href="javascript:openPopupFocus('/home/calendar.jsp?form=myform&field=numDaysExpiry&mo=0', '_blank', 186, 170, 'width=186,height=170,resizable=yes,toolbar=no,status=no,scrollbars=no,menubar=no,directories=no,location=no,dependant=yes', true, true);" class="datePicker" tabindex="3" title="Pick A Date (New Window)" onclick="setLastMousePosition(event)" id="numDaysPopCal">
+								<img src="/s.gif" alt="Pick A Date (New Window)" class="datePickerIcon" height="100%">
+							</a>
+							<span class="dateFormat">[&nbsp;<a href="#" onclick="var inputField = getElementByIdCS('numDaysExpiry'); if (inputField && inputField.disabled == false) { inputField.value = '{!Today}'; if (inputField.onchange) {inputField.onchange();}}return false;">{!Today}</a>&nbsp;]</span>
+						</td>
+					</tr>	
+					<tr>
+						<td style = "padding:2px 10px 2px 2px; text-align:right; font-size: 8pt; font-weight: bold; color:#333;">Run Automation</td>
+						<td>
+							<input name="runAutomation" type="checkbox" id="runAutomation" value="" >
+						</td>
+					</tr>			
+				</table>
+				<br>
+				<div class="pBody" align = center>
+					<input id = "submit" Name = "submit" class="btn" type=button value="Save" onClick="javascript:saveResult();" disable = "true">
+					<input id = "cancel" Name = "cancel" class="btn" type=button value="Cancel" onClick="javascript:window.close();" disable = "true">
+				</div>				
+			</div>	
+			<DIV id="divDebug"></DIV>		
+		</form>	
+	</body>
+<!-- {!Sequence_Number__c.Next_Number__c} --> </html>

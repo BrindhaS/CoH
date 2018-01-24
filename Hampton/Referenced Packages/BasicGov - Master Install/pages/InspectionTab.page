@@ -1,0 +1,481 @@
+<apex:page standardController="MUSW__Inspection__c" extensions="MUSW.InspectionController" recordSetVar="c" tabStyle="MUSW__Inspection__c" id="p" showHeader="{!!printMode}" sidebar="{!!printMode}">
+    
+    <!------ MAP SCRIPT ------>
+    <!--script type="text/javascript" src="http://gettingthere.imbresources.org/assets/js/arcgislink_compressed.js"/ Used for ESRI layers on Google map -->
+    <!-- COMMENTED OUT FOR REMOVING MAP ***
+    <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?sensor=false"/>
+    <script type="text/javascript" src="{!$Resource.ArcGISGoogleMapsV3Lib}"/>
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"/>
+    <script type="text/javascript" src="/soap/ajax/24.0/connection.js"/>
+    <script type="text/javascript">
+    var map;
+    var tabs;
+    var showMap;
+    var selq;
+    
+    function init() {
+        if (!showMap) {
+            selq = '{!$CurrentPage.parameters.queries}';
+            showMap = ({!showMap}) ? false : true;
+            toggleMap();
+        }
+    }
+    
+    function setupMap() {
+        var geocoder;
+        var waypoints = [];
+        
+        var myOptions = {
+            zoom: 18,
+            mapTypeId: google.maps.MapTypeId.ROADMAP,
+            mapTypeControl: false
+        }
+        
+        // instantiate map
+        map = new google.maps.Map(document.getElementById("map"), myOptions);
+        map.setCenter(new google.maps.LatLng(locs[0].lat, locs[0].long));
+        
+        // populate waypoints
+        for (var i in locs) {
+            waypoints.push( {location: new google.maps.LatLng(locs[i].lat, locs[i].long), stopover: true} );
+        }
+        
+        if (showDirections) {
+            // setup routing service
+            var ds = new google.maps.DirectionsService();
+            var directionsDisplay = new google.maps.DirectionsRenderer();
+            directionsDisplay.setMap(map);
+            
+            // setup geocoder
+            geocoder = new google.maps.Geocoder();
+
+            // geocode org address and display route
+            var orgAddress = "{!JSENCODE(orgAddress)}";
+            var orgLatLng;
+            geocoder.geocode( { 'address': orgAddress}, function(results, status) {
+                if (status == google.maps.GeocoderStatus.OK) {
+                    orgLatLng = results[0].geometry.location;
+                } else {
+                    alert("Geocode of the organization was unsuccessful: " + status);
+                }
+                
+                var request = {
+                    origin: orgLatLng,
+                    destination: orgLatLng,
+                    waypoints: waypoints,
+                    travelMode: google.maps.DirectionsTravelMode.DRIVING
+                };
+                
+                ds.route(request, function(response, status) {
+                    if (status == google.maps.DirectionsStatus.OK) {
+                        
+                        directionsDisplay.setOptions( { suppressMarkers: true } );
+                        directionsDisplay.setDirections(response);
+                        replaceMarkers(response, locs);
+                        directionsDisplay.setPanel(document.getElementById("steps"));
+                    }
+                });
+            });
+        }
+        else {
+            createMarkers(locs);
+        }
+        
+        // setup queries
+        setupLayers();
+        
+        var msurl = "http://sampleserver1.arcgisonline.com/ArcGIS/rest/services/Louisville/LOJIC_LandRecords_Louisville/MapServer";
+        var msurl2 = "http://sampleserver1.arcgisonline.com/ArcGIS/rest/services/Demographics/ESRI_Population_World/MapServer";
+        var msurl3 = "http://sampleserver1.arcgisonline.com/ArcGIS/rest/services/Demographics/ESRI_Census_USA/MapServer";
+        //var svc = new gmaps.ags.MapOverlay(msurl3);
+        //svc.setMap(map);
+    }
+    
+    function createMarkers(locs) {
+        var infowindow = new google.maps.InfoWindow({
+            content: ""
+        });
+        
+        // setup auto-fitting
+        var bounds = new google.maps.LatLngBounds();
+        
+        for (var i in locs) {
+            var marker = new google.maps.Marker( {
+                position: new google.maps.LatLng(locs[i].lat, locs[i].long), 
+                map: map,
+                title: locs[i].name,
+                icon: "https://chart.googleapis.com/chart?chst=d_map_pin_letter&chld=" + (parseInt(i)+1) + "|FF0000|000000",
+                html: "<b>"+locs[i].name+"</b><br>Permit: "+locs[i].permit+"<br>"+locs[i].street+"<br>"+locs[i].city
+            });
+          
+            google.maps.event.addListener(marker, 'click', function() {
+                infowindow.setContent(this.html);
+                infowindow.open(map, this);
+            });
+            google.maps.event.addListener(infowindow, 'closeclick', function() {
+                 map.setCenter(this.getPosition()); 
+            });
+            
+            bounds.extend(marker.position);
+        }
+        
+        // fit to the map
+        map.fitBounds(bounds);
+    }
+    
+    function replaceMarkers(directionResult, locs) {
+    
+        var infowindow;
+        var myRoute = directionResult.routes[0];
+        
+        infowindow = new google.maps.InfoWindow({
+            content: ""
+        });
+        
+        for (var i = 0; i < myRoute.legs.length; i++) {
+            var icon;
+            var text;
+            var title;
+            if (i == 0) {
+                icon = "https://chart.googleapis.com/chart?chst=d_map_xpin_icon&chld=pin_star|car-dealer|00FFFF|FF0000";
+                text = myRoute.legs[i].start_address;
+                title = "Start";
+            }
+            else {
+                icon = "https://chart.googleapis.com/chart?chst=d_map_pin_letter&chld=" + i + "|FF0000|000000";
+                var j = parseInt(i)-1;
+                text = "<b>"+locs[j].name+"</b><br>Permit: "+locs[j].permit+"<br>"+locs[j].street+"<br>"+locs[j].city;
+                title = locs[j].name;
+            }
+          
+            var marker = new google.maps.Marker( {
+                position: myRoute.legs[i].start_location, 
+                map: map,
+                title: title,
+                icon: icon,
+                html: text
+            });
+          
+            google.maps.event.addListener(marker, 'click', function() {
+                infowindow.setContent(this.html);
+                infowindow.open(map, this);
+            });
+            google.maps.event.addListener(infowindow, 'closeclick', function() {
+                 map.setCenter(this.getPosition()); 
+            });
+        }
+        
+        // end marker
+        var marker = new google.maps.Marker( {
+            position: myRoute.legs[i-1].end_location, 
+            map: map,
+            title: "End",
+            icon: "https://chart.googleapis.com/chart?chst=d_map_pin_icon&chld=flag|ADDE63",
+            html: myRoute.legs[i-1].end_address
+        });
+    }
+    
+    function setupLayers() {
+        // get tabs and their icons
+        if (!tabs) {
+            tabs = {};
+            var tabsd = sforce.connection.describeTabs();
+            for (var i in tabsd) {
+                for (var j in tabsd[i].tabs) {
+                    if (tabsd[i].tabs[j].sobjectName)
+                        tabs[tabsd[i].tabs[j].sobjectName] = tabsd[i].tabs[j].iconUrl;
+                }
+            }
+            
+            tabs["Task"] = "https://chart.googleapis.com/chart?chst=d_map_pin_icon&chld=flag|FF4500";
+        
+            // add custom icons for other objects
+            tabs["Random0"] = "https://chart.googleapis.com/chart?chst=d_map_pin_letter&chld=X|CCFF33|000000";
+            tabs["Random1"] = "https://chart.googleapis.com/chart?chst=d_map_pin_letter&chld=X|33FFFF|000000";
+            tabs["Random2"] = "https://chart.googleapis.com/chart?chst=d_map_pin_letter&chld=X|FF99FF|000000";
+            tabs["Random3"] = "https://chart.googleapis.com/chart?chst=d_map_pin_letter&chld=X|66FF66|000000";
+            tabs["Random4"] = "https://chart.googleapis.com/chart?chst=d_map_pin_letter&chld=X|FFFFFF|000000";
+        }
+        
+        // get Queries
+        for (var k in queries) {
+            // get SF tab icon
+            var icon = tabs[queries[k].object];
+            if (!icon) icon = tabs["Random" + parseInt(k) % 5];
+            for (var i in queries[k].results) {
+                if (queries[k].results[i].lat && queries[k].results[i].long) {
+                    var title = queries[k].results[i].name;
+                    var marker = new google.maps.Marker( {
+                        position: new google.maps.LatLng(queries[k].results[i].lat, queries[k].results[i].long), 
+                        //map: map,
+                        title: title,
+                        icon: icon,
+                        queryName: k
+                    });
+                    queryMarkers.push(marker);
+                    
+                    if (selq.indexOf(k) > -1) marker.setMap(map);
+                }
+            }
+        }
+    }
+    
+    function toggleLayer(qname, show) {
+        for (var i in queryMarkers) {
+            if (queryMarkers[i].queryName == qname) {
+                if (show) queryMarkers[i].setMap(map);
+                else queryMarkers[i].setMap(null);
+            }
+        }
+        
+        if (show) selq += qname+',';
+        else selq.replace(qname+',', '');
+    }
+    
+    function toggleMap() {
+        showMap = (showMap) ? false : true;
+        document.getElementById('p:f:mapContainer:mapPanel').style.display = (showMap) ? 'block' : 'none';
+        if (showMap) setupMap();
+    }
+    
+    function toggleDirections(show) {
+        showDirections = show;
+        
+        //document.getElementById('steps').style.display = (show) ? 'block' : 'none';
+        
+        if ({!printMode}) {
+            document.getElementById('steps').style.width = (show) ? '100%' : '0%';
+            document.getElementById('steps').style.float = '';
+            document.getElementById('steps').style.height = '100%';
+            document.getElementById('map').style.width = '100%';
+            document.getElementById('map').style.float = '';
+        }
+        else {
+            document.getElementById('steps').style.width = (show) ? '30%' : '0%';
+            document.getElementById('steps').style.float = 'right';
+            document.getElementById('map').style.width = (show) ? '69%' : '100%';
+            document.getElementById('map').style.float = 'left';
+        }
+        
+        setupMap();
+    }
+    
+    /**** MOS: this code uses ESRI sampleserver1, which is not secure (https). it also needs to use proper urls instead of sample ones */
+    function setupMap2() {
+       var myOptions = {
+        zoom: 4,
+        center: new google.maps.LatLng(40, -100),//35.23, -80.84),
+        mapTypeId: google.maps.MapTypeId.ROADMAP,
+        streetViewControl: true //my favorite feature in V3!
+      };
+      var map = new google.maps.Map(document.getElementById("map"), myOptions);
+      var url = 'http://sampleserver1.arcgisonline.com/ArcGIS/rest/services/Demographics/ESRI_Census_USA/MapServer';
+      var dynamap = new gmaps.ags.MapOverlay(url);//, { opacity: 0.5 });
+      dynamap.setMap(map);
+
+    }
+    </script>-->
+    
+    <!------ END MAP SCRIPT ------>
+    
+    <apex:sectionHeader title="Inspections" subtitle="Home" rendered="{!!printMode}"/>
+    <apex:listViews type="MUSW__Inspection__c" id="insplist" rendered="{!scheduleMode}"/> <!-- Can't use rerender to exclude from print view, otherwise we get INVALID_SESSION_ID. Not sure why, as usual -->
+    
+    <apex:form id="f">
+    <apex:actionFunction name="addJS" action="{!addToItinerary}" reRender="works,msg">
+        <apex:param name="woSelected" assignTo="{!woSelected}" value=""/>
+    </apex:actionFunction>
+    
+    <apex:variable value="{!IF(assignees.size = 1 || printMode || !scheduleMode, 'Itinerary', 'Itineraries')}{!IF(printMode || !scheduleMode, ' for '+assigneeNameSelected,'')}" var="itinTitle"/>
+    <apex:pageBlock title="{!itinTitle}" id="i">
+        <apex:pageBlockSection columns="4" rendered="{!!printMode}">
+            <apex:selectList value="{!assigneeSelected}" size="1" label="Assignee" onchange="selq=''; showDirections=false; changeWorksJS();" rendered="{!scheduleMode}">
+                <apex:selectOptions value="{!assignees}"/>
+            </apex:selectList>
+            <apex:selectList value="{!viewSelected}" size="1" label="View" onchange="selq=''; showDirections=false; changeWorksJS();">
+                <apex:selectOptions value="{!views}"/>
+            </apex:selectList>
+            
+            <apex:outputText rendered="{!!scheduleMode && !printMode}"/>
+            <apex:outputPanel styleClass="btn" onclick="window.location.href='InspectionTab?scheduleMode'" rendered="{!!scheduleMode && !printMode}">Schedule Inspections</apex:outputPanel>
+            <!-- *** COMMENTED OUT FOR REMOVING MAP *** -->
+            <!--apex:commandButton value="{!IF(showMap, 'Hide Map', 'Show Map')}" action="{!toggleMap}" onclick="toggleMap();" id="mapToggleBtn" reRender="mapToggleBtn,btns"/>
+            <apex:outputPanel id="btns">
+                <apex:commandButton value="Refresh Map" id="mapRefreshBtn" onclick="selq=''; showDirections=false;" reRender="mapContainer,mapToggleBtn" rendered="{!showMap}"/>
+            </apex:outputPanel>-->
+        </apex:pageBlockSection>
+       
+        <apex:outputPanel >
+            <apex:outputLink onclick="window.print();" rendered="{!printMode}">Print Itinerary</apex:outputLink>
+        </apex:outputPanel>
+        
+        <apex:pageBlockSection id="works" columns="1">            
+            <apex:outputText rendered="{!filteredWorks.size = 0}">No records to display.</apex:outputText>
+            <apex:pageBlockTable value="{!filteredWorks}" var="w" rendered="{!filteredWorks.size > 0}">
+                <apex:column value="{!w.MUSW__Order__c}"/>
+                <apex:column headerValue="Change Order" rendered="{!filteredWorks.size > 1 && !printMode}">
+                    <apex:image value="/img/func_icons/remove12.gif" onclick="removeJS('{!w.Id}');" title="Remove" style="cursor: pointer;"/>&nbsp;&nbsp;
+                    <apex:image value="/img/move_up.gif" onclick="moveUpJS('{!w.Id}');" title="Move up" style="cursor: pointer;"/>&nbsp;&nbsp;
+                    <apex:image value="/img/move_down.gif" onclick="moveDownJS('{!w.Id}');" title="Move down" style="cursor: pointer;"/>&nbsp;&nbsp;
+                    <apex:outputPanel >
+                    Move:&nbsp;&nbsp;<apex:inputText size="1" maxlength="3" id="changeRow"/>&nbsp;&nbsp;
+                    <apex:image value="/img/arrow2_picklist_right.gif" title="Change row" onclick="moveToRowJS('{!w.Id}', document.getElementById(this.parentNode.id.substr(0, this.parentNode.id.lastIndexOf(':')+1)+'changeRow').value);" style="cursor: pointer;" id="changeRowImg"/>
+                    </apex:outputPanel>
+                </apex:column>
+                <!-- Fieldset -->
+                <apex:repeat value="{!fsFields}" var="f">
+                
+                    <apex:column rendered="{!f != 'Name' && f != 'MUSW__Scheduled_Start_Date__c'}">
+                        <apex:facet name="header">
+                            <apex:commandLink action="{!sortItinerary}" value="{!f.label} {!IF(sortField=f, IF(sortDir='ASC','∧','∨'), '')}" reRender="works">
+                                <apex:param name="col" assignTo="{!sortField}" value="{!f}"/>
+                            </apex:commandLink>
+                        </apex:facet>
+                        <apex:outputField value="{!w[f]}"/>
+                    </apex:column>
+                    
+                    <apex:column rendered="{!f = 'Name'}">
+                        <apex:facet name="header">
+                            <apex:commandLink action="{!sortItinerary}" value="{!f.label} {!IF(sortField=f, IF(sortDir='ASC','∧','∨'), '')}" reRender="works">
+                                <apex:param name="col" assignTo="{!sortField}" value="{!f}"/>
+                            </apex:commandLink>
+                        </apex:facet>
+                        <apex:outputLink value="/{!w.Id}" target="_blank">{!w.Name}</apex:outputLink>
+                    </apex:column>
+                    
+                    <apex:column rendered="{!f = 'MUSW__Scheduled_Start_Date__c'}">
+                        <apex:facet name="header">
+                            <apex:commandLink action="{!sortItinerary}" value="{!f.label} {!IF(sortField=f, IF(sortDir='ASC','∧','∨'), '')}" reRender="works">
+                                <apex:param name="col" assignTo="{!sortField}" value="{!f}"/>
+                            </apex:commandLink>
+                        </apex:facet>
+                        <apex:inputField value="{!w.MUSW__Scheduled_Start_Date__c}" rendered="{!!printMode}"/>
+                        <apex:outputField value="{!w.MUSW__Scheduled_Start_Date__c}" rendered="{!printMode}"/>
+                    </apex:column>
+                    
+                </apex:repeat>
+                <!-- /Fieldset -->
+                <apex:column headerValue="" id="owner" rendered="{!!printMode}">
+                    <apex:commandLink value="Reassign" reRender="works" rendered="{!w.Id != reassignId}">
+                        <apex:param name="firstParam" assignTo="{!reassignId}" value="{!w.Id}"/>
+                    </apex:commandLink>
+                    <apex:inputField value="{!w.OwnerId}" rendered="{!w.Id = reassignId}"/>
+                </apex:column>
+            </apex:pageBlockTable>
+            
+            <apex:outputPanel rendered="{!!printMode && filteredWorks.size > 0}">
+            <apex:outputPanel styleClass="btn" onclick="saveJS();">Save Itinerary</apex:outputPanel>
+            <apex:outputPanel styleClass="btn" onclick="printJS();">Print View</apex:outputPanel>
+            </apex:outputPanel>
+        </apex:pageBlockSection>
+        <apex:outputPanel id="msg">
+            <apex:messages />
+        </apex:outputPanel>
+    </apex:pageBlock>
+
+    <!-- *** COMMENTED OUT FOR REMOVING MAP ***
+    <apex:pageBlock id="mapContainer" mode="maindetail">
+    <apex:outputPanel id="mapPanel">
+        <script>
+            var showDirections;
+            var locs = new Array();
+            var queries = {};
+            var queryMarkers = new Array();
+        </script>
+        
+        <apex:repeat value="{!filteredWorks}" var="w">
+            <script>locs.push( {lat:{!w.Permit__r.Latitude__c}, long:{!w.Permit__r.Longitude__c}, name:'{!JSENCODE(w.Name)}', permit:'{!JSENCODE(w.Permit__r.Name)}', street:'{!JSENCODE(w.Permit__r.Street__c)}', city:'{!JSENCODE(w.Permit__r.City__c)}' } );</script>
+        </apex:repeat>
+        
+        <apex:repeat value="{!queries}" var="q">
+            <script>var qres = [];</script>
+            <apex:repeat value="{!q.results}" var="r">
+                <script>qres.push({ name:'{!JSENCODE(r.title)}', lat:{!r.lat}, long:{!r.lon} });</script>
+            </apex:repeat>
+            <script>queries['{!JSENCODE(q.queryName)}'] = { object:'{!JSENCODE(q.objectName)}', results:qres };</script>
+        </apex:repeat>
+        
+        <apex:pageBlockSection columns="{!IF(printMode,1,2)}">
+            <apex:pageBlockSectionItem dataStyle="width:15%" rendered="{!!printMode}">
+                <apex:outputPanel styleClass="steps">
+                <b>Query Layers</b><br/>
+                <apex:repeat value="{!queries}" var="q">
+                    <apex:inputCheckbox label="{!q.queryName}" onclick="toggleLayer('{!q.queryName}', this.checked);"/>&nbsp;&nbsp;{!q.queryName}<br/>
+                </apex:repeat><br/>
+                <b>Directions</b><br/>
+                <apex:inputCheckbox label="Show directions" onclick="toggleDirections(this.checked);"/>&nbsp;&nbsp;Show directions
+                </apex:outputPanel>
+            </apex:pageBlockSectionItem>
+            
+            <apex:pageBlockSectionItem dataStyle="width:100%">
+                <div id="map" style="width:100%;float:left"/><div id="steps" style="width:0%;float:right"/>
+            </apex:pageBlockSectionItem>
+        </apex:pageBlockSection>
+    </apex:outputPanel>
+    </apex:pageBlock>
+    -->
+
+    
+    <script>
+    if ({!printMode}) {
+        document.getElementById('actionForm').style.display = 'none';
+        document.getElementById('filter_element').style.display = 'none';
+        document.getElementById('p:insplist:fcf').style.display = 'none';
+        hideClass('bNext');
+        hideClass('bPageBlock brndScnBrd secondaryPalette');
+    }
+    
+    //*** COMMENTED OUT FOR REMOVING MAP ***
+    //init();
+    //var showdir = ('{!$CurrentPage.parameters.showDirections}' == 'true') ? true : false;
+    //toggleDirections(showdir); // this already calls setupMap()
+    
+    function hideClass(objClass) {
+        var ie = (document.all) ? true : false;
+        var elements = (ie) ? document.all : document.getElementsByTagName('div');
+        for (i=0; i<elements.length; i++) {
+            if (elements[i].className == objClass) {
+                elements[i].style.display = 'none';
+            }
+        }
+    }
+    </script>
+    
+    <!-- *** COMMENTED OUT FOR REMOVING MAP *** 
+    <apex:actionFunction name="printJS" action="{!save}" oncomplete="window.open('/apex/InspectionTab?save_new=1&sfdc.override=1&printMode&assignee={!assigneeSelected}&view={!viewSelected}&showMap='+showMap+'&queries='+selq+'&showDirections='+showDirections, '_blank', 'width=800');" reRender="i"/>
+    -->
+    <apex:actionFunction name="saveJS" action="{!save}" reRender="works,msg"/>
+    <apex:actionFunction name="printJS" action="{!save}" oncomplete="window.open('/apex/InspectionTab?save_new=1&sfdc.override=1&printMode&assignee={!assigneeSelected}&view={!viewSelected}&showMap=false', '_blank', 'width=800');" reRender="works,msg"/>
+    <apex:actionFunction name="changeWorksJS" reRender="works,msg"/>
+    <apex:actionFunction name="moveUpJS" action="{!moveUp}" reRender="works">
+        <apex:param name="changeId" assignTo="{!changeId}" value=""/>
+    </apex:actionFunction>
+    <apex:actionFunction name="moveDownJS" action="{!moveDown}" reRender="works">
+        <apex:param name="changeId" assignTo="{!changeId}" value=""/>
+    </apex:actionFunction>
+    <apex:actionFunction name="moveToRowJS" action="{!moveToRow}" reRender="works,msg">
+        <apex:param name="changeId" assignTo="{!changeId}" value=""/>
+        <apex:param name="changeRow" assignTo="{!changeRow}" value=""/>
+    </apex:actionFunction>
+    <apex:actionFunction name="removeJS" action="{!remove}" reRender="works">
+        <apex:param name="changeId" assignTo="{!changeId}" value=""/>
+    </apex:actionFunction>
+    </apex:form>
+    
+    <!-- *** COMMENTED OUT FOR REMOVING MAP ***
+    <style>
+    #map {
+      font-family: Arial;
+      font-size:12px;
+      line-height:normal !important;
+      height:350px;
+      background:transparent;
+    }
+    #steps {
+      overflow: auto;
+      height:350px;
+    }
+    </style>
+    -->
+
+</apex:page>

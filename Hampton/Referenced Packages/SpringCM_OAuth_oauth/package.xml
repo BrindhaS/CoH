@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Package xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>SpringCM_OAuth_oauth</fullName>
+    <apiAccessLevel>Unrestricted</apiAccessLevel>
+    <modules>
+        <module>
+            <label>SpringCM_OAuth_oauth</label>
+            <moduleType>connected</moduleType>
+            <name>SpringCM_OAuth_oauth</name>
+            <types>
+                <members>SpringCM_OAuth_oauth_devConfig</members>
+                <name>ConnectivityDevConfigMetadata</name>
+            </types>
+            <types>
+                <members>SpringCMEos__SpringCM_OAuth_oauth</members>
+                <name>Module</name>
+            </types>
+            <version>27.0</version>
+        </module>
+    </modules>
+    <namespacePrefix>SpringCMEos</namespacePrefix>
+    <version>36.0</version>
+</Package>

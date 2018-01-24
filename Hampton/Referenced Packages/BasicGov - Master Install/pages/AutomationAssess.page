@@ -1,0 +1,2385 @@
+<apex:page controller="MUSW.AutomationAssessController" showHeader="false" sidebar="false">
+<html>
+    <head>
+        <title>Run Automation Rules</title>
+        <link href="/dCSS/Theme2/default/common.css" type="text/css" media="handheld,print,projection,screen,tty,tv" rel="stylesheet"/>
+        <script type="text/javascript" src="/js/functions.js"></script>
+        <script src="/soap/ajax/24.0/connection.js"></script>
+        <apex:includeScript value="{!$Resource.MUSW__lgmCommon}"/>
+        <!-- <apex:includeScript value="{!$Resource.lgmDataContext}"/>-->
+        
+        <script id="lgmDataContextScript1" language="javascript">
+            var filters = [];
+        </script>
+        <apex:repeat value="{!filters}" var="f">
+            <script>filters.push( {field:"{!f.MUSW__Field__c}", table:"{!f.MUSW__Table__c}"} );</script>
+        </apex:repeat>
+        <script id="lgmDataContextScript2" language="javascript">
+/**************************************************************************************
+*   Class       : LGM Object Operations Library
+*   Created By  : Chris McLuckie
+*   Created On  : 03/22/2007
+*   Purpose     :
+*   Requires    : $SControl.lgmCommon
+**************************************************************************************/
+lgmSFDCObjectQuery = function(table, query, filter, level, relationship, processed) {
+    this.Table = table;
+    this.Query = query;
+    this.Filter = filter;
+    this.Level = level;
+    this.Relationship = relationship;
+    this.Processed = processed;
+};
+
+lgmSFDCObjectOperations = function() {
+    //**********************************
+    // private properties
+    //**********************************
+    var that = this;  // Required for Javascript limitation of 'this' operator
+
+    //**********************************
+    // public properties
+    //**********************************
+    this.Queries = new Array();
+    this.Definitions = new Array();
+    
+    //**********************************
+    // private methods
+    //**********************************
+    function gatherFields(sobject) {
+        var fieldList = "";
+        if (sobject == "Task")
+        {
+            fieldList = "Id, OwnerId, ";
+        }
+        else
+        {
+            fieldList = "Name, Id, OwnerId, "; 
+        }
+        var fields = that.Definitions[sobject].fields;
+        for (var i=0; i<fields.length; i++) {
+            if ((fields[i].name != "IsDeleted") && (fields[i].name != "IsPublic") && (fields[i].name != "IsArchived")
+                && (fields[i].name != "Name") && (fields[i].name != "Id") && (fields[i].name != "OwnerId") 
+                && (fields[i].name != "ConnectionReceivedId") && (fields[i].name != "ConnectionSentId")
+                && ((fields[i].type == "reference") || (lgmDataContext.fieldList.indexOf(fields[i].name.toLowerCase()) > -1))) { 
+                fieldList = [fieldList, fields[i].name, ", "].join("");
+            }
+        }
+        //chop off last comma
+        fieldList = fieldList.substring(0, fieldList.length-2);
+        lgm.debug.addMessage("fieldList: " + fieldList);
+        return fieldList;
+    }
+    
+    //**********************************
+    // public methods
+    //**********************************
+    lgmSFDCObjectOperations.prototype.ProcessIncompleteQueries=function() {
+        //gather all fields for queries undefined
+        var dgRetrieve = new Array();
+        
+        // find missing described objects
+        var ii = 0;
+        for (var i=0; i<this.Queries.length; i++) {
+            if (this.Definitions[this.Queries[i].Table] == null) {
+                dgRetrieve[ii] = this.Queries[i].Table;
+                ii++;
+            }
+        }
+
+        // add missing described objects to cache
+        var tableDefs = sforce.connection.describeSObjects(dgRetrieve);
+        for (var i=0; i<tableDefs.length; i++) {
+            this.Definitions[tableDefs[i].name] = tableDefs[i];
+        }   
+        
+        // processed queries
+        for (var i=0; i<this.Queries.length; i++) {
+            // select fields
+            if (this.Queries[i].Query == null || this.Queries[i].Query == "") {
+                var result = ["SELECT ", gatherFields(this.Queries[i].Table), " FROM ", this.Queries[i].Table, " "].join("");
+                
+                // where clause
+                if (this.Queries[i].Filter != null)
+                    result += this.Queries[i].Filter;
+                    
+                this.Queries[i].Query = result;
+            }
+        }
+    }
+};
+
+
+/**************************************************************************************
+*   Class       : LGM Data Context Library
+*   Created By  : Chris McLuckie
+*   Created On  : 01/24/2007
+*   Purpose     :
+*   Requires    : $SControl.lgmCommon
+**************************************************************************************/
+lgmDataContext = function() {
+};
+
+lgmDataContext.tableName = null;
+lgmDataContext.recordID = null;
+lgmDataContext.processOnly = null; //get only these tables and their children
+lgmDataContext.endAtList = "User, Account, Contact, MUSW__Parcel__c, MUSW__Condition__c, MUSW__Fee__c, MUSW__Fund__c, MUSW__Fee_Payment__c,MUSW__Receipt__c, MUSW__Binder__c,MUSW__Work_Item__c"; //stop it from jumping to other contexts (common objects)
+lgmDataContext.exclusionList = "user, note, recurringevent, caseshare, casecontactrole, openactivity,emailstatus,musw__vehicle__c,musw__receipt__c,musw__binder__c,musw__proceeding_agenda__c,musw__fund__c,processinstance"; 
+lgmDataContext.includeList = "musw__permit__c,musw__complaint__c,musw__planning__application__c,musw__master_project__c,musw__license1__c,permit2__c,complaint2__c,application2__c,license2__c,project2__c"; //BASE
+lgmDataContext.compoundFKs = false;
+lgmDataContext.createFlatFile = false;
+lgmDataContext.masterRecordList = new Array();
+lgmDataContext.retrievedRecordList = new Array();
+lgmDataContext.objectRecord = new Array();
+lgmDataContext.flatArray = new Array();
+lgmDataContext.flatArrayNumColumns = 0;
+lgmDataContext.continueFunc = null; //set to name of function to continue onto when data context is finished
+lgmDataContext.upLevels = 3;
+lgmDataContext.dwnLevels = 2;
+lgmDataContext.fieldList = "{!contextFields}"; //comma delimited list of filter and result (and content-tag) fields
+
+var recursionCounter = 0;
+var levelCounter = new Array();
+var tablesProcessed = new Array();
+var queryBuilder = new lgmSFDCObjectOperations();
+
+lgmDataContext.getDataContext = function() {
+    
+    // get filters for the Automation Engine based on the filters retrieved in Apex
+    lgmAutomationEngine.filterFields = filters;
+    
+    // Begin Building Context   
+    lgm.debug.addMessage(["<STRONG>DC START TIME:", new Date(), "</STRONG>"].join("")); 
+
+    if (lgmDataContext.continueFunc == null) {
+        lgm.debug.addMessage("<STRONG>Set return function before calling context</STRONG>");
+        return;
+    } 
+    
+    //Set optional scope - speeds up this tremendously!
+    
+    if(lgm.href.param["scope"] != null) {
+        if (lgm.href.param["scope"].indexOf("FIN") > -1) {
+            lgmDataContext.includeList = lgmDataContext.includeList + "musw__fee__c,musw__receipt__c,musw__fee_payment__c,musw__work_item__c,musw__fund__c,";
+        }
+        if (lgm.href.param["scope"].indexOf("BUS") > -1) {
+                    lgmDataContext.includeList = lgmDataContext.includeList + "musw__condition__c,task,attachment,";
+        }
+    } 
+    //include any custom tables to query for (comma delimited)
+    if(lgm.href.param["extraobjects"] != null) {
+        lgmDataContext.includeList = lgmDataContext.includeList + lgm.href.param["extraobjects"];
+    }
+    
+    levelCounter[0] = 1;
+    queryBuilder.Queries[0] = new lgmSFDCObjectQuery(lgmDataContext.tableName, null, ["WHERE Id = '", lgmDataContext.recordID, "'"].join(""), 0, "parent", false);
+    queryBuilder.ProcessIncompleteQueries();
+    
+    //throw("e");
+    sforce.connection.query(queryBuilder.Queries[0].Query, 
+        {onSuccess:lgmDataContext.processQuery,
+        onFailure:lgmDataContext.failureQuery,
+        source:queryBuilder.Queries[0]});   
+    queryBuilder.Queries[0].Processed = true;                                       
+};
+
+
+lgmDataContext.processQuery = function(queryResults, source) {
+    var recs = null;
+    
+    if (queryResults != null) {
+        //Add the Query Records to the DataSet (even if no records)
+        var tableName = source.Table; 
+        recs = queryResults.getArray("records");    
+        
+        if (lgmDataContext.objectRecord[tableName] == null)
+            lgmDataContext.objectRecord[tableName] = recs;
+        else {
+            for (var i = 0; i < recs.length; i++) {
+                lgmDataContext.objectRecord[tableName][lgmDataContext.objectRecord[tableName].length] = recs[i];
+            }
+        }
+        
+        if (lgmDataContext.createFlatFile) {
+            //TODO: Execute Flat output
+        }
+        
+        if (recs != null) { //DO NOT PROCESS ANY DATASETS WITH NO DATA!!
+            if (recs.length > 0) {
+                var tableDefinition = queryBuilder.Definitions[tableName];  //Load the table definition
+                lgm.debug.addMessage([new Date(), " : <STRONG>Added ", recs.length, " records from ", tableDefinition.name.toLowerCase(), " to context at level ", source.Level, ".</STRONG>"].join(""));
+            
+                // Do not process tables in the Exclusion List any further and process if in the process only list (non-empty)
+                if ((lgmDataContext.endAtList.toLowerCase().indexOf(tableDefinition.name.toLowerCase()) == -1)){  
+                    var recordIds = lgmDataContext.getRecordIds(queryResults, "Id"); //Gather Id of the Records
+                    //if there are child relationships
+                    if (tableDefinition.get("childRelationships") != null && source.Level < lgmDataContext.dwnLevels) {
+                        // Loop through all of the children from tableDefinition
+                        for (var i = 0; i < tableDefinition.childRelationships.length; i++) {       
+                            var relation = tableDefinition.childRelationships[i];
+                            var relationshipKey = ["fk:", tableDefinition.name.toLowerCase(), ":", relation.childSObject.toLowerCase(), ":", relation.field.toLowerCase()].join("");    // create a key name for the relationship
+
+                            if ((relation != null) && (lgmDataContext.toProcess(relation.childSObject.toLowerCase())) && (tablesProcessed[relationshipKey] == null) && (relation.childSObject.toLowerCase() != tableDefinition.name.toLowerCase()) && (lgmDataContext.exclusionList.indexOf(relation.childSObject.toLowerCase()) == -1) && (relation.childSObject.toLowerCase().indexOf("history") == -1) && ((lgm.href.param["scope"] == null) || (lgmDataContext.includeList.indexOf(relation.childSObject.toLowerCase()) > -1))) {                                                       
+                                // Ensure the following 1) we haven't prcessed this relationship earlier, 2) the parent and child are not the same, 3) the table isn't in the exclude list 4)table not a history table 5)it's in scope if in use
+                                if (true) {
+                                    //Build the query to see if we need to go into the next branch
+                                    var queryWhere = lgmDataContext.buildWhereFromIds(recordIds, relation.field.toLowerCase());
+            
+                                    // Associate record Ids to this relationship and mark query for processing
+                                    lgmDataContext.associateRecordIds(recordIds, tableDefinition.name.toLowerCase(), relation.childSObject.toLowerCase(), relation.field.toLowerCase());
+                                    if (queryWhere.length > 0) { // query only when there is a valid filter
+                                        // Process the next Query
+                                        recursionCounter++;                                     
+                                        var targetTable = relation.childSObject;                                    
+                                        queryBuilder.Queries[queryBuilder.Queries.length] = new lgmSFDCObjectQuery(targetTable, null, queryWhere, source.Level+1, relationshipKey, false);
+                                    }
+                                }               
+                            }                           
+                            tablesProcessed[relationshipKey] = true; // Mark relationship as processed
+                        }
+                    }
+                    
+                    if (source.Level < lgmDataContext.upLevels) {  // Loop through all of the parent lookups from tableDefinition
+                        for (var i = 0; i < tableDefinition.fields.length; i++) {
+                            
+                            if ( tableDefinition.fields[i].type == "reference" ) {
+                                var relatedTableName = tableDefinition.fields[i].referenceTo.toString().toLowerCase();
+                                var relationshipKey = ["fk:", relatedTableName.toLowerCase(), ":", tableDefinition.name.toLowerCase(), ":", tableDefinition.fields[i].name.toLowerCase()].join(""); // create a key name for the relationship
+                
+                                // Old Code                         
+                                if ((typeof(tableDefinition.fields[i].referenceTo) == "object" && tableDefinition.fields[i].referenceTo.length == 1) || (typeof(tableDefinition.fields[i].referenceTo) == "string" && tableDefinition.fields[i].referenceTo.length > 0))
+                                {
+                                    if (tableDefinition.fields[i].referenceTo.length > 0) {
+                                        // Ensure the following 1) we haven't prcessed this relationship earlier, 2) the field is a lookup, 3) the parent and child are not the same, 4) the table isn't in the exclude list 5)table is not a history table 6)table is in optional scope
+                                        if ((tablesProcessed[relationshipKey] == null) && (tableDefinition.fields[i].type == "reference") && (lgmDataContext.exclusionList.indexOf([relatedTableName.toLowerCase(),","].join("")) == -1) && (relatedTableName.toLowerCase().indexOf("history") == -1) && ((lgm.href.param["scope"] == null) || (lgmDataContext.includeList.indexOf(relatedTableName.toLowerCase()) > -1))) {
+                                            // Build the query to see if we need to go into the next branch                             
+                                            recordIds = lgmDataContext.getRecordIds(queryResults, tableDefinition.fields[i].name);          
+                                            var queryWhere = lgmDataContext.buildWhereFromIds(recordIds, "Id");
+                    
+                                            // Associate record Ids to this relationship and mark query for processing
+                                            lgmDataContext.associateRecordIds(recordIds, relatedTableName, tableDefinition.name, tableDefinition.fields[i].name);
+                                            if (queryWhere.length > 0) {  // query only when there is a valid filter
+                                                recursionCounter++;
+                    
+                                                // Process the next Query
+                                                var targetTable = tableDefinition.fields[i].referenceTo;                                    
+                                                queryBuilder.Queries[queryBuilder.Queries.length] = new lgmSFDCObjectQuery(targetTable, null, queryWhere, source.Level+1, relationshipKey, false);
+                                            }
+                                        }               
+                                        
+                                        // Mark relationship as processed
+                                        tablesProcessed[relationshipKey] = true;
+                                    }   
+                                }
+                                // Old Code 
+                            }
+                        }                       
+                    }               
+                }
+            }
+        }
+    }
+    levelCounter[source.Level]--;
+    recursionCounter--;
+    
+    // Process all queries once the level is finished
+    if (levelCounter[source.Level] == 0) {
+        queryBuilder.ProcessIncompleteQueries();
+        for(var i=0; i<queryBuilder.Queries.length; i++) {
+            if (queryBuilder.Queries[i].Processed == false) {
+                levelCounter[queryBuilder.Queries[i].Level] = levelCounter[queryBuilder.Queries[i].Level] == null ? 1 : levelCounter[queryBuilder.Queries[i].Level]+1;
+                lgm.debug.addMessage([new Date(), " : ", queryBuilder.Queries[i].Relationship, " level ", queryBuilder.Queries[i].Level, ":", levelCounter[queryBuilder.Queries[i].Level]].join(""));                           
+                sforce.connection.query(queryBuilder.Queries[i].Query, 
+                    {onSuccess:lgmDataContext.processQuery,
+                    onFailure:lgmDataContext.failureQuery,
+                    source:queryBuilder.Queries[i]});   
+                    queryBuilder.Queries[i].Processed = true;                                       
+            }                                                                       
+        }
+    }   
+    
+    if (recursionCounter == -1) {  // If == to 0, I am the last one, so clean up
+        lgm.debug.addMessage(["<STRONG>DC END TIME:", new Date(), "</STRONG>"].join(""));
+        lgmDataContext.continueFunc(lgmDataContext.objectRecord);  //context finished, so continue
+    }
+}
+
+//get value of the field given the table and it's record Id
+lgmDataContext.getFieldValue = function(table, field, recordId) {
+    for (var i = 0; i < lgmDataContext.objectRecord[table].length; i++) {
+        if (lgmDataContext.objectRecord[table][i].get("Id") == recordId) {
+            return(lgmDataContext.objectRecord[table][i].get(field));
+        }
+    
+    }
+}
+
+//get record id when given the table, file, and value that uniquely identifies that record
+//useful for user names/aliases, contact full names, parcel numbers, foreing id's, etc.
+//if value is not unique, it will return the first record Id that it finds.
+lgmDataContext.getRecordId = function(table, field, value) {
+    for (var i = 0; i < lgmDataContext.objectRecord[table].length; i++) {
+        if (lgmDataContext.objectRecord[table][i].get(field) == value) {
+            return(lgmDataContext.objectRecord[table][i].get("Id"));
+        }
+    }
+}
+
+lgmDataContext.getRecordIds = function(queryResults, field) {
+    var retVal = new Array();
+    var recs = queryResults.getArray("records");
+    for(var i = 0; i < recs.length; i++) {
+        if (recs[i].get(field) != null)
+            retVal[i] = recs[i].get(field);
+    }
+    
+    return retVal;
+}
+
+lgmDataContext.addRecordsToRetrievedList = function(records) {
+    for(var i=0; i < records.length; i++) {
+        lgmDataContext.retrievedRecordList[records[i]] = true;
+    }
+}
+
+//append additional records to data model
+//query on table where field = value
+//store results in DM
+//returns array of recordIds of all records it found
+lgmDataContext.appendRecords = function(table, field, fieldValue) {
+    var temp = new Array();
+
+
+    //if fields is a string or ID, wrap in quotes
+    var tableDefinition = sforce.connection.describeSObject(table);
+    var fields =tableDefinition.fields;
+    for (var i=0; i < fields.length; i++) {
+        if (fields[i].name == field) {
+            if ((fields[i].type == 'ID')||(fields[i].type == 'string'))
+                fieldValue = ["'", fieldValue, "'"].join("");
+        }
+    }
+    
+    var queryNumber = queryBuilder.Queries.length;
+    queryBuilder.Queries[queryNumber] = new lgmSFDCObjectQuery(table, null, ["WHERE ", field, " = ", fieldValue].join(""), 0, "parent", true);
+    queryBuilder.ProcessIncompleteQueries();
+    
+    recs = sforce.connection.query(queryBuilder.Queries[queryNumber].Query);    
+
+    //var sql = ["SELECT ", lgmDataContext.getFields(table), " FROM ", table, " where ", field, " = ", fieldValue].join("");
+    //var qr = lgm.connection2.query(sql);
+    
+    //recs = qr.getArray("records");
+    if (recs.length > 0) {
+        if (lgmDataContext.objectRecord[table] != null) {
+            temp = recs.concat(lgmDataContext.objectRecord[table]);
+            lgmDataContext.objectRecord[table] = temp;
+        } else {
+            lgmDataContext.objectRecord[table] =recs;
+        }
+        return lgmDataContext.getRecordIds(qr,"Id");
+    }
+    return null;                    
+}
+
+//retrieve the name of the child object that is shared between the given two tables with the related field name, and it's field label
+//relationType parameter options: MANYTOMANY - specifies that the common child must be a many to many lookup table 
+//ONETOMANY - standard single lookup reference eg. User, contact, etc.
+//ALL - both MANYTOMANY and ONETOMANY
+//If more than one child is found it will return a list of relations comma delimited 
+//If none are found, returns a blank string
+lgmDataContext.getCommonChildNames = function(table1, table2, relationType ) {
+//return class: list - children tables separated by comma's
+//              relations - array containing list of childrelationship classes: table (of child), field1, label1, field2, label2
+//                          *fieldname2, fieldLabel2 are only populated if MANYTOMANY is specified
+//                          *fieldLabels refer to label the parent gives to the lookup field label having the relationship
+
+var children = new Array();
+var list = [];
+var commonChildren = [];
+
+if (table1 != table2) {
+    //get children of first table
+    var tableDefinitions = sforce.connection.describeSObjects([table1,table2]);
+    //var tableDefinition = queryBuilder.Definitions[table1];  //Load the table definition
+    var tableDefinition = tableDefinitions[0];
+    //if there are child relationships
+    if (tableDefinition.get("childRelationships") != null ) {
+        // Loop through all of the children from tableDefinition
+        for (var i = 0; i < tableDefinition.childRelationships.length; i++) {       
+            var relation = tableDefinition.childRelationships[i];
+            //var relationshipKey = ["fk:", tableDefinition.name.toLowerCase(), ":", relation.childSObject.toLowerCase(), ":", relation.field.toLowerCase()].join("");  // create a key name for the relationship
+    
+            children[relation.childSObject] = {field:relation.field, label:relation.relationshipName};                          
+            
+        }
+        
+    }
+    
+    //get children of second table
+    //var tableDefinition = queryBuilder.Definitions[table2];  //Load the table definition
+    var tableDefinition = tableDefinitions[1];
+    //if there are child relationships
+    if (tableDefinition.get("childRelationships") != null ) {
+        // Loop through all of the children from tableDefinition
+        for (var i = 0; i < tableDefinition.childRelationships.length; i++) {       
+            var relation = tableDefinition.childRelationships[i];
+            //var relationshipKey = ["fk:", tableDefinition.name.toLowerCase(), ":", relation.childSObject.toLowerCase(), ":", relation.field.toLowerCase()].join("");  // create a key name for the relationship
+    
+            //is this table also a child of the first table?
+            if (children[relation.childSObject] != null) {
+                if (relationType == "MANYTOMANY") {
+                    if (children[relation.childSObject].field != relation.field) {
+                        return {list: relation.childSObject, relations:{table:relation.childSObject, field1:children[relation.childSObject].field, label1:children[relation.childSObject].label, field2:relation.field, label2:relation.relationshipName}};
+                    }
+                } else {
+                    commonChildren.push({table:relation.childSObject, field1:relation.field, label1:relation.relationshipName});
+                    list.push(relation.childSObject+", "); 
+                }   
+            }
+        }
+        
+        //chop off last comma
+        if (list[list.length])
+            list[list.length] = list[list.length].substring(0, list[list.length].length-2);
+    }
+}
+
+list = list.join("");
+
+return {list:list,relations:commonChildren};
+
+};
+
+
+lgmDataContext.findRelationships = function(table1, table2) {
+    var children = new Array();
+    var commonChildren = new Array();
+    var list = "";
+    var mmList = "";
+    
+    if (table1 != table2) {
+        // get the definitions for the two tables
+        var tableDefinitions = sforce.connection.describeSObjects([table1, table2]);
+
+        // find child relationships for table 1
+        var tableDefinition = tableDefinitions[0];
+        if (tableDefinition.get("childRelationships") != null ) {
+            for (var i = 0; i < tableDefinition.childRelationships.length; i++) {       
+                var relation = tableDefinition.childRelationships[i];       
+                var relationshipKey = ["fk:", tableDefinition.name.toLowerCase(), ":", relation.childSObject.toLowerCase(), ":", relation.field.toLowerCase()].join("");    // create a key name for the relationship
+                
+                if (relation.field != "WhoId" && relation.field != "WhatId" && relation.field != "ParentId" && relation.field != "TargetObjectId") {
+                    if (list.indexOf(relation.childSObject) == -1) {
+                        children[children.length] = {Name:relationshipKey, ParentTable:tableDefinition.name, ParentLabel:tableDefinition.label, ChildTable:relation.childSObject, ForeignKeyField:relation.field, Type:null};               
+                        list = list + relation.childSObject + ",";
+                    } else if (table2 == relation.childSObject) {
+                        children[children.length] = {Name:relationshipKey, ParentTable:tableDefinition.name, ParentLabel:tableDefinition.label, ChildTable:relation.childSObject, ForeignKeyField:relation.field, Type:"1:M"};              
+                    } else {
+                        children[children.length] = {Name:relationshipKey, ParentTable:tableDefinition.name, ParentLabel:tableDefinition.label, ChildTable:relation.childSObject, ForeignKeyField:relation.field, Type:"M:M"};
+                        mmList = mmList + relation.childSObject + ",";
+                    }
+                }
+            }
+        }
+        
+        // find child relationships for table 2
+        var tableDefinition = tableDefinitions[1];
+        if (tableDefinition.get("childRelationships") != null ) {
+            for (var i = 0; i < tableDefinition.childRelationships.length; i++) {       
+                var relation = tableDefinition.childRelationships[i];
+                var relationshipKey = ["fk:", tableDefinition.name.toLowerCase(), ":", relation.childSObject.toLowerCase(), ":", relation.field.toLowerCase()].join("");    // create a key name for the relationship       
+
+                if (relation.field != "WhoId" && relation.field != "WhatId" && relation.field != "ParentId" && relation.field != "TargetObjectId") {
+                    if (list.indexOf(relation.childSObject) == -1) {
+                        children[children.length] = {Name:relationshipKey, ParentTable:tableDefinition.name, ParentLabel:tableDefinition.label, ChildTable:relation.childSObject, ForeignKeyField:relation.field, Type:null};               
+                        list = list + relation.childSObject + ",";
+                    } else if (table1 == relation.childSObject) {
+                        children[children.length] = {Name:relationshipKey, ParentTable:tableDefinition.name, ParentLabel:tableDefinition.label, ChildTable:relation.childSObject, ForeignKeyField:relation.field, Type:"1:M"};
+                    } else {
+                        children[children.length] = {Name:relationshipKey, ParentTable:tableDefinition.name, ParentLabel:tableDefinition.label, ChildTable:relation.childSObject, ForeignKeyField:relation.field, Type:"M:M"};
+                        mmList = mmList + relation.childSObject + ",";
+                    }
+                }
+            }           
+        }
+        
+        // Match Relationships
+        for (var i = 0; i < children.length; i++) {
+            if (children[i].Type == "M:M") {
+                if (commonChildren[children[i].ChildTable] == null)
+                    commonChildren[children[i].ChildTable] = new Array();
+                    
+                commonChildren[children[i].ChildTable][commonChildren[children[i].ChildTable].length] = children[i];
+            } else if (children[i].Type == "1:M") {
+                if (commonChildren[children[i].ParentTable] == null)
+                    commonChildren[children[i].ParentTable] = new Array();
+                    
+                commonChildren[children[i].ParentTable][commonChildren[children[i].ChildTable].length] = children[i];
+            } else if (mmList.indexOf(children[i].ChildTable) > -1) {
+                children[i].Type = "M:M";
+                if (commonChildren[children[i].ChildTable] == null)
+                    commonChildren[children[i].ChildTable] = new Array();
+                    
+                commonChildren[children[i].ChildTable][commonChildren[children[i].ChildTable].length] = children[i];
+            }
+        }
+    }
+    
+    return commonChildren;
+};
+
+
+
+//insert or update a record and append to datacontext
+//expect table to update/insert into and 
+//hash table of field and fieldvalues to set in the new record object
+lgmDataContext.genericUpsert = function(destTable, fieldValues) {
+
+    //create record object and set values
+    var destinationTable = new sforce.SObject(destTable); 
+    for (var field in fieldValues) {
+        destinationTable.set(field,fieldValues[field]);
+    }
+    
+    //save to database
+    if (destinationTable["Id"] != null) 
+        var error = sforce.connection.update([destinationTable]);
+    else
+        var error = sforce.connection.create([destinationTable]);
+    if (error.toString().indexOf("errors") != -1 ) {
+        throw "Result Save Error: " + error.toString();
+    }
+    
+    //update data context
+    if (lgmDataContext.objectRecord[destTable] != null) {
+        var temp = destinationTable.concat(lgmDataContext.objectRecord[destTable]);
+        lgmDataContext.objectRecord[destTable] = temp;
+    } else {
+        lgmDataContext.objectRecord[destTable] =destinationTable;
+    }
+    
+};
+
+
+//is this table in an non-empty processOnly list? If so, then return true
+lgmDataContext.toProcess = function (table) {
+    var process = true;
+    if (lgmDataContext.processOnly !=null) {
+        if (lgmDataContext.processOnly.toLowerCase().indexOf(table.toLowerCase()) == -1 ) {
+            return false;
+        }
+    }
+    return process;
+}
+
+lgmDataContext.associateRecordIds = function(records, parentTable, childTable, foreignKeyField) {
+    var assoc = {Parent:parentTable, Child:childTable, ForeignKey:foreignKeyField};
+
+    for(var i=0; i < records.length; i++) {
+        if (lgmDataContext.masterRecordList[records[i]] == null) {
+            lgmDataContext.masterRecordList[records[i]] = new Array();
+            lgmDataContext.masterRecordList[records[i]][0] = assoc;
+        } else {
+            lgmDataContext.masterRecordList[records[i]][lgmDataContext.masterRecordList[records[i]].length] = assoc;            
+        }
+    }
+}
+
+lgmDataContext.buildWhereFromIds = function (records, field, start, end) {
+    if (start == null) start = 1;
+    if (start == null) end = 1;
+    var recordsAdded = 0;
+    var retVal = "";
+    
+    if (records.length > 0) {
+        var retVal = "";
+        for (var i = 0; i < records.length; i++) {
+            if (!lgmDataContext.exists(records[i])) {
+                retVal = [retVal, field, " = '", records[i], "' OR "].join("");
+                recordsAdded++;
+            }
+            else { 
+                if (field != "Id") { 
+                    retVal = [retVal, field, " = '", records[i], "' OR "].join("");
+                    recordsAdded++;
+                }
+            }
+        }
+        
+        retVal = ["WHERE ", retVal.substring(0, retVal.length - 3)].join("");   
+    }
+    
+    // Add records to the retrieve list
+    if (start == end)
+        lgmDataContext.addRecordsToRetrievedList(records);
+    
+    if (recordsAdded > 0) {
+        return retVal;
+    } else {
+        return "";
+    }
+}
+
+lgmDataContext.failureQuery = function(error, source) {
+    lgm.debug.addMessage([source, " : ", error].join(""));
+  }
+
+
+lgmDataContext.exists = function(recordId) {
+    if (recordId != null) {
+        if (lgmDataContext.retrievedRecordList[recordId] != null) {
+            return true;
+        }
+    }
+    return false;
+}
+
+lgmDataContext.notify = function(message) {
+    window.status = message;
+}
+        </script>
+        <!--<apex:includeScript value="{!$Resource.lgmAutomationEngine}"/>-->
+        <script language="javascript">
+        /**************************************************************************************
+* Class : LGM Automation Engine Library
+* Created By : James Wikkerink
+* Created On : 02/15/2007
+* Purpose :
+* Requires : $SControl.lgmCommon
+*            $SControl.lgmDataContext
+**************************************************************************************/
+
+lgmAutomationEngine = function() {
+};
+
+
+//public
+lgmAutomationEngine.parentTable = null;
+lgmAutomationEngine.recordID = null;
+lgmAutomationEngine.applicableRules = new Array();
+lgmAutomationEngine.applicableRulesDesc = new Array();
+lgmAutomationEngine.numApplicableRules = 0;
+
+//private
+lgmAutomationEngine.parent = null;
+lgmAutomationEngine.automation = null;
+
+lgmAutomationEngine.filterTableApply = new Array(); //set of filter tables names of filter tables that had at least one record match
+lgmAutomationEngine.filterApply = new Array(); //set of filter table recordId's that had all filter field's matched
+lgmAutomationEngine.filterPrevent = new Array(); //set of filter table recordId's that had at least one filter field mismatch
+lgmAutomationEngine.ruleApply = new Array(); //set of rules to apply
+lgmAutomationEngine.stateMachine = new Array(); //hash table of accumulated field updates - to support PRIOR VALUE before and after a specific rule & group's bean is created (inter)
+lgmAutomationEngine.stateEngine = new Array();  //hash table of accumulated field updates (and only edits for now) - supports rule order and rule dependencies (extra)
+
+lgmAutomationEngine.dformat = null;
+lgmAutomationEngine.notifications = '<strong>Not all updates applied. Errors:</strong><br/>';
+
+lgmAutomationEngine.INSERT = "Add Record";
+
+lgmAutomationEngine.contentTagStart = "<content"; var contentTagEnd = "</content";
+lgmAutomationEngine.repeatTagStart = "<repeat"; var repeatTagEnd = "</repeat";
+
+lgmAutomationEngine.repeatObjectName = ""; //child filter object name to repeat over
+lgmAutomationEngine.filterFields = new Array();
+
+//Use this function as the entry point for your DHTML and JAVASCRIPT processing
+lgmAutomationEngine.setApplicableRules = function() 
+{   
+    lgm.debug.addMessage(["<STRONG>AUTO ENGINE START TIME:", new Date(), "</STRONG>"].join("")); 
+    
+    if (lgmAutomationEngine.continueFunc == null) {
+        lgm.debug.addMessage("<STRONG>Set engine continue function before calling context</STRONG>");
+        return;
+    } 
+    var uInfo = sforce.connection.getUserInfo(); // has the locale
+    lgmAutomationEngine.dformat = lgm.date.parseDateFormat("{!TODAY()}", uInfo.userLocale);
+    
+    // required params:
+    // - parentTable - for query SQL eg. MUSW__Permit__c
+    // - recordID - the id value to uniquely identify parent in a query
+    // - parent - for messages to user and destination source filter eg. Permit
+    // - ?ChildTableName? - lookup column name - parameter having name of child table having the 
+    //      value of the column that links to the parent (the lookup column name on the child) 
+    //      eg.  MUSW__Work_Item__c=Permit__c
+    
+    lgm.href.getParameters();
+    
+    try
+    {   
+    
+        //***
+        //Apply and save standard rules (as determined by URL parameters)
+        // - these saved results are then picked up by the data context and rules can apply to them
+        if((lgm.href.param["scope"] == null) || (lgm.href.param["scope"].indexOf("STD") > -1)) {
+        
+        lgm.debug.addMessage(["<STRONG>AUTO STANDARD START TIME:", new Date(), "</STRONG>"].join("")); 
+        //JAW done by triggers now
+        //lgmAutomationEngine.applyStandard();
+        if (lgmAutomationEngine.numApplicableRules > 0) {
+            lgmAutomationEngine.saveResult();
+            //clear applied results cache
+            lgmAutomationEngine.applicableRules = new Array();
+            lgmAutomationEngine.numApplicableRules = 0;
+            lgmAutomationEngine.applicableRulesDesc = new Array();
+        }
+        lgm.debug.addMessage(["<STRONG>AUTO STANDARD END TIME:", new Date(), "</STRONG>"].join("")); 
+        
+        }
+        //*** 
+        
+        //get all data related to this parent
+        lgmDataContext.tableName = lgmAutomationEngine.parentTable;
+        
+        lgmDataContext.recordID = lgmAutomationEngine.recordID;
+        lgmDataContext.continueFunc = lgmAutomationEngine.setup2;
+        lgmDataContext.getDataContext();
+        
+    }
+    catch(err)
+    {
+        lgm.debug.addMessage("Rule Error: " + err.toString());
+    }
+};
+
+//continuation after dataContext created
+lgmAutomationEngine.setup2 = function () 
+{  
+    try
+    {   
+        //Data context created, now continue
+        
+        //get parent records
+    
+        lgmAutomationEngine.parent = lgmDataContext.objectRecord[lgmAutomationEngine.parentTable];
+        
+        //get parent's full database recordID
+        lgmAutomationEngine.recordID = lgmAutomationEngine.parent[0]["Id"];
+                
+        //***
+        //get all rules related to our data context only
+    
+        lgmAutomationEngine.automation = lgmAutomationEngine.retrieveRules();
+        
+        if (lgmAutomationEngine.automation != null) {
+            if (lgmAutomationEngine.automation.length > 0) {
+                //***
+                //Check what filters apply
+                
+                var rulesCount = lgmAutomationEngine.validateFilters();
+                //alert("Rule count "+rulesCount);
+                //***
+                //Check for duplicates (already applied rules) of the applicable rules
+                
+                if (rulesCount > 0) {
+                    lgmAutomationEngine.applyResults();     
+                }
+            }
+        }
+        
+        lgm.debug.addMessage(["<STRONG>AUTO ENGINE END TIME:", new Date(), "</STRONG>"].join("")); 
+        
+        lgmAutomationEngine.continueFunc();//engine finished, so continue
+                
+    }
+    catch(err)
+    {
+        lgm.debug.addMessage("Rule Error: " + err.toString());
+    }
+};
+
+lgmAutomationEngine.retrieveRules = function() 
+{
+    //build Filter where clause using source-filtered rules
+    
+    var queryFields = new Array();
+    
+    var sqlWhere = "";
+    
+    var tableCount = 0;
+    var fieldName = "";
+    var fieldValue = "";
+    
+    //var fieldCount = 0;
+    //var filterCriteria = "";
+    
+    var temp = "";
+    var tempOp = "";
+    
+
+    
+    try
+    {
+    
+    //are there fields defined to search the data model?
+    if (lgmAutomationEngine.filterFields.length > 0 ) 
+    {
+        sqlWhere = " where (";
+        
+        for (var object in lgmDataContext.objectRecord) 
+        {
+            tableCount = tableCount +1;
+        
+            
+            if (tableCount > 1 ) {
+                sqlWhere = sqlWhere + " or (";
+            }
+            else {
+                sqlWhere = sqlWhere + " ("
+            }
+            
+            sqlWhere = sqlWhere + "(MUSW__Filter_Table_Index__c like '%" + object + "%' and MUSW__Filter_Count__c = 0 AND (MUSW__Type__c = '' OR MUSW__Type__c = 'Assess')) ";
+    
+            
+            var objRec = lgmDataContext.objectRecord[object]; 
+            //if there is an object definition
+            if ( objRec !=null ) {
+                //for each object record
+                for (var i=0;i<objRec.length;i++) {
+                    
+                    //for each significant field
+                    for (var j=0;j<lgmAutomationEngine.filterFields.length;j++) {
+                        //does this field apply to our current table?
+                        if (lgmAutomationEngine.filterFields[j].table == object) {
+                        
+                            fieldName = lgmAutomationEngine.filterFields[j].field;
+                            fieldValue = objRec[i].get(fieldName);
+                            
+                            //is there data in this field?
+                            if (fieldValue != null) {
+                                
+                                //have we not queried for this before? 
+                                if (queryFields[object+fieldName+fieldValue] == null) {
+                                
+                                    //remember this table-field-value pair
+                                    queryFields[object+fieldName+fieldValue] = 1;
+                                
+                                    //find filters with this exact table:field|Value match
+                                    temp = object + ":" + fieldName +"|" + lgmAutomationEngine.escapeSOQL(fieldValue);
+                                    
+                                    //find filters with table:field but Value is in a range
+                                    tempOp = object + ":" + fieldName +"?|";
+                                    
+                                    sqlWhere = sqlWhere + " or ";
+                                    
+                                    //search index for table-field-value tri-pair matches or table-field ranges
+                                    sqlWhere = sqlWhere + "MUSW__Filter_Index__c like '%"+temp +"%' or MUSW__Filter_Index__c like '%"+tempOp+"%'";
+                                }
+                            }
+                        }
+                    }
+                    //var fieldCount = 0;
+                }
+            }
+            sqlWhere = sqlWhere + ")";
+        } //for loop
+        sqlWhere = sqlWhere + ") and (MUSW__Active__c = true AND (MUSW__Type__c = '' OR MUSW__Type__c = 'Assess') " +
+                " AND ( MUSW__Effective_Date__c = null OR MUSW__Effective_Date__c <= TODAY ) AND ( MUSW__End_Date__c = null OR MUSW__End_Date__c >= TODAY )) ";
+    }
+    else {
+        throw lgm.error("No automation fields defined");
+    }
+    //var automationFields = lgmAutomationEngine.getFields("MUSW__Automation_Rule__c");
+    
+    //*****required to have certain rules running before others
+    sqlRuleSort = " order by MUSW__Order__c, Id";
+    
+    //get all rules and results related to our data context
+    lgmAutomationEngine.automation = lgm.connection.query("SELECT Id, Name, MUSW__Filter_Count__c, MUSW__Filter_Table_Index__c, MUSW__Filter_Table_Count__c, MUSW__Description__c, MUSW__Result_Table_Count__c, MUSW__Result_Table_Index__c, MUSW__CVRecordID__c, MUSW__Active__c, MUSW__Filter_Index__c, MUSW__Result_Group_Count__c, MUSW__Result_Index__c, MUSW__Result_Count__c, MUSW__Filter_Group_Count__c, MUSW__Order__c, MUSW__Filter_Index_Long__c, MUSW__Type__c, MUSW__Effective_Date__c, MUSW__End_Date__c, (SELECT Id, MUSW__action_type__c, MUSW__expression__c, MUSW__field__c, MUSW__group__c, MUSW__table__c, MUSW__value__c, MUSW__Automation_Rule__c from musw__results__r where MUSW__active__c = true order by MUSW__group__c, MUSW__table__c, MUSW__order__c) FROM MUSW__Automation_Rule__c " + sqlWhere + sqlRuleSort);
+    lgm.debug.addMessage("Number of Rules to evaluate filters: " + lgmAutomationEngine.automation.length);
+    
+    return lgmAutomationEngine.automation;
+    }
+    catch(err)
+    {   
+        lgm.debug.addMessage("Rule Retrieve Error: " + err.toString());
+    }
+
+};
+
+lgmAutomationEngine.validateFilters = function() 
+{
+    //***
+    //find applicable rules using filters on existing data
+    //assume there is matching records for these rules because of first pass
+    //second pass is checking for multiple filters and tables for rule application
+    
+    var rulesCount = 0;
+    var filterTable = "";
+    var filterMatch = new Array();
+    var filterTables = new Array();
+    var applicable = false;
+    var ruleId="";
+    
+    var rulesCount = 0;
+    //for each parent (should be only one)
+    for (var j=0;j<lgmAutomationEngine.parent.length;j++) 
+    {   //for each rule
+        for (var i=0;i<lgmAutomationEngine.automation.length;i++) 
+        {   
+            try
+            {
+            
+            ruleId = lgmAutomationEngine.automation[i]["Id"];
+            //default to false
+            applicable = false;
+            //get filterTable index
+            var filterTableIndex = lgmAutomationEngine.automation[i].get("MUSW__Filter_Table_Index__c").split("&");
+            
+            //initialize filter index position
+            var filterIncrement = 0; // how many filters have been evaluated so far
+            
+            
+            //for each filter group (a group is a combined action to take)
+            //1-based count
+            for (var g=1;g<=lgmAutomationEngine.automation[i].get("MUSW__Filter_Group_Count__c");g++) {
+            
+                //for each filter table
+
+                for (var k=0;k<lgmAutomationEngine.automation[i].get("MUSW__Filter_Table_Count__c");k++) {
+                    
+                    var filterTable = filterTableIndex[k];
+                    
+                    //check filters (filter counts of zero were validated in first pass)
+                    if (lgmAutomationEngine.automation[i].get("MUSW__Filter_Count__c") != 0 ) 
+                    {   
+                    
+                        //get filter index
+                        //need full description for syncing group
+                        var filterIndex = lgmAutomationEngine.automation[i].get("MUSW__Filter_Index_Long__c").split("&");
+                        
+                        //get applicable data
+                        var childRecords = lgmDataContext.objectRecord[filterTable];
+                        
+                        //remember starting index
+                        var startIncrement = filterIncrement; 
+                        
+                        //for each data record, see if filters apply
+                        for (var i2=0;i2<childRecords.length;i2++) 
+                        {   //default to true
+                            applicable = true;
+                            
+                            //reset count of filters evaluated
+                            var filtersEvaluated = 0;
+
+                            
+                            //for each filter
+                            //beginning @ filterIncrement position, evaluate the rest of filters for this rule
+                            //***filterIncrement depends on filters being ordered by group, then by table
+                            for (var l=filterIncrement;l<lgmAutomationEngine.automation[i].get("MUSW__Filter_Count__c");l++) {
+                                
+                                var filter = filterIndex[l];
+                                
+                                //expected format: Action^Group#Order!Table:Column=Value
+                                var filterAction = filter.split("^")[0];
+                                var filterGroup2 = filter.split("^")[1].split("#")[0];
+                                //var filterOrder2 = filter.split("#")[1].split("!")[0];
+                                
+                                var filterTable2 = filter.split("!")[1].split(":")[0];
+                                
+                                var filterField = filter.split(":")[1].split("?")[0];
+                                var filterOp = filter.split("?")[1].split("|")[0];
+                                var filterValue = filter.split("|")[1];
+                                
+                                
+                                //is current filter table the same as the current table index?
+                                //is current filter in the current group?
+                                //is the current filter in the current sort ordinal?
+                                if ((filterTable2 == filterTable) && (filterGroup2 == g)){
+                            
+                                    //does this filter match the field value on this child table?
+                                    
+                                    if (!(lgmAutomationEngine.compare(childRecords[i2].get(filterField),filterValue,filterOp, ruleId)))  {
+                                        
+                                        applicable = false;
+                                        lgm.debug.addMessage("Filter FALSE : <STRONG>" + lgmAutomationEngine.automation[i]["Name"] + "</STRONG> : " + filterTable2 + "." + filterField + " " + filterOp + " " + filterValue + "<STRONG> ; Value = </STRONG>" + childRecords[i2].get(filterField));
+                                    }
+                                    
+                                    filtersEvaluated++;
+                                    
+                                }
+                                
+                            }
+                            
+                            
+                            //store matching filter table record id with rule id, group and filter table name
+                            // used later when processing update results
+                            //JAW REVIEW filterPrevent and filterApply may be better implemented using an array of recordsId's rather than delimited strings by "&"
+                            if (applicable) { //store matching data record Id
+                                
+                                //*****filter record is applicable
+                                
+                                
+                                //***if not prevented by another mismatch on this table record
+                                if (lgmAutomationEngine.nvl(lgmAutomationEngine.filterPrevent[lgmAutomationEngine.automation[i].get("Id")+g+filterTable],"").indexOf(childRecords[i2].get("Id")) == -1){
+                                    
+                                    //***append filter table name if not already there to matching filterTable list
+                                    //***used to determine if rule should apply
+                                    if (lgmAutomationEngine.filterTableApply[lgmAutomationEngine.automation[i].get("Id")+g] == null) {
+                                        lgmAutomationEngine.filterTableApply[lgmAutomationEngine.automation[i].get("Id")+g] = filterTable;
+                                    } else {
+                                        //if not a duplicate, add matching table name to list
+                                        if (lgmAutomationEngine.filterTableApply[lgmAutomationEngine.automation[i].get("Id")+g].indexOf(filterTable) == -1) {
+                                            lgmAutomationEngine.filterTableApply[lgmAutomationEngine.automation[i].get("Id")+g] = lgmAutomationEngine.filterTableApply[lgmAutomationEngine.automation[i].get("Id")+g] + "&" + filterTable;
+                                        
+                                        }
+                                    }
+                                    
+                                    //***append filter table record ID that matched all filter criteria
+                                    //***used for determining record positioning in results
+                                    //is it the first time we're allowing this record Id?
+                                    //notice that we don't store the group - results do not refer to the group when determining record position
+                                    if (lgmAutomationEngine.filterApply[lgmAutomationEngine.automation[i].get("Id")+filterTable] == null) {
+                                        lgmAutomationEngine.filterApply[lgmAutomationEngine.automation[i].get("Id")+filterTable] = childRecords[i2].get("Id");
+                                    } else {
+                                        //if not a duplicate, add matching record Id to list
+                                        if (lgmAutomationEngine.filterApply[lgmAutomationEngine.automation[i].get("Id")+filterTable].indexOf(childRecords[i2].get("Id")) == -1) {
+                                            lgmAutomationEngine.filterApply[lgmAutomationEngine.automation[i].get("Id")+filterTable] = lgmAutomationEngine.filterApply[lgmAutomationEngine.automation[i].get("Id")+filterTable] + "&" + childRecords[i2].get("Id");
+                                        
+                                        }
+                                    }
+                                    
+                                }
+                            } else {
+                                //prevent any more matches for this table (and group and rule) on this record
+                                
+                                if (lgmAutomationEngine.filterPrevent[lgmAutomationEngine.automation[i].get("Id")+g+filterTable] == null) {
+                                    lgmAutomationEngine.filterPrevent[lgmAutomationEngine.automation[i].get("Id")+g+filterTable] = childRecords[i2].get("Id");
+                                } else {
+                                    //if not a duplicate preventor, add preventor record Id to list
+                                    if (lgmAutomationEngine.filterPrevent[lgmAutomationEngine.automation[i].get("Id")+g+filterTable].indexOf(childRecords[i2].get("Id")) == -1) {
+                                        lgmAutomationEngine.filterPrevent[lgmAutomationEngine.automation[i].get("Id")+g+filterTable] = lgmAutomationEngine.filterPrevent[lgmAutomationEngine.automation[i].get("Id")+g+filterTable] + "&" + childRecords[i2].get("Id");
+                                    
+                                    }
+                                }
+                                
+                                //if we had a prior filter match on this table record, remove this recordId from applicable filters list
+                                //notice no reference to the group as results do not refer to the same group as filters to determine record position
+                                //JAW Review - this needs to be upgraded so that unmatching filter positions (applicable filter records) do not remove record positions in other groups 
+                                //failure in this group, means this record position cannot be used only in this group (other successful groups may still have their record positions)
+                                if (lgmAutomationEngine.nvl(lgmAutomationEngine.filterApply[lgmAutomationEngine.automation[i].get("Id")+filterTable],"").indexOf(childRecords[i2].get("Id")) != -1) {
+                                    
+                                    var filterRecordIds = lgmAutomationEngine.filterApply[lgmAutomationEngine.automation[i].get("Id")+filterTable];
+                                    filterRecordIdArray = filterRecordIds.split("&");
+                                    filterRecordIds = "";
+                                    
+                                    //rebuild applicable filters list but without the current record Id (which does not meet the current filter field requirement (but did before))
+                                    for (var f=0;f<filterRecordIdArray.length;f++) {
+                                        if (filterRecordIdArray[f] != childRecords[i2].get("Id")) {
+                                            if (filterRecordIds.length > 0 ) {
+                                                filterRecordIds = filterRecordIds + "&" + filterRecordIdArray[f];
+                                            } else {
+                                                filterRecordIds = filterRecordIdArray[f];
+                                            }
+                                        }
+                                    }
+                                    lgmAutomationEngine.filterApply[lgmAutomationEngine.automation[i].get("Id")+filterTable] = filterRecordIds;
+                                }
+                            }
+                            
+                        }
+                        filterIncrement = filterIncrement + filtersEvaluated;   
+
+                    }
+                    else {//filter only on presence of a table record since no field filters are present
+                        
+                        //***get all filter table's record data for use as record positions
+                        var childRecords = lgmDataContext.objectRecord[filterTable];
+                        if (childRecords != null) {
+                            //***filter applies because no filter-fields exist
+                            //***and records exist
+                            
+                            //***append filter table name if not already there to matching filterTable list
+                            //***used to determine if rule should apply
+                            if (lgmAutomationEngine.filterTableApply[lgmAutomationEngine.automation[i].get("Id")+g] == null) {
+                                lgmAutomationEngine.filterTableApply[lgmAutomationEngine.automation[i].get("Id")+g] = filterTable;
+                            } else {
+                                //if not a duplicate, add matching table name to list
+                                if (lgmAutomationEngine.filterTableApply[lgmAutomationEngine.automation[i].get("Id")+g].indexOf(filterTable) == -1) {
+                                    lgmAutomationEngine.filterTableApply[lgmAutomationEngine.automation[i].get("Id")+g] = lgmAutomationEngine.filterTableApply[lgmAutomationEngine.automation[i].get("Id")+g] + "&" + filterTable;
+                                
+                                }
+                            }
+
+                            //for each data record, add record Id
+                            for (var i2=0;i2<childRecords.length;i2++) 
+                            {
+                                //***append filter table record ID's
+                                //***used for determining record positioning in results
+                            
+                                //is it the first time we're allowing this record Id?
+                                if (lgmAutomationEngine.filterApply[lgmAutomationEngine.automation[i].get("Id")+filterTable] == null) {
+                                    lgmAutomationEngine.filterApply[lgmAutomationEngine.automation[i].get("Id")+filterTable] = childRecords[i2].get("Id");
+                                } else {
+                                    //if not a duplicate, add matching record Id to list
+                                    if (lgmAutomationEngine.filterApply[lgmAutomationEngine.automation[i].get("Id")+filterTable].indexOf(childRecords[i2].get("Id")) == -1) {
+                                        lgmAutomationEngine.filterApply[lgmAutomationEngine.automation[i].get("Id")+filterTable] = lgmAutomationEngine.filterApply[lgmAutomationEngine.automation[i].get("Id")+filterTable] + "&" + childRecords[i2].get("Id");
+                                    
+                                    }
+                                }
+                            }
+                        }                       
+                    }
+                } //filter table loop
+                
+                //does each filter table have at least one record that matches?
+                if (lgmAutomationEngine.filterTableApply[lgmAutomationEngine.automation[i].get("Id")+g] == lgmAutomationEngine.automation[i].get("MUSW__Filter_Table_Index__c")) {
+                    //store rule ID, and destination table under the desired action
+                    lgmAutomationEngine.ruleApply[lgmAutomationEngine.automation[i].get("Id")]= lgmAutomationEngine.automation[i] ; // Rule record
+                    rulesCount = rulesCount +1;
+                }   
+            } //group loop  
+            }
+            catch(err)
+            {   
+                lgm.debug.addMessage("Rule Filter Error: " + lgmAutomationEngine.automation[i]["Name"] + err.toString());
+            }
+        } //rule loop
+    } // parent loop
+    
+    return rulesCount;  
+
+};
+
+
+
+// Apply the results associated to the rules that passed the filter verification
+// Some rules require that automation rules have already been applied
+// if not, build list of beans to tentatively apply for when user ok's the list
+lgmAutomationEngine.applyResults = function(i) 
+{
+    //***
+    //find duplicates using rule results on existing data
+    // - for each applicable rule check to see if result has already been applied
+    // - if not, create a bean for the rule
+    
+    
+    var rulesCount = 0;
+    var filterTable = "";
+    var filterMatch = new Array();
+    var filterTables = new Array();
+    var fauxId = new Array(); //stores temporary placeholder Id for insert actions for use in stateMachine
+    var allowed = true;
+    
+    var resultIndex;
+    var resultIncrement;
+    var resultTableIndex;
+    var resultTable;
+    var insertFlag;
+    var startIncrement;
+    var resultsEvaluated;
+    var result;
+    var resultId;
+    var resultAction;
+    var resultGroup2;
+    var resultTable2;
+    var resultField;
+    var resultValue;
+    var insertAction;
+    var duplicateCheck;
+
+    var totalNewResults = 1;//total number of result records to work with within one rule
+    var multiSearch; //allowed to find multiple filter records because we are repeating
+    var value;
+    var priorValue;
+    
+    var rulesCount = 0;
+
+    //for each parent (should be only one)
+    for (var j=0;j<lgmAutomationEngine.parent.length;j++) 
+    {   //for each applicable rule
+        for (var ruleId in lgmAutomationEngine.ruleApply) 
+        {
+        try //catch error at the rule level
+        {
+            //default to false
+            allowed = false;
+            
+            //get result index
+            resultIndex = lgmAutomationEngine.ruleApply[ruleId].get("MUSW__Result_Index__c").split("&");
+            
+            //initialize result index position
+            resultIncrement = 0; // how many filters have been evaluated so far
+            
+            //get resultTable index
+            resultTableIndex = lgmAutomationEngine.ruleApply[ruleId].get("MUSW__Result_Table_Index__c").split("&");
+            
+            //for each result group (a group is a combined action to take)
+            //1-based count
+            for (var g=1;g<=lgmAutomationEngine.ruleApply[ruleId].get("MUSW__Result_Group_Count__c");g++) 
+            {   
+                //for each result table
+                for (var k=0;k<lgmAutomationEngine.ruleApply[ruleId].get("MUSW__Result_Table_Count__c");k++) 
+                {   
+                    resultTable = resultTableIndex[k];
+                    insertFlag = false;
+                
+                    //check if results exist 
+                    if (lgmAutomationEngine.ruleApply[ruleId].get("MUSW__Result_Count__c") != 0 ) 
+                    { 
+            
+                        totalNewResults = 1;
+                        var repeater = 0;
+                        multiSearch = false;
+                        
+                        //for each new upsert record
+                        while (repeater < totalNewResults)
+                        {
+                            //remember starting index
+                            startIncrement = resultIncrement;
+                            
+                        
+                            //reset count of results evaluated
+                            resultsEvaluated = 0;
+                            
+                            //any duplicate record field will make this false
+                            allowed = true;
+                        
+                
+                            //for each result instruction
+                            for (var l=resultIncrement;l<lgmAutomationEngine.ruleApply[ruleId].get("MUSW__Result_Count__c");l++) {
+                                
+                                result = resultIndex[l];
+                                
+                                //expected format: resultId@Action^Group#Order!Table:Column=Value
+                                resultId = result.split("@")[0];
+                                resultAction = result.split("@")[1].split("^")[0];
+                                resultGroup2 = result.split("^")[1].split("#")[0];
+                                
+                                resultTable2 = result.split("!")[1].split(":")[0];
+                                resultField = result.split(":")[1].split("=")[0];
+                                resultValue = unescape(result.split("=")[1]);
+                                
+                                //set flags based on resultAction
+                                if ((resultAction == "Add Record") || (resultAction == "Add Record - Duplicate Check") || (resultAction == "Add Records - Duplicate Check")) {
+                                    insertAction = true;
+                                } else {
+                                    insertAction = false;
+                                }
+                                
+                                //set flags based on duplicate check
+                                if ( (resultAction == "Add Record - Duplicate Check") || (resultAction == "Add Records - Duplicate Check") || (resultAction == "New Value - Duplicate Check")) {
+                                    duplicateCheck = true;
+                                } else {
+                                    duplicateCheck = false;
+                                }
+                                
+                                //get number of filter records to repeat over
+                                if (resultAction == "Add Records - Duplicate Check")
+                                {
+                                    multiSearch = true;
+                                    //get object name to repeat over
+                                    resultValue = lgmAutomationEngine.getRepeatVal(resultValue, resultAction, ruleId); //sets global lgmAutomationEngine.repeatObjectName
+                                     
+                                    //get number of filter records
+                                    var destRecordID = lgmAutomationEngine.filterApply[ruleId+lgmAutomationEngine.repeatObjectName];
+                                    if (destRecordID != null) 
+                                    {
+                                        var destRecordID = destRecordID.split("&");
+                                        if (destRecordID.length > 1) 
+                                        {
+                                            totalNewResults = destRecordID.length; //set number of new upsert records to create
+                                        }
+                                    }
+                                    else
+                                    {
+                                        throw lgm.error(ruleId + "Results: Unexpected: no filter records to repeat over");
+                                    }
+                                }
+                                
+                                //is current result table the same as the current table index?
+                                //and is current group the same as the current group index?
+                                if ((resultTable2 == resultTable) && (resultGroup2 == g)) {
+                                    
+                                    
+                                    //***if duplicate checking, is there one table-field data record that matches this particular result
+                                    if (duplicateCheck ) {
+                                    
+                                        //get applicable data
+                                        var childRecords = lgmDataContext.objectRecord[resultTable];
+                            
+                                        if (childRecords.length > 0) {
+                                        
+                                            //for each data record, see if results apply
+                                        
+                                            for (var i2=0;i2<childRecords.length;i2++) 
+                                            {   
+                                    
+                                                //build field result and check if matches current DC record
+                                                
+                                                if (childRecords[i2].get(resultField) != null) {
+                                                    //records added to DC inside Engine, may not have this result field
+                                                    
+                                                    
+                                                    // ***** code below is the same in the following loop: allowed
+                                                    
+                                                    //set insert flag if any result on this table was an insert action
+                                                    if (insertAction) {//creating an ABRE record
+                                                        insertFlag = true;
+                                                        var placeHolderId = ruleId+g+repeater;  //set placeholderID
+                                                    } else {
+                                                        if (fauxId[ruleId+g+repeater] == null) { //updating an DC record
+                                                            var placeHolderId = childRecords[i2].get("Id");
+                                                        } else { //updating an ABRE added record
+                                                            var placeHolderId = ruleId+g+repeater; 
+                                                        }
+                                                    }
+                                                    
+                                                    //get prior field value from a prior result if we have one, else
+                                                    //  else get it from datamodel if we are updating
+                                                    if (lgmAutomationEngine.stateMachine[placeHolderId+resultTable+resultField+repeater] != null) { 
+                                                        priorValue = lgmAutomationEngine.stateMachine[placeHolderId+resultTable+resultField+repeater];
+                                                    } else if (insertFlag == false) {
+                                                        //has a prior rule *edited* this field?
+                                                        if (lgmAutomationEngine.stateEngine[resultTable+resultField] != null ) {
+                                                            priorValue = lgmAutomationEngine.stateEngine[resultTable+resultField][0]; //get value
+                                                        } else {
+                                                            priorValue = childRecords[i2].get(resultField);
+                                                        }
+                                                    } else {
+                                                        priorValue = null;
+                                                    }
+                                                    
+                                                    // ***** code above is the same in the following loop: allowed
+    
+                                                    //does this result match the field value on this child table?
+                                                    var value = lgmAutomationEngine.calculate(ruleId,priorValue,resultValue, resultAction,resultId,childRecords[i2].get("Id"), null, repeater,multiSearch)
+                                                    value = lgmAutomationEngine.formatValue(value,resultTable,resultField); 
+                                                    if (childRecords[i2].get(resultField) == value)  
+                                                    {   
+                                                        allowed = false;
+                                                    } 
+                
+                                                }   //if DC record has the given field
+                                                
+                                            } //record loop 
+    
+                                        }   //if data exists
+                                                
+                                    } //duplicate check
+                                    
+                                    resultsEvaluated++; 
+                                                    
+                                } else {
+                                    //skip ahead (new table or group)
+                                    l = lgmAutomationEngine.ruleApply[ruleId].get("MUSW__Result_Count__c");
+                                }  //group and table synch                          
+                            } //result loop 
+                            
+                            repeater++;
+                            
+                        } //while repeater (number of upsert records to create
+                        
+                        resultIncrement = resultIncrement + resultsEvaluated;   
+                                
+                    } //check results
+                    else {
+                        alert("empty record");
+                        allowed = true;
+                    }
+                } //result table loop
+                    
+                    
+                //***
+                // if no duplicate found for current automation rule group, then create bean
+                
+                if (allowed) 
+                {
+                    //reset starting position in index
+                    resultIncrement =startIncrement ;
+                    
+                    //for each result table
+                    for (var k=0;k<lgmAutomationEngine.ruleApply[ruleId].get("MUSW__Result_Table_Count__c");k++) {
+        
+                        resultTable = resultTableIndex[k];
+                        
+                        totalNewResults = 1;
+                        var repeater = 0;
+                        multiSearch = false;
+                        
+                        //for each new upsert record
+                        while (repeater < totalNewResults)
+                        {
+                        
+                            var valueDescription = "";
+                            insertFlag = false;
+                            
+                            
+                            //reset count of results evaluated
+                            resultsEvaluated = 0;
+    
+                            //for each result
+                            
+                            for (var l=resultIncrement;l<lgmAutomationEngine.ruleApply[ruleId].get("MUSW__Result_Count__c");l++) {
+                            
+                                result = resultIndex[l];
+                                        
+                                //expected format: resultId@Action^Group#Order!Table:Column=Value
+                                resultId = result.split("@")[0];
+                                resultAction = result.split("@")[1].split("^")[0];
+                                resultGroup2 = result.split("^")[1].split("#")[0];
+                                //var resultOrder2 = result.split("#")[1].split("!")[0];
+                                
+                                resultTable2 = result.split("!")[1].split(":")[0];
+                                resultField = result.split(":")[1].split("=")[0];
+                                resultValue = unescape(result.split("=")[1]);
+                                
+                                //is current result table the same as the current table index?
+                                //and is current group the same as the current group index?
+                                if ((resultTable2 == resultTable) && (resultGroup2 == g)) {
+                                
+                                    if ((resultAction == "Add Record") || (resultAction == "Add Record - Duplicate Check") || (resultAction == "Add Records - Duplicate Check")) {
+                                        insertAction = true;
+                                    } else {
+                                        insertAction = false;
+                                    }
+    
+                                    //get number of filter records to repeat over
+                                    if (resultAction == "Add Records - Duplicate Check")
+                                    {
+                                        multiSearch = true;
+                                        //get object name to repeat over
+                                        resultValue = lgmAutomationEngine.getRepeatVal(resultValue, resultAction, ruleId); //sets global lgmAutomationEngine.repeatObjectName
+                                         
+                                        //get number of filter records
+                                        var destRecordID = lgmAutomationEngine.filterApply[ruleId+lgmAutomationEngine.repeatObjectName];
+                                        if (destRecordID != null) 
+                                        {
+                                            var destRecordID = destRecordID.split("&");
+                                            if (destRecordID.length > 1) 
+                                            {
+                                                totalNewResults = destRecordID.length; //set number of new upsert records to create
+                                            }
+                                        }
+                                        else
+                                        {
+                                            throw lgm.error(ruleId + "Results: Unexpected: no filter records to repeat over");
+                                        }
+                                    }
+                                
+                                    //if bean doesn't exist create one
+                                    if (lgmAutomationEngine.applicableRules[lgmAutomationEngine.ruleApply[ruleId].get("Id")+g+resultTable+repeater] == null) { 
+                                
+                                        //create bean
+                                        var destinationRecord = new sforce.SObject(resultTable); 
+                                        
+                                        //set id's (foreign and/or primary ID's)
+                                        destinationRecord = lgmAutomationEngine.setIDs(destinationRecord,insertAction,lgmAutomationEngine.ruleApply[ruleId].get("Id"),resultTable, repeater);
+                                        
+                                    } else { //grab from array
+                                        destinationRecord = lgmAutomationEngine.applicableRules[lgmAutomationEngine.ruleApply[ruleId].get("Id")+g+resultTable+repeater];
+    
+                                    }
+                                    
+                                    // ***** code below is the same in the above loop: duplicate check
+                                    
+                                    //set insert flag if any result on this table was an insert action
+                                    if (insertAction) {
+                                        insertFlag = true;
+                                        var placeHolderId = ruleId+g+repeater;  //set and store placeholderID
+                                        fauxId[placeHolderId] = true;
+                                    } else {
+                                        if (fauxId[ruleId+g+repeater] == null) { //updating an DC record 
+                                            var placeHolderId = destinationRecord.get("Id");
+                                        } else { //updating an ABRE added record
+                                            var placeHolderId = ruleId+g+repeater; //
+                                        }
+                                    }
+                                    
+                                    //get prior field value if we have it, else if we are updating, get it from a prior rule or get it from datamodel 
+                                    if (lgmAutomationEngine.stateMachine[placeHolderId+resultTable+resultField] != null) {
+                                        priorValue = lgmAutomationEngine.stateMachine[placeHolderId+resultTable+resultField];
+                                        //reset description
+                                        valueDescription = "";
+                                    } else if (insertFlag == false) {
+                                        //has a prior rule updated *edited* this field?
+                                        if (lgmAutomationEngine.stateEngine[resultTable+resultField] != null ) {
+                                            priorValue = lgmAutomationEngine.stateEngine[resultTable+resultField][0]; //get value
+                                        } else {
+                                            priorValue = lgmDataContext.getFieldValue(resultTable, resultField, destinationRecord.get("Id"));
+                                        }
+                                    } else {
+                                        priorValue = null;
+                                    }
+                                    
+                                    // ***** code above is the same in the above loop: duplicate check
+    
+                                    //****************************
+                                    //set destination table field value to the calculated result    
+                                    //*****************************
+                                    
+                                    var value = lgmAutomationEngine.calculate(ruleId, priorValue,resultValue, resultAction,resultId,destinationRecord.get("Id"),destinationRecord, repeater,multiSearch);
+                                    
+                                    
+                                    value = lgmAutomationEngine.formatValue(value,resultTable,resultField); 
+                                    //valueDescription = valueFormatted.toString().substring(0,30) + " ";
+                                    valueDescription = "Group " + g;
+                                    destinationRecord.set(resultField,value);           
+                                    
+                                    //store bean for possible later results (or saving to database if no more results)
+                                    lgmAutomationEngine.applicableRules[lgmAutomationEngine.ruleApply[ruleId].get("Id")+g+resultTable+repeater] = destinationRecord; 
+                                    
+                                    //update stateMachine
+                                    lgmAutomationEngine.stateMachine[placeHolderId+resultTable+resultField] = value;
+                                    
+                                    //update stateEngine (only edits for now: placeHolderId = recordId )
+                                    if (insertFlag == false) {
+                                        lgmAutomationEngine.stateEngine[resultTable+resultField] = [value,placeHolderId]; //set value & recordId
+                                    }
+                                    
+                                    resultsEvaluated++;
+    
+                                        
+                                } else { 
+                                    //skip ahead (new table or group - index is sorted by rule, group, table, order)
+                                    l = lgmAutomationEngine.ruleApply[ruleId].get("MUSW__Result_Count__c");
+                                }
+                                
+                                
+                            } //for each result instruction
+                            
+                                
+                            
+                            //store bean into data model
+                            //***so that duplicateCheck will see this record when other rules attempt to add the same record
+                            if (insertFlag) {
+                                if (lgmDataContext.objectRecord[resultTable] != null) { 
+                                    lgmDataContext.objectRecord[resultTable][lgmDataContext.objectRecord[resultTable].length] = lgmAutomationEngine.applicableRules[lgmAutomationEngine.ruleApply[ruleId].get("Id")+g+resultTable+repeater];
+                                } else {
+                                    lgmDataContext.objectRecord[resultTable][0] = lgmAutomationEngine.applicableRules[lgmAutomationEngine.ruleApply[ruleId].get("Id")+g+resultTable+repeater]; 
+                                }
+                            }
+                            
+                            lgmAutomationEngine.numApplicableRules = lgmAutomationEngine.numApplicableRules +1;
+                            
+                            //insert rule description
+                            //var destinationTableName = lgm.string.replaceAll(lgm.string.replaceAll(lgm.string.replaceAll(resultTable,"MUSW__",""),"__c",""),"_"," ");// format table name
+                            lgmAutomationEngine.applicableRulesDesc.push(lgmAutomationEngine.ruleApply[ruleId]["Name"] + " - " + valueDescription );
+                        
+                            repeater++;
+                            multiSearch = false;
+                        } //repeater
+                        
+                        resultIncrement = resultIncrement + resultsEvaluated;
+                            
+                    } //result table loop
+                    
+                } //duplicate check
+            } //group loop
+        }
+        catch(err)
+        {   
+            lgm.debug.addMessage("Rule Result Error: " + lgmAutomationEngine.ruleApply[ruleId]["Name"] + " " + err.toString() + "\n"+err.description); //to handle both lgm.error and system errors
+        }   
+        } //rule loop
+    } // parent loop
+        
+    return true;
+    
+};
+
+//set the bean ID's given a table name and action
+//use data map and priority of relationships to determine the ID's
+//always set FK (if it is a child)
+
+lgmAutomationEngine.setIDs = function(destbean, insertAction, ruleId, table, repeater) 
+{
+    //find the starting filter position and the relationship for this table
+    
+    //1. Is there a filter position having the same name as this table?
+    var destRecordID = lgmAutomationEngine.filterApply[ruleId+table];
+    if (destRecordID != null) {
+        var destRecordID = destRecordID.split("&");
+        if ((destRecordID.length > 1) && (insertAction != true)) {
+            throw lgm.error(ruleId + " update rule to itself or content tag has multiple matching filters");
+        }
+        
+        var destRecordID = destRecordID[repeater]; //grab first one (doesn't matter at this point)
+        
+        if (insertAction) {
+            //ensure filter-result table isn't the master parent for inserts
+            if (table == lgmAutomationEngine.parentTable) {
+                throw lgm.error(ruleId + " insert rule to master parent not allowed");
+            }
+            //get parent of table
+            var tableDefinition = sforce.connection.describeSObject(table);
+            var destFKName;
+            var destParent;
+            var fKValue;
+            //set all the foreign keys of the bean to be the same as filter match record
+            //rule results can later overwrite them if they are configured to
+            var relatedTableName = "";
+            for (var key in tableDefinition.fields) {
+                if (tableDefinition.fields[key].type == "reference") {
+                    relatedTableName = tableDefinition.fields[key].referenceTo.toString();
+                    if (relatedTableName.indexOf("User") == -1 ) {//do not include user references
+                        //grab value from current table record and set fk
+                        fKValue = lgmDataContext.getFieldValue(table, tableDefinition.fields[key].name, destRecordID);
+                        if (fKValue != null) {
+                            destbean.set(tableDefinition.fields[key].name, fKValue);
+                        }
+                    }
+                }
+            }
+        } else {
+            //set record id
+            destbean.set("Id", destRecordID);
+        }
+        
+    }
+    
+     //2. Is there a filter position that is my parent? 
+    if ((insertAction) && (destRecordID == null))  {
+    
+        //get parent of table
+        var tableDefinition = sforce.connection.describeSObject(table);
+        for (var key in tableDefinition.fields) {
+            if (tableDefinition.fields[key].type == "reference") {
+                var relatedTableNames = tableDefinition.fields[key].referenceTo.toString();
+                var relatedTableName = relatedTableNames.split(",");
+                for (var i=0;i<relatedTableName.length;i++) {
+                    if ((lgmAutomationEngine.filterApply[ruleId+relatedTableName[i]] != null) && (destRecordID == null)) {
+                        var destRecordID = lgmAutomationEngine.filterApply[ruleId+relatedTableName[i]];
+                        var destFKName = tableDefinition.fields[key].name;
+                        
+                        //set foreign key
+                        destbean.set(destFKName, destRecordID);
+                    }
+                }
+            }
+        }
+    } 
+     
+     //3. Is the master parent this table?
+    if ((table == lgmAutomationEngine.parentTable) && (destRecordID == null)) {
+        var destRecordID = lgmAutomationEngine.recordID;
+        if (insertAction) {
+            throw lgm.error(ruleId + " insert rule to master parent not allowed");
+        } else {
+            //set record ID
+            destbean.set("Id", destRecordID);
+        }
+    
+    } 
+    
+     //4. Is the master parent my parent?
+    if ((insertAction) && (destRecordID == null)){
+        //get child of master parent
+        
+        tableDefinition = sforce.connection.describeSObject(lgmAutomationEngine.parentTable);
+        // Loop through all of the children from tableDefinition
+        for (var i = 0; i < tableDefinition.childRelationships.length; i++) {       
+            var relation = tableDefinition.childRelationships[i];
+            if ((tableDefinition.childRelationships[i].childSObject == table) && (destRecordID == null)) {
+                var destRecordID = lgmAutomationEngine.recordID;
+                var destFKName = tableDefinition.childRelationships[i].field;
+                
+                //set foreign key
+                destbean.set(destFKName, destRecordID);
+            }
+        }
+    }
+    
+    if ((insertAction != true) && (destRecordID == null)){          
+        throw lgm.error(ruleId + " update rule to a child is not allowed");
+    }
+    if (destRecordID == null) {         
+        throw lgm.error(ruleId + " no position found for result to save from");
+    }
+    
+    return destbean;
+
+};
+
+
+lgmAutomationEngine.tableField = function (table, field) {
+
+    this.table = table;
+    this.field = field;
+
+};
+
+lgmAutomationEngine.tableField.prototype.setTable = function(table)
+{
+    this.table = table;
+};
+
+lgmAutomationEngine.tableField.prototype.setField = function(field)
+{
+    this.field = field;
+};
+
+//set value of repeat tag and return remaining value
+lgmAutomationEngine.getRepeatVal = function (contentTag, func, ruleId) 
+{
+    
+    var contentPairCount = 0;
+    
+    if ((contentTag.indexOf("<repeat>") == -1) && (func == "Add Records - Duplicate Check")) {
+        throw lgm.error(ruleId + " " + func + " requires a valid repeat tag");
+    }
+    
+    if (func == "Add Records - Duplicate Check" )
+    {
+        //***if result value is a table.field or table.field~value pair - retrieve value before doing calculation
+        while (contentTag.indexOf(lgmAutomationEngine.repeatTagStart) != -1 ) {
+        
+            if (contentPairCount==1) 
+                throw lgm.error(func + " multiple repeat fields not allowed with result action 'Add Records'");
+                    
+            var startTagStartPos = contentTag.indexOf(lgmAutomationEngine.repeatTagStart);
+            var startTagEndPos = contentTag.indexOf(">", startTagStartPos);
+        
+            var endTagStartPos = contentTag.indexOf(repeatTagEnd, startTagStartPos);
+            if (endTagStartPos == -1) {
+                throw lgm.error(ruleId+"No repeat end tag was found");
+            }
+            var endTagEndPos = contentTag.indexOf(">", endTagStartPos);
+        
+            lgmAutomationEngine.repeatObjectName = contentTag.substring(startTagEndPos+1,endTagStartPos);
+        
+            contentTag = contentTag.substring(0,startTagStartPos) + '' + contentTag.substring(endTagEndPos+1);
+            contentPairCount =contentPairCount+1;
+        }
+    }
+    return contentTag;
+}
+        
+            
+
+
+//return value of content tag
+lgmAutomationEngine.lookupTagContent = function (contentTag, destbean, func, tableFieldObj, ruleId, repeater, searchWithinMultiples) 
+{
+    
+    var contentPairCount = 0;
+    var replaceValue = contentTag;
+    
+    //***if result value is a table.field or table.field~value pair - retrieve value before doing calculation
+    while (contentTag.indexOf(lgmAutomationEngine.contentTagStart) != -1 ) {
+    
+        if ((contentPairCount==1) && (func!="Expression Result") && (func!="Add Records - Duplicate Check") && (func!="Add Record - Duplicate Check") && (func!="Add Record") && (func!="New Value (Text Fields)"))
+            throw lgm.error(func + " multiple content fields only allowed with result action 'Expression Result'");
+                
+        var startTagStartPos = contentTag.indexOf(lgmAutomationEngine.contentTagStart);
+        var startTagEndPos = contentTag.indexOf(">", startTagStartPos);
+    
+        var endTagStartPos = contentTag.indexOf(contentTagEnd, startTagStartPos);
+        if (endTagStartPos == -1) {
+            throw lgm.error(ruleId+"No content end tag was found");
+        }
+        var endTagEndPos = contentTag.indexOf(">", endTagStartPos);
+    
+    
+        var resultPair = contentTag.substring(startTagEndPos+1,endTagStartPos);
+    
+        tableFieldObj.setTable( resultPair.split(".")[0]);
+        
+    
+        //if table.field~value pair
+        if (resultPair.indexOf("~") != -1) {
+        
+            tableFieldObj.setField( resultPair.split(".")[1].split("~")[0]);
+            fieldValue = resultPair.split(".")[1].split("~")[1];
+            
+            //get table.field~value pair
+            replaceValue = lgmDataContext.getRecordId (tableFieldObj.table, tableFieldObj.field, fieldValue);
+            //contentTag of null is ok  if func == "Get Lookup"
+            if ((replaceValue == null ) && (func != "Get Lookup")) {
+                throw lgm.error(" Failed to find: " + tableFieldObj.table + "." + tableFieldObj.field + "~" + fieldValue);
+            }
+        } else {//else table.field pair
+        
+            tableFieldObj.setField( resultPair.split(".")[1]);
+                
+            //dont retrieve result if func is "Sum Numbers"
+            if (func != "Sum Numbers") {
+                
+                //*** get table.field pair
+                
+                replaceValue = lgmAutomationEngine.getTableFieldValue(tableFieldObj.table, tableFieldObj.field, destbean, ruleId, repeater, searchWithinMultiples);
+                
+                if (replaceValue == null) {
+                    throw lgm.error(" Failed to find value for: " + tableFieldObj.table + "." + tableFieldObj.field);
+                }
+            }
+            else
+                break;
+        }
+        
+        contentTag = contentTag.substring(0,startTagStartPos) + replaceValue + contentTag.substring(endTagEndPos+1);
+        contentPairCount =contentPairCount+1;
+    
+    }
+
+return contentTag;
+}
+
+
+lgmAutomationEngine.formatValue = function (fieldValue,resultTable,resultField) {
+
+    if (!(isNaN(fieldValue))) {
+        var fields = sforce.connection.describeSObject(resultTable).fields;
+        for (var i=0; i<fields.length; i++) {
+            if (fields[i].name == resultField) {
+                if (fields[i].type == "currency") {
+                    fieldValue = lgm.numeric.round(parseFloat(fieldValue), 2);
+                    break;
+                }
+            }
+        }
+    }
+
+    return fieldValue;
+}
+
+lgmAutomationEngine.round = function (n,dec) {
+    n = parseFloat(n);
+    if(!isNaN(n)){
+        if(!dec) var dec= 0;
+        var factor= Math.pow(10,dec);
+        return Math.floor(n*factor+((n*factor*10)%10>=5?1:0))/factor;
+    }else{
+        return n;
+    }
+}
+
+lgmAutomationEngine.compare = function(value1, value2, operator, ruleId) 
+{
+    var ret;
+    
+    //blank rule filter field value - check for null (not the string "null")
+    if (value2 == "null") 
+        value2 = null;
+        
+    //if value2 contains a content tag(s), replace with value
+    else if (value2.indexOf(lgmAutomationEngine.contentTagStart) != -1 ) {
+        var o = new lgmAutomationEngine.tableField("","");
+        value2 = lgmAutomationEngine.lookupTagContent(value2, null, "", o, ruleId);
+    } 
+    
+    //if both values are numbers do math comparison
+    if ((!isNaN(value1)) && (!isNaN(value2))) {
+        value1=value1-0; //quickest to convert to number
+        value2=value2-0;
+    }
+    
+    
+    switch (operator) {
+        case ">": { if (value1 > value2) {ret = true;}else{ret = false;} break; }
+        case ">=": { if (value1 >= value2) {ret = true;}else{ret = false;} break; }
+        case "=": { if (value1 == value2) {ret = true;}else{ret = false;} break; }
+        case "<=": { if (value1 <= value2) {ret = true;}else{ret = false;} break; }
+        case "<": { if (value1 < value2) {ret = true;}else{ret = false;} break; }
+        case "!=": { if (value1 != value2) {ret = true;}else{ret = false;} break; }
+        case "IN": { value2=","+value2+",";if (value2.indexOf(","+value1+",") != -1) {ret = true;}else{ret = false;} break; }
+        case "CONTAINS": { if (value1.indexOf(value2) != -1) {ret = true;}else{ret = false;} break; }
+        case "NOT IN": { value2=","+value2+",";if (value2.indexOf(","+value1+",") != -1) {ret = false;}else{ret = true;} break; }
+        case "NOT CONTAINS": { if (value1.indexOf(value2) != -1) {ret = false;}else{ret = true;} break; }
+        default: { if (value1 == value2) {ret = true;}else{ret = false;} break ;}
+      }
+    return ret;
+
+};
+
+//run calculation function based on action
+//fieldValue is always a string or a number, not a complete type such as a date
+lgmAutomationEngine.calculate =function(ruleId, priorValue, resultValue, func, resultId, recordId, destbean, repeater, multiSearch) 
+{
+
+    //for result commands that performs calcs on fieldvalue, it can't be null
+    if ((priorValue == null) && ((func == "Add Calendar Days") || (func == "Add Business Days") || (func == "Add Adjusted Calendar Days") || (func == "Decrement Number") || (func == "Increment Number") || (func == "Multiply Number") || (func == "Divide Number"))) {
+        throw lgm.error(ruleId + " " + func + " "+resultValue+" requires a prior field value in recordId: "+ recordId);
+    }
+    
+    //for result commands that require content
+    if ((resultValue.indexOf("<content>") == -1) && ((func == "Get Lookup") || (func == "Table Field Pair") || (func == "Sum Numbers"))) {
+        throw lgm.error(ruleId + " " + func + " "+resultValue+" missing valid content tag");
+    }
+    
+    var fieldValue = "";
+    var replaceValue = "";
+    
+    
+    
+    //get merge fields
+    if (resultValue.indexOf("<") != -1) {
+    
+        switch (resultValue) {
+            case "<user/>": { resultValue = "{!$User.Id}"; break; }      
+            //default: { ret = resultValue; break }
+        }
+        
+        //if field contains a content tag(s), replace with value
+        if (resultValue.indexOf(lgmAutomationEngine.contentTagStart) != -1 ) {
+        
+                var o = new lgmAutomationEngine.tableField("","");
+                resultValue = lgmAutomationEngine.lookupTagContent(resultValue, destbean, func, o, ruleId, repeater, multiSearch);
+    
+        }
+    }
+    
+    //get calculation result
+    var ret;
+    switch (func) {
+        case "Add Record": { ret = resultValue; break; }
+        case "Add Records - Duplicate Check": { ret = resultValue; break; }
+        case "Add Record - Duplicate Check": { ret = resultValue; break; }
+        case "New Value (Numeric Fields)": { ret = resultValue-0; break; }
+        case "New Value (Text Fields)": { ret = resultValue; break; }
+        case "New Value - Duplicate Check": { ret = resultValue; break; }
+        case "Add Calendar Days": { ret = lgm.date.addDays(priorValue, resultValue); 
+                                    ret = new Date(ret); break; }
+        case "Add Business Days": { ret = lgm.date.addWeeks(priorValue, lgm.numeric.lZ(lgm.numeric.getInt(resultValue/5,1,0,3))); //max 999 weeks 
+                                    ret = lgm.date.addDays(ret, resultValue%5);
+                                    ret = lgm.date.addDays(ret, lgm.date.weekendAdjust(ret.getDay())); 
+                                    ret = new Date(ret);
+                                    //JAW - REVIEW - add holiday adjust
+                                    //for # adjusted holidays in range
+                                    //one last weekend adjust (watch out for a possible holiday in this weekend.)
+                                    break;}
+        case "Add Adjusted Calendar Days": { ret = lgm.date.addDays(priorValue, resultValue); 
+                                    ret = lgm.date.addDays(ret, lgm.date.weekendAdjust(ret.getDay())); 
+                                    ret = new Date(ret);
+                                    //JAW - REVIEW - add holiday adjust
+                                    //for # *adjusted* holidays in range
+                                    //one last weekend adjust (watch out for a possible holiday in this weekend.)
+                                    break; }
+        case "Date": { if (resultValue == "<today/>") {
+                                        ret = lgm.date.getDateFromFormat  ("{!TODAY()}", lgmAutomationEngine.dformat);
+                                        ret = new Date(ret);
+                                    } else {
+                                        ret = lgm.date.getDateFromFormat (resultValue,"MM/dd/yyyy"); 
+                                        ret = new Date(ret);
+                                    }
+                                    break; }
+        case "Decrement Number": {  ret = priorValue - (resultValue - 0) ; break; }
+        case "Increment Number": {  ret = priorValue + (resultValue - 0); break; }
+        case "Get Lookup": {        if (resultValue == null) {
+                                        //lookup value not in data context so query for it
+                                        // and append to data context
+                                        // it returns array of recordIds of the records it appended
+                                        var resultValue = lgmDataContext.appendRecords(o.table, o.field, value);
+                                        if (resultValue != null) {
+                                            if (resultValue.length = 1) {
+                                                //we want the only recordID
+                                                var resultValue = resultValue[0];
+                                            } else {
+                                                throw lgm.error(ruleId+ " Found more than one lookup record for: " + o.table + ": " + o.field + " = " + value);
+                                            }
+                                        }
+                                    }
+                                    
+                                    if (resultValue == null) {
+                                        throw lgm.error(ruleId+ " Failed to find lookup id for: " + o.table + ": " + o.field + " = " + value);
+                                    }
+                                    ret = resultValue; break; }
+        case "Table Field Pair": {  
+                                    ret = resultValue; break; }
+        case "Sum Numbers": {       //get applied filter record ID's
+                                    var filterRecordID = lgmAutomationEngine.filterApply[ruleId+o.table];
+                                    
+                                    //get filter table data
+                                    var sourceRecs = lgmDataContext.objectRecord[o.table]
+                                    //JAW Review: fix this to allow summing of both already created records (filtered records) and new records in state engine
+                                    if (filterRecordID != null) { 
+
+                                        //loop through matching filter records to accumulate the values of the filterField
+                                        //return total accumulation
+    
+                                        var filterRecordID = filterRecordID.split("&");
+                                        var accumm = 0;
+                                        for (var i=0;i<filterRecordID.length;i++) {
+                                            for (var j=0;j<sourceRecs.length;j++) {
+                                            
+                                                //is this a filtered record?
+                                                if (sourceRecs[j]["Id"] == filterRecordID[i]) { 
+                                                
+                                                    //ignore nulls
+                                                    if (sourceRecs[j][o.field] != null) {
+                                                        accumm = (sourceRecs[j][o.field] - 0) + accumm;
+                                                    }
+                                                }
+                                            }
+                                        }                           
+                                        ret = accumm; 
+                                        
+                                        
+                                    } else {
+                                        //sum all records in table (even new)
+                                        
+                                        if (sourceRecs != null) {
+                                            var accumm = 0;
+    
+                                            for (var j=0;j<sourceRecs.length;j++) {
+                                            
+                                                //ignore nulls
+                                                if (sourceRecs[j][o.field] != null) {
+                                                    accumm = (sourceRecs[j][o.field] - 0) + accumm;
+                                                }
+                                            }
+                                        } else {
+                                            accumm = null;
+                                        }
+                                    } 
+                                    //add to priorValue if not null
+                                    if ((priorValue != null) && (accumm != null)){
+                                        ret = accumm+(priorValue - 0);
+                                    }
+                                    break; }
+        case "Multiply Number": {   ret = priorValue * (resultValue - 0); break; }
+        case "Divide Number": {     ret = priorValue / (resultValue - 0); break; }
+        case "Expression Result": { //get result expression (function definition)
+                                    var expr = "";
+                                    var results = lgmAutomationEngine.ruleApply[ruleId].get("MUSW__Results__r"); 
+                                    if (results != null) {
+                                        results = results.records;
+                                        for (var i = 0; i < results.length; i++){
+                                            if (results[i].get("Id") == resultId) {
+                                                var expr = results[i].get("MUSW__Expression__c");
+                                                if (expr == null) 
+                                                    expr = "";
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    ret = eval(resultValue+";"+expr); break; }
+        default: { ret = resultValue; break; }
+      }
+    return ret;
+} ;
+
+//***getTableFieldValue
+//* given the name of a table and field to find, get record position based on priority 
+//* and then return the field value in that table record
+//* pull value from in priority order: current bean, single filter record, parent record
+//* JAW REVIEW: future enhancements include finding a filter's single parent or a master parent's single parent.
+//***
+lgmAutomationEngine.getTableFieldValue = function(table, field, destbean, ruleId, repeater, multiSearch ) {
+//find the starting filter position and the relationship for this table
+var myValue;
+var destRecordID;
+var recordPositionFound = false;
+
+//a. does the dest bean have this table:field set? (working within this rule's own result record)
+
+if (destbean != null) {
+    if (destbean.type == table) {
+        if (destbean[field] != null ) {
+            recordPositionFound = true;
+            return(destbean[field]);
+        }
+    }
+}
+
+//b. has this table:field been edited by another rule?
+//return latest value
+
+if (lgmAutomationEngine.stateEngine[table+field] != null)
+    return(lgmAutomationEngine.stateEngine[table+field][0]); //get value
+
+if (recordPositionFound != true) 
+{
+
+    //1. Is there a filter position for this rule having the same name as this table?
+    
+    destRecordID = lgmAutomationEngine.filterApply[ruleId+table];
+    if (destRecordID != null) 
+    {
+        var destRecordID = destRecordID.split("&");
+        if (destRecordID.length > 1 && !multiSearch ) 
+        {
+            throw lgm.error(ruleId + " update rule to itself or content tag has multiple matching filters");
+        }
+        //is tablename not the same as the object we are repeating over?
+        //ie. the filtered parent or some other child record besides the repeater filtered child
+        if (lgmAutomationEngine.repeatObjectName != table)
+        {
+            var destRecordID = destRecordID[0];
+            recordPositionFound = true;
+        }
+        else //get repeater's filter record's Id eg. second filtered record's Id
+        {
+            var destRecordID = destRecordID[repeater];
+        }
+        //return value
+        return(lgmDataContext.getFieldValue(table, field, destRecordID));
+    }
+}
+
+
+
+ //2. Is the master parent this table?
+ 
+if (recordPositionFound != true) {
+    if (table == lgmAutomationEngine.parentTable) {
+        destRecordID = lgmAutomationEngine.recordID;
+        recordPositionFound = true;
+        
+        //return value
+        return(lgmDataContext.getFieldValue(table, field, destRecordID));
+    
+    } 
+}
+
+if (recordPositionFound != true) {
+
+//3. Is this table a parent of a filter?
+
+//get child of master parent
+    
+    var tableDefinition = sforce.connection.describeSObject(table);
+    // Loop through all of the children of this table
+    for (var i = 0; i < tableDefinition.childRelationships.length; i++) {       
+        var relation = tableDefinition.childRelationships[i];
+        if ((lgmAutomationEngine.filterApply[ruleId+tableDefinition.childRelationships[i].childSObject] != null) && (destRecordID == null)) {
+            //get child record Id
+            var destRecordID = lgmAutomationEngine.filterApply[ruleId+tableDefinition.childRelationships[i].childSObject];
+            
+            var destRecordID = destRecordID.split("&");
+            if (destRecordID.length > 1) {
+                throw lgm.error(ruleId + " more than one children filter record in " + tableDefinition.childRelationships[i].childSObject + " for: " + table);
+            }
+            //get record id of child
+            var destRecordID = destRecordID[0];
+            //get parent's foreign key in child
+            var destFKName = tableDefinition.childRelationships[i].field;
+
+            //get parent id
+            destRecordID = lgmDataContext.getFieldValue(tableDefinition.childRelationships[i].childSObject, destFKName, destRecordID);
+            recordPositionFound = true;
+            
+            //return desired field value in parent
+            return(lgmDataContext.getFieldValue(table, field, destRecordID));
+        }
+    }
+
+} 
+
+//if (recordPositionFound != true) {
+//4. Is this table the master parent's parent?
+//} 
+
+if (recordPositionFound == false) {         
+    throw lgm.error(ruleId + " no record position found for " + table);
+}
+
+};
+
+//send changes to host
+lgmAutomationEngine.saveResult = function() 
+{    
+    var recordCounter = 0;
+    var retval = true;
+    var ruleCreate = new Array();
+    var ruleUpdate = new Array();
+    try
+    {                   
+        // Save Results
+        if (saveResult)
+        {
+            //separate inserts and updates, then save
+            for (var apply in lgmAutomationEngine.applicableRules) {
+                if (lgmAutomationEngine.applicableRules[apply].get("Id") != null) 
+                {
+                    ruleUpdate.push(lgmAutomationEngine.applicableRules[apply]);
+                }
+                else
+                {
+                    ruleCreate.push(lgmAutomationEngine.applicableRules[apply]);
+                }
+            }
+            //***save results to server
+            
+            if (ruleUpdate.length > 0) {
+                
+                var result = sforce.connection.update(ruleUpdate);
+                for (var i = 0; i < result.length; i++)
+                {
+                    if (result[i].success != 'true')
+                    {
+                        //if (result.toString().indexOf("errors") != -1 ) {
+                        lgmAutomationEngine.notifications += result[i].get('errors').message + '<br/>';
+                        lgm.debug.addMessage("Result Save Error: "+result[i].get('errors').toString());
+                        retval = false;
+                    }
+                }
+            }
+            
+            if (ruleCreate.length > 0) {
+                var result = sforce.connection.create(ruleCreate);
+                for (var i = 0; i < result.length; i++)
+                {
+                    if (result[i].success != 'true')
+                    {
+                        //if (result.toString().indexOf("errors") != -1 ) {
+                        lgmAutomationEngine.notifications += result[i].get('errors').message + '<br/>';
+                        lgm.debug.addMessage("Result Save Error: "+result[i].get('errors').toString());
+                        retval = false;
+                    }
+                }
+            }
+        }   
+    }
+    catch(err)
+    {   retval = false;
+        lgm.debug.addMessage("Result Save Error: " + err.toString());
+    }
+    return retval;  
+};
+
+//convert nulls to a default value
+lgmAutomationEngine.nvl = function(value, defaultvalue) {
+    if (value == null) {
+        return defaultvalue;
+    } else {
+        return value;
+    }
+};
+
+//field field list
+lgmAutomationEngine.getFields = function(sobject) {
+var fieldList = "";
+    var fields = sforce.connection.describeSObject(sobject).fields;
+    for (var i=0; i<fields.length; i++) {
+        if ((fields[i].name != "IsDeleted") && (fields[i].name != "IsPublic") && (fields[i].name != "IsArchived")) {
+            fieldList = fieldList + fields[i].name + ", ";
+        }
+    }
+    //chop off last comma
+    fieldList = fieldList.substring(0, fieldList.length-2);
+    return fieldList;
+}
+
+//escape the apostrophe in data
+lgmAutomationEngine.escapeSOQL = function(qdata) {
+
+return qdata.replace(/([\'\|\!\{\}\[\]\^~\:\\])/g, "\\$1");
+}
+        </script>
+        <script id="clientEventHandlersJS" language="javascript">   
+//Use this function as the entry point for your DHTML and JAVASCRIPT processing
+function setup() 
+{   
+
+    isDebug = {!$User.MUSW__Debug__c};
+
+    if (isDebug) {
+        lgm.debug(document.getElementById("divDebug"));
+    }
+    
+    if ({!$User.MUSW__Step_Through__c}) {
+        //throw uncaught exception so can step through in managed client environment
+        throw "e";
+    }
+    
+    lgm.href.getParameters();
+    
+    notify("Finding Data & Rules...");
+
+    //document.getElementById('parentName').innerHTML = lgm.href.param["parent"];
+    
+    sforce.connection.sessionId = "{!$Api.Session_ID}";
+    
+    lgmAutomationEngine.recordID = "{!recordId}";
+    lgmAutomationEngine.parentTable = "{!parentName}";
+    lgmAutomationEngine.parentName = "{!parentLabel}";
+
+    lgmAutomationEngine.continueFunc = setup2;
+    lgmAutomationEngine.setApplicableRules();
+}
+
+function setup2()
+{
+    //***
+    //update display
+    notify("Click Update to Apply...");
+    
+    if (lgmAutomationEngine.numApplicableRules == 0) 
+    {
+        document.getElementById('status').innerHTML = "No " + lgmAutomationEngine.parentName + " updates available";
+    } else  {
+        document.getElementById('counterLabel').innerHTML = escape(lgmAutomationEngine.numApplicableRules);
+        
+        // Display Messages to User
+        var applicableRules = document.getElementById('applicableRules');
+        
+        for(var i=0;i<lgmAutomationEngine.applicableRulesDesc.length;i++) {
+            applicableRules[applicableRules.length] = new Option(lgmAutomationEngine.applicableRulesDesc[i] );
+        
+        }
+        var parentName = lgm.string.replaceAll(lgm.string.replaceAll(lgmAutomationEngine.parentTable,"MUSW__",""),"__c","");// format table name
+        document.getElementById('status').innerHTML = "{!ParentLabel} updates ready:";
+    }
+    document.getElementById('update').disabled=false;
+    document.getElementById('cancel').disabled=false;
+}
+
+//send changes to host
+function saveResult() 
+{    
+        if(lgmAutomationEngine.saveResult()) {
+            opener.location.href = "/{!recordId}";
+            window.top.close();
+        } else
+        {
+            document.getElementById('messages').style.display = "block";
+            document.getElementById('messages').innerHTML = lgmAutomationEngine.notifications;
+        }
+}
+
+function notify(message) {
+    window.status = message;
+}
+
+</script>
+    </head>
+    <body onload="setup()" >
+        <apex:form id="myform">
+            <apex:pageBlock id="parentName" title="Assess {!ParentLabel}" mode="maindetail">
+                <apex:pageBlockSection title="Results" columns="1">
+                    <table cellspacing="0" cellpadding="0" border="0" >
+                        <tr>
+                            <td width="5"></td>
+                            <td width="100%"></td>
+                            <td width="5"></td>
+                        </tr>
+                        <tr>
+                            <td>&nbsp;</td>
+                            <td style = "padding:2px 10px 2px 2px; text-align:center;  font-weight: bold; color:#333;"><span id="counterLabel" name="counterLabel"></span>&nbsp;<span id="status">Processing...</span></td>
+                            <td>&nbsp;</td>
+                        </tr>
+                        <tr>
+                            
+                        </tr>                   
+                        <tr>
+                            <td>&nbsp;</td>
+                            <td><SELECT NAME="applicableRules" ID="applicableRules"  size="5" style="width:100%"></SELECT></td>
+                            <td>&nbsp;</td>
+                        </tr>                   
+                        <tr>
+                            <td>&nbsp;</td>
+                            <td><br/></td>
+                            <td>&nbsp;</td>
+                        </tr>
+                        <tr>
+                            <td>&nbsp;</td>
+                            <td align = "center">
+                               <input id = "update" Name = "update" class="btn" type="button" value="Update" onClick="javascript:saveResult();" disabled="true"/>
+                               <input id = "cancel" Name = "cancel" class="btn" type="button" value="Cancel" onClick="javascript:opener.location.href = '/{!recordId}';window.top.close();"/>
+                            </td>
+                            <td>&nbsp;</td>
+                        </tr>
+                    </table>
+               </apex:pageBlockSection>
+                
+               
+                
+            </apex:pageBlock>
+        </apex:form>
+            <div id="messages" style="display:none;padding:10px 10px 10px 20px;"></div>
+            <DIV id="divDebug"></DIV>
+        
+    </body>
+</html>
+</apex:page>

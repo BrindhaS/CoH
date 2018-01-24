@@ -1,0 +1,80 @@
+<apex:page controller="FeeProcessPrintController" renderAs="pdf">
+    <head>
+        <style type="text/css" media="print">
+        @page
+        {          
+            @top-left
+            {                   
+                content: element(header);               
+            
+            }
+            @bottom-right
+            {
+                content: element(footer);
+            }
+            margin:1in;         
+        }
+        div.header
+        {
+            display: block;   
+            position: running(header);           
+        }           
+        .cityName
+        {
+            font-size:16px;
+            font-weight:bold;
+        }
+        .citySubName
+        {
+            font-size:12px;
+            font-weight:bold;
+        }
+        div.footer
+        {
+            display: block;
+            position: running(footer);
+            height:200px;
+        }
+                   
+        body {font-family:'Arial','Helvetica',sans-serif;font-size:11px; }
+        .data2Col {width:100%}
+        .feesStyle {width:150px;padding-left:0cm;}
+        .colstyle {width:50%;}
+        </style>
+    </head>  
+    
+    <div class='header' >
+        <div name='hcontent' style='padding-top:4px;'>
+            <!--<div name='logo' style='float:left;'> <img style='height:80px;' src="{!URLFOR($Resource.LetterImages, 'hamptonHeader.gif')}" /></div>-->
+            <div  name='Main' style='valign:top;float:left;'> <span class='cityName'> City of Hampton, Virginia </span>
+             <br/>
+            <span class='citySubName' ><a href="http://www.hampton.gov/cdd"><b>Community Development Department</b></a></span>
+            </div> 
+            <div name='Contact' style='float:right;text-align:right;'>
+               <a href="http://www.hampton.gov/cdd">www.hampton.gov/cdd</a><br/>
+               757.728.2444<br/>
+               Fax:757.728.2445
+            </div>
+            <div style='clear:both;'></div> 
+            <hr></hr>
+         </div>
+    </div>
+    <div class='footer'>
+        <hr></hr>       
+        <div style='float:left;'>
+           22 Lincoln Street, City Hall<br></br>              
+           Hampton, VA 23669
+        </div>
+        <div style='float:right;'>
+           <img style='height:40px;' src="{!URLFOR($Resource.LetterImages,'hamptonfooter.gif')}" />
+        </div>
+        <div style='clear:both;'></div>              
+    </div>
+    
+  
+    <c:FeeProcessConfirm receipts="{!rs}" fees="{!fees}" cart="{!cart}" emailAddress="{!emailAddress}"/>
+    <br/><br/>
+    <div>
+    Thank you for your transaction with the Community Development Department today. We appreciate your business and look forward to serving you in the future.
+    </div>
+</apex:page>

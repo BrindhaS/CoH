@@ -1,0 +1,161 @@
+<html>
+<head>
+    <script type="text/javascript" src="/js/functions.js"></script>
+    <script src="/soap/ajax/8.0/connection.js"></script>
+    {!INCLUDE($SControl.lgmMapping)}
+    {!INCLUDE($SControl.lgmDataContext)}
+	{!INCLUDE($SControl.lgmCommon)}
+	{!INCLUDE($SControl.lgmLibraryManager)}
+    
+    <script id="clientEventHandlersJS" language="javascript">
+	<!-- /*JAW Review cannot refer to non-secure sites
+		var mapping = null;  //Must be declared globally
+		var primaryTable;
+		var parcelID;
+		
+		var mapbuilder = null;  //Must be declared globally
+		var mbConfigUrl='/servlet/servlet.FileDownload?file=01560000000FbcA';  
+		var mbNsUrl="http://mapbuilder.sourceforge.net/mapbuilder";
+		var mbServerConfig="";
+			
+		function setup() { 
+		*/
+			//***get user parameters instead of from URL to be able to debug on Mapping Service Tab which has this scontrol embedded
+			
+			if ({!$User.Debug__c} == true) {
+				//turn on debug
+				lgm.debug(document.getElementById("divDebug"));
+			}
+		
+			if ({!$User.Step_Through__c} == true) {
+				//throw uncaught exception so can step through in managed client environment
+				throw "e";
+			}
+			
+			lgm.href.getParameters();
+			
+			// create & setup map on the screen document.getElementById("divMap")
+			mapping = new lgmMapping("mapping", document.getElementById("divMap"), null, '{!$User.Mapping_Service_Name__c}', '', 600, 363);			
+			*/
+			//*************************************
+			//Initialize DataContext
+			
+			//eid is required
+			lgmDataContext.recordID = lgm.href.param["eid"];
+			
+			lgmDataContext.tableName = lgm.href.param["primaryTable"];
+			
+			parcelID = lgm.href.param["parcelID"];
+			 
+			//get primary tablename if not provided
+			if (lgmDataContext.tableName == null){
+			*/
+	  			/* JAW REVIEW don't get entire database schema - save time
+	  			var dgRetrieve = new Array();
+				var result = sforce.connection.describeGlobal();
+				var ii = 0;
+				for (var i=0; i<result.types.length; i++) {
+					if (result.types[i].substring(0,4) == "MUSW") {
+						dgRetrieve[ii] = result.types[i];
+						ii++;
+					}
+				}
+				var allCustTables = sforce.connection.describeSObjects(dgRetrieve);*/
+				
+				//get info on the tables that link to parcel either directly or indirectly
+				dgRetrieve=["MUSW__Permit__c","MUSW__Master_Project__c","MUSW__Complaint__c","MUSW__Planning_Application__c","MUSW__Mapping_Service__c"];
+
+				var allCustTables = sforce.connection.describeSObjects(dgRetrieve);
+				
+				for (var i=0; i<allCustTables.length; i++) {
+					if (allCustTables[i].keyPrefix == lgm.href.param["eid"].substring(0,3))
+			  			lgmDataContext.tableName = allCustTables[i].name;
+				}
+			}
+			if (lgmDataContext.tableName != "MUSW__Mapping_Service__c") {
+				if (parcelID == null) //get properties
+				{
+					if (lgm.href.param["commonChildren"] == null) {
+						var commonChildren = lgmDataContext.getCommonChildNames("MUSW__Parcel__c", lgmDataContext.tableName, "MANYTOMANY");
+					} else {
+						var commonChildren = {list: lgm.href.param["commonChildren"],relations: null};
+					}
+	
+					lgmDataContext.processOnly = [lgmDataContext.tableName, ", ",commonChildren.list,", MUSW__Parcel__c"].join("");
+				} 
+				else //get parcel directly attached
+				{
+					lgmDataContext.processOnly = [lgmDataContext.tableName,", MUSW__Parcel__c"].join("");
+				}
+
+			} else { //get any one parcel (for use in Mapping Service tab where no data context is specified)
+				var parcel = sforce.connection.query("select Id from MUSW__Parcel__c where MUSW__City__c !=null and MUSW__Street__c != null and MUSW__State__c !=null Limit 1");
+				lgmDataContext.recordID = parcel.records["Id"];
+				lgmDataContext.processOnly = ["MUSW__Parcel__c"];
+			}			
+			*/
+			//*************************************
+			// load DataContext
+			lgmDataContext.continueFunc = mapping.ContextContinue;
+			lgmDataContext.debug = null;
+			lgmDataContext.getDataContext();	
+
+			return false;	
+		}
+		
+		function mapbuilder_setup() {
+			config.parseConfig(config);
+			config.callListeners("init");
+			var mbTimerStop=new Date();
+			config.callListeners("loadModel");
+    	}   
+		
+	//-->
+	</script>
+</head>
+
+<body onload = "return setup();libraryManagerInit();">
+	<div id="divMap" name = "divMap" style="width:100%"></div>
+    <table>
+      <tr><th colspan=2></th></tr>
+      <tr><td><h2 id="mapTitle"/></td></tr>
+      <tr valign="top">
+        <td>
+          <table>
+            <tr><td colspan="2" id="mainMapPane"/></tr>
+            <tr>
+              <td align="left" id="locatorMap"/>
+              <td align="right" id="cursorTrack" />
+            </tr>
+          </table>
+        </td>
+        <td>
+          <table>
+            <tr><td valign="top" id="mainButtonBar"/></tr>
+            <tr><td><br/></td></tr>
+            <tr><td id="legend"/></tr>     
+            <tr><td><br/></td></tr>
+            <tr><td colspan="2" id="addFeatureToLGM"/></tr>       
+            <tr><td><br/></td></tr>
+            <tr><td colspan="2" id="featureList"/></tr>       
+          </table>
+        </td>
+      </tr>
+      <tr>
+        <td colspan="2" id="transactionResponse"/>
+      </tr>      
+      <tr align="right">
+        <td colspan="2">
+          <table>
+            <tr align="right">
+              <td></td>
+              <td></td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+      <tr><td colspan="2" id="eventLog"/></tr>
+    </table>	
+    <DIV id="divDebug"></DIV>
+</body>
+</html>

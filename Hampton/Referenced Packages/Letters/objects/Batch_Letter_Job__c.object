@@ -1,0 +1,372 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <actionOverrides>
+        <actionName>Accept</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>CancelEdit</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>Clone</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>Delete</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>Edit</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>Follow</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>List</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>New</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>SaveEdit</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>Tab</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>View</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <allowInChatterGroups>false</allowInChatterGroups>
+    <compactLayoutAssignment>SYSTEM</compactLayoutAssignment>
+    <customHelp>MUSW__HelpInterface</customHelp>
+    <deploymentStatus>Deployed</deploymentStatus>
+    <deprecated>false</deprecated>
+    <description>Letter job stats</description>
+    <enableActivities>false</enableActivities>
+    <enableBulkApi>true</enableBulkApi>
+    <enableEnhancedLookup>true</enableEnhancedLookup>
+    <enableFeeds>false</enableFeeds>
+    <enableHistory>true</enableHistory>
+    <enableReports>true</enableReports>
+    <enableSearch>true</enableSearch>
+    <enableSharing>true</enableSharing>
+    <enableStreamingApi>true</enableStreamingApi>
+    <fields>
+        <fullName>Batch_Letter_Name__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <formula>Batch_Letter__r.File_Name_Prefix__c</formula>
+        <label>File Name Prefix</label>
+        <required>false</required>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Text</type>
+        <unique>false</unique>
+    </fields>
+    <fields>
+        <fullName>Batch_Letter__c</fullName>
+        <deleteConstraint>SetNull</deleteConstraint>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>Batch Letter</label>
+        <referenceTo>Batch_Letter__c</referenceTo>
+        <relationshipName>Batch_Run_Jobs</relationshipName>
+        <required>false</required>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Lookup</type>
+    </fields>
+    <fields>
+        <fullName>Child_Iterate_Ids__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <inlineHelpText>Record id&apos;s to filter children record results further</inlineHelpText>
+        <label>Child Iterate Ids</label>
+        <length>32768</length>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>LongTextArea</type>
+        <visibleLines>3</visibleLines>
+    </fields>
+    <fields>
+        <fullName>End_Time__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>Completed</label>
+        <required>false</required>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>DateTime</type>
+    </fields>
+    <fields>
+        <fullName>HasChildIds__c</fullName>
+        <defaultValue>false</defaultValue>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>HasChildIds</label>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Checkbox</type>
+    </fields>
+    <fields>
+        <fullName>Output_Type__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>Output Type</label>
+        <length>4</length>
+        <required>false</required>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Text</type>
+        <unique>false</unique>
+    </fields>
+    <fields>
+        <fullName>Override_Parameters__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>Override Parameters</label>
+        <length>1000</length>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>LongTextArea</type>
+        <visibleLines>3</visibleLines>
+    </fields>
+    <fields>
+        <fullName>Print_File_Location__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>Print File Location</label>
+        <required>false</required>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Url</type>
+    </fields>
+    <fields>
+        <fullName>Print_File_Name__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>Print File Name</label>
+        <length>255</length>
+        <required>false</required>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Text</type>
+        <unique>false</unique>
+    </fields>
+    <fields>
+        <fullName>Print_File__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <formula>IF(
+	Print_File_Name__c = &quot;&quot;,
+	&quot;-- not available --&quot;,
+	IF(
+		Single_Letter_Job__c == true,
+		IF(
+			LEN(Print_File_Name__c )&lt;20,
+			HYPERLINK(Print_File_Name__c , &quot;click to view&quot;, &quot;_top&quot;),
+			HYPERLINK(&quot;https://lettersingle.mybasicgov.com/mergedoc/&quot; &amp; Print_File_Name__c , &quot;click to view&quot;, &quot;_top&quot;)
+		),
+		HYPERLINK(&quot;https://letterbatch.mybasicgov.com/mergedoc/&quot;  &amp;  Print_File_Name__c , &quot;click to view&quot;, &quot;_blank&quot;)
+	)
+)</formula>
+        <formulaTreatBlanksAs>BlankAsZero</formulaTreatBlanksAs>
+        <label>Print File</label>
+        <required>false</required>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Text</type>
+        <unique>false</unique>
+    </fields>
+    <fields>
+        <fullName>Recipients__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <inlineHelpText>comma delimited list of contact ids up to a max of 2000 to have letter copies. Minimum 1 contact id.</inlineHelpText>
+        <label>Recipients</label>
+        <length>32768</length>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>LongTextArea</type>
+        <visibleLines>2</visibleLines>
+    </fields>
+    <fields>
+        <fullName>Single_Letter_Job__c</fullName>
+        <defaultValue>false</defaultValue>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <inlineHelpText>Only one letter in this job</inlineHelpText>
+        <label>Single</label>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Checkbox</type>
+    </fields>
+    <fields>
+        <fullName>Start_Time__c</fullName>
+        <defaultValue>NOW()</defaultValue>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>Submitted</label>
+        <required>false</required>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>DateTime</type>
+    </fields>
+    <fields>
+        <fullName>Status__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>Status</label>
+        <picklist>
+            <picklistValues>
+                <fullName>In Queue (verifying...)</fullName>
+                <default>true</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Processing</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>Completed</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>James Status</fullName>
+                <default>false</default>
+            </picklistValues>
+            <sorted>false</sorted>
+        </picklist>
+        <required>false</required>
+        <trackHistory>true</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Picklist</type>
+    </fields>
+    <fields>
+        <fullName>TemplateId__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <formula>Batch_Letter__r.Merge_Template__r.Id</formula>
+        <formulaTreatBlanksAs>BlankAsZero</formulaTreatBlanksAs>
+        <label>TemplateId</label>
+        <required>false</required>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Text</type>
+        <unique>false</unique>
+    </fields>
+    <fields>
+        <fullName>debug__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>System Messages</label>
+        <length>32000</length>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>LongTextArea</type>
+        <visibleLines>10</visibleLines>
+    </fields>
+    <label>Letter Job</label>
+    <nameField>
+        <displayFormat>BLJ-{YYYY}{MM}{DD}-{0}</displayFormat>
+        <label>Number</label>
+        <trackHistory>false</trackHistory>
+        <type>AutoNumber</type>
+    </nameField>
+    <pluralLabel>Letter Jobs</pluralLabel>
+    <searchLayouts>
+        <lookupDialogsAdditionalFields>Batch_Letter__c</lookupDialogsAdditionalFields>
+        <lookupDialogsAdditionalFields>Status__c</lookupDialogsAdditionalFields>
+        <lookupDialogsAdditionalFields>Start_Time__c</lookupDialogsAdditionalFields>
+        <lookupDialogsAdditionalFields>End_Time__c</lookupDialogsAdditionalFields>
+        <lookupDialogsAdditionalFields>Output_Type__c</lookupDialogsAdditionalFields>
+        <lookupDialogsAdditionalFields>Print_File__c</lookupDialogsAdditionalFields>
+        <lookupDialogsAdditionalFields>Single_Letter_Job__c</lookupDialogsAdditionalFields>
+        <lookupPhoneDialogsAdditionalFields>Batch_Letter__c</lookupPhoneDialogsAdditionalFields>
+        <lookupPhoneDialogsAdditionalFields>Status__c</lookupPhoneDialogsAdditionalFields>
+        <lookupPhoneDialogsAdditionalFields>Start_Time__c</lookupPhoneDialogsAdditionalFields>
+        <lookupPhoneDialogsAdditionalFields>End_Time__c</lookupPhoneDialogsAdditionalFields>
+        <lookupPhoneDialogsAdditionalFields>Output_Type__c</lookupPhoneDialogsAdditionalFields>
+        <lookupPhoneDialogsAdditionalFields>Single_Letter_Job__c</lookupPhoneDialogsAdditionalFields>
+        <searchFilterFields>NAME</searchFilterFields>
+        <searchFilterFields>Batch_Letter__c</searchFilterFields>
+        <searchFilterFields>Status__c</searchFilterFields>
+        <searchFilterFields>Start_Time__c</searchFilterFields>
+        <searchFilterFields>End_Time__c</searchFilterFields>
+        <searchFilterFields>Output_Type__c</searchFilterFields>
+        <searchFilterFields>Single_Letter_Job__c</searchFilterFields>
+    </searchLayouts>
+    <sharingModel>ReadWrite</sharingModel>
+    <webLinks>
+        <fullName>Clone_x5</fullName>
+        <availability>online</availability>
+        <displayType>button</displayType>
+        <linkType>javascript</linkType>
+        <masterLabel>Clone x5</masterLabel>
+        <openType>onClickJavaScript</openType>
+        <protected>false</protected>
+        <url>{!REQUIRESCRIPT (&quot;/soap/ajax/26.0/connection.js&quot;)};
+{!REQUIRESCRIPT (&quot;/soap/ajax/26.0/apex.js&quot;)};
+
+var bljId = &apos;{!Batch_Letter_Job__c.Id}&apos;;
+
+result = sforce.connection.query(&quot;Select BGBL__Batch_Letter__c, BGBL__Output_Type__c, BGBL__Status__c, BGBL__Single_Letter_Job__c, BGBL__OVERRIDE_PARAMETERS__C from BGBL__Batch_Letter_Job__c where id = &apos;&quot; + bljId + &quot;&apos;&quot;);
+var records = result.getArray(&quot;records&quot;);
+
+var bljToInsert = new Array();
+for (var i=0; i&lt; 5; i++) 
+{
+    var newBLJ = new sforce.SObject(&quot;BGBL__Batch_Letter_Job__c&quot;);
+    newBLJ.BGBL__Batch_Letter__c =records[0].BGBL__Batch_Letter__c;
+    newBLJ.BGBL__Output_Type__c =records[0].BGBL__Output_Type__c;
+    newBLJ.BGBL__Status__c = &apos;In Queue (verifying...)&apos;;
+    newBLJ.BGBL__Single_Letter_Job__c = true;
+    newBLJ.BGBL__OVERRIDE_PARAMETERS__C = records[0].BGBL__OVERRIDE_PARAMETERS__C;
+    bljToInsert.push(newBLJ );
+}
+sforce.connection.create(bljToInsert);
+alert(&apos;inserted &apos; + bljToInsert.length + &apos; records&apos;);
+/*
+{!REQUIRESCRIPT (&quot;/soap/ajax/26.0/connection.js&quot;)};
+{!REQUIRESCRIPT (&quot;/soap/ajax/26.0/apex.js&quot;)};
+
+var bljId = &apos;{!Batch_Letter_Job__c.Id}&apos;;
+
+result = sforce.connection.query(&quot;Select BGBL__Batch_Letter__c, BGBL__Output_Type__c, BGBL__Status__c, BGBL__Single_Letter_Job__c, BGBL__OVERRIDE_PARAMETERS__C from BGBL__Batch_Letter_Job__c where id = &apos;&quot; + bljId + &quot;&apos;&quot;);
+var records = result.getArray(&quot;records&quot;);
+var bljToInsert[];
+for (var i=0; i&lt; 5; i++) 
+{
+    var record = records[i];
+
+    var newBLJ = new sforce.SObject(&quot;BGBL__Batch_Letter_Job__c&quot;);
+    newBLJ.BGBL__Batch_Letter__c =record.BGBL__Batch_Letter__c;
+    newBLJ.BGBL__Output_Type__c =record.BGBL__Output_Type__c;
+    newBLJ.BGBL__Status__c = &apos;In Queue (verifying...)&apos;;
+    newBLJ.BGBL__Single_Letter_Job__c = true;
+    newBLJ.BGBL__OVERRIDE_PARAMETERS__C = record.BGBL__OVERRIDE_PARAMETERS__C;
+    bljToInsert.add(newBLJ );
+}
+
+sforce.connection.create(bljToInsert);
+*/</url>
+    </webLinks>
+    <webLinks>
+        <fullName>Refresh_Status</fullName>
+        <availability>online</availability>
+        <displayType>massActionButton</displayType>
+        <linkType>javascript</linkType>
+        <masterLabel>Refresh Status</masterLabel>
+        <openType>onClickJavaScript</openType>
+        <protected>false</protected>
+        <requireRowSelection>false</requireRowSelection>
+        <url>top.location.reload();</url>
+    </webLinks>
+</CustomObject>

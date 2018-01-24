@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<DocumentFolder xmlns="http://soap.sforce.com/2006/04/metadata">
+    <accessType>Shared</accessType>
+    <name>LGM - Mapping System Files</name>
+    <publicFolderAccess>ReadOnly</publicFolderAccess>
+    <sharedTo>
+        <roleAndSubordinates>Building_Inspector</roleAndSubordinates>
+        <roleAndSubordinates>CDD_Director</roleAndSubordinates>
+        <roleAndSubordinates>Construction_Inspections_Manager</roleAndSubordinates>
+        <roleAndSubordinates>Deputy_Director</roleAndSubordinates>
+        <roleAndSubordinates>Electrical_Inspector</roleAndSubordinates>
+        <roleAndSubordinates>Fire_Chief</roleAndSubordinates>
+        <roleAndSubordinates>Fire_Marshal</roleAndSubordinates>
+        <roleAndSubordinates>Housing_Neighbourhood_Svcs_Mgr</roleAndSubordinates>
+        <roleAndSubordinates>Inspections_Manager_All</roleAndSubordinates>
+        <roleAndSubordinates>Inspector</roleAndSubordinates>
+        <roleAndSubordinates>Planner</roleAndSubordinates>
+        <roleAndSubordinates>Planning_Zoning_Admin_Manager</roleAndSubordinates>
+        <roleAndSubordinates>Plans_Reviewer</roleAndSubordinates>
+        <roleAndSubordinates>Plumbing_Inspector</roleAndSubordinates>
+        <roleAndSubordinates>Ppty_Maintenance_Zoning_Enforcement_Mgr</roleAndSubordinates>
+        <roleAndSubordinates>Project_Coordinator</roleAndSubordinates>
+        <roleAndSubordinates>Site_Plan_Agent</roleAndSubordinates>
+        <roleAndSubordinates>Sr_Plans_Reviewer</roleAndSubordinates>
+        <roleAndSubordinates>Support_Services</roleAndSubordinates>
+        <roleAndSubordinates>Support_Services_Mgr</roleAndSubordinates>
+        <roleAndSubordinates>Support_Services_Occupancy</roleAndSubordinates>
+        <roleAndSubordinates>Support_Services_System</roleAndSubordinates>
+        <roleAndSubordinates>Wetlands_Supervisor</roleAndSubordinates>
+        <roleAndSubordinates>Zoning_Official</roleAndSubordinates>
+    </sharedTo>
+</DocumentFolder>

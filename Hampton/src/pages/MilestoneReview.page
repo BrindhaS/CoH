@@ -1,0 +1,251 @@
+<apex:page standardController="MUSW__Milestone__c" extensions="MilestoneReviewController" id="p" action="{!redirectNoSub}">
+<apex:variable var="ms" value="{!MUSW__Milestone__c}"/>
+<apex:form id="f">
+<script>
+    // get dependent picklists for Group and send up to controller
+    sforce.connection.sessionId = "{!$Api.Session_ID}";
+    var describeResults = sforce.connection.describeSObject("musw__work_item__c");
+    
+    function wiGroupChanged(group) {
+        var vals = getDependentValues("MUSW__Type__c", group);
+        filterWorkItemsJS(group, vals.join());
+    }
+    
+    function getPicklistValues(field) {
+        var vals = new Array();
+        var validField = false;
+        for(var i = 0; i < describeResults.fields.length; i++) 
+        {
+            var fieldList = describeResults.fields[i];
+            var fieldName = fieldList.name;
+     
+            if(fieldName.toLowerCase() == field.toLowerCase())
+            {
+                validField = true;
+                for(var j = 0; j < fieldList.picklistValues.length; j++)
+                {
+                    
+                    var newValue = new Object();
+                    newValue.label = fieldList.picklistValues[j].label;
+                    newValue.value = fieldList.picklistValues[j].value;
+                    /*newValue.default = fieldList.picklistValues[j].defaultValue;*/
+                    if(fieldList.picklistValues[j].hasOwnProperty('validFor'))
+                    {
+                        newValue.validFor = fieldList.picklistValues[j].validFor;
+                    }
+                    vals.push(newValue);
+                }
+                break;
+            }
+        }
+        
+        return vals;
+    }
+    
+    function getDependentValues(field, value) {
+        var vals = new Array();
+        
+        var dependencyCode = new Array();
+        var picklistValues = getPicklistValues(field);
+        var controller = "Group__c";
+        var controllerFields = getPicklistValues(controller);
+        
+        // sub function to do the validFor test
+        function isDependentValue(index, validFor)
+        {
+            var base64 = new sforce.Base64Binary("");
+            var decoded = base64.decode(validFor);
+            var bits = decoded.charCodeAt(index>>3);
+            
+            return ((bits & (0x80 >> (index%8))) != 0);
+        }
+        
+        for(var item = 0; item < controllerFields.length; item++)
+        {
+            if(controllerFields[item].value.toLowerCase() == value.toLowerCase())
+             {
+                for(var i = 0; i < picklistValues.length; i++)
+                {
+                    if(isDependentValue(item, picklistValues[i].validFor))
+                    {
+                        vals.push(picklistValues[i].label);                                                               
+                    }
+                }
+            }
+        }
+        
+        return vals;
+    }
+    </script>
+    
+    <apex:sectionHeader title="Review" subtitle="{!ms.Name}">
+        <apex:messages />
+    </apex:sectionHeader>
+    
+    <apex:pageBlock id="pb">
+        <apex:pageblockbuttons >
+            <apex:commandbutton action="{!save}" value="Save"/>
+            <apex:commandbutton action="{!cancel}" value="Cancel" immediate="true"/>
+        </apex:pageblockbuttons>
+        
+        <apex:pageBlockSection columns="2" title="Review">
+            <apex:repeat value="{!$ObjectType.MUSW__Milestone__c.FieldSets.Submission_Review_Overview}" var="f">
+                <apex:outputField value="{!ms[f]}" rendered="{!f != 'MUSW__Status__c' && f != 'OwnerId'}"/>
+                <apex:inputField value="{!ms[f]}" rendered="{!f = 'MUSW__Status__c' || f = 'OwnerId'}"/>
+            </apex:repeat>
+        </apex:pageBlockSection>
+        <apex:pageBlockSection columns="2" title="Submission">
+            <apex:repeat value="{!$ObjectType.MUSW__Submission__c.FieldSets.Submission_Review_Overview}" var="f2">
+                <apex:outputField value="{!sub[f2]}"><apex:inlineEditSupport /></apex:outputField>
+            </apex:repeat>
+        </apex:pageBlockSection>
+        
+        <table style="width:100%" cellpadding="0" class="resizable"><tr>
+            <td style="{!IF(!isnull(filteredWorkItems), 'width:30%', 'width:0%')}">
+                <apex:pageBlockSection columns="1" title="Work Items" id="wiPbs" rendered="{!!isnull(filteredWorkItems)}">
+                    <apex:pageBlockSection columns="2">
+                        <apex:selectList size="1" label="Group" onchange="wiGroupChanged(this.value);">
+                            <apex:selectOptions value="{!wiGroups}"/>
+                        </apex:selectList>
+                        <apex:actionStatus id="wiChangeStatus" 
+                                onstart="javascript: document.getElementById('p:f:pb:wiPbs:wiTable').style.display='none';" 
+                                onstop="javascript: document.getElementById('p:f:pb:wiPbs:wiTable').style.display='block';" 
+                                startText="Loading..." stopText=""/>
+                    </apex:pageBlockSection>
+                    <apex:pageBlockTable value="{!filteredWorkItems}" var="wi" id="wiTable">
+                        <apex:repeat value="{!workItemFields}" var="f3">
+                            <apex:column headerValue="{!f3.label}" rendered="{!f3 != 'MUSW__Type__c'}"><apex:inputField value="{!wi[f3]}" style="width:70%"/></apex:column>
+                            <apex:column headerValue="{!f3.label}" rendered="{!f3 = 'MUSW__Type__c'}"><apex:outputField value="{!wi[f3]}" style="width:70%"/></apex:column>
+                        </apex:repeat>
+                    </apex:pageBlockTable>
+                </apex:pageBlockSection>
+            </td>
+            <td style="{!IF(!isnull(filteredWorkItems), 'width:70%', 'width:100%')}">
+                <apex:pageblockSection columns="1" title="Submission Preview">
+                    <apex:outputText rendered="{!viewLinks.size = 0}">Manual Submissions cannot be previewed.</apex:outputText>
+                    <apex:outputPanel rendered="{!viewLinks.size > 1 || docUrlToShow != null}" id="scmPanel">
+                        <apex:repeat value="{!viewLinks}" var="l" rendered="{!viewLinks.size > 1}">
+                            <apex:commandLink value="{!l.label}" reRender="scmPanel" style="font-weight:{!IF(l.url = docUrlToShow, 'bold', 'normal')}">
+                                <apex:param name="param1" assignTo="{!docUrlToShow}" value="{!l.url}"/>
+                            </apex:commandLink><br/>
+                        </apex:repeat>
+                        
+                        <apex:outputPanel rendered="{!docUrlToShow != null}">
+                            <apex:outputText rendered="{!viewLinks.size > 1}"><br/></apex:outputText>
+                            <apex:iframe src="{!docUrlToShow}&sfsid={!$Api.Session_ID}&sfapiurl={!$Api.Partner_Server_URL_280}"/>
+                            <!--<apex:iframe src="https://www.springcm.com/atlas/Link/Document/9922/{!RIGHT(docUrlToShow, 36)}"/>-->
+                            <br/><br/>
+                        </apex:outputPanel>
+                    </apex:outputPanel>                   
+                    <a href="#" onclick="window.open('/apex/OrdinanceLookup','_blank','width=670,height=480,scrollbars=yes'); return false;">Lookup Standard Comments...</a>
+                </apex:pageblockSection>
+                
+                <apex:pageBlockSection columns="1" title="Activities" id="activityPbs">
+                    <apex:tabPanel switchType="client" tabClass="activeTab" inactiveTabClass="inactiveTab" width="100%" id="tabs">
+                        <apex:tab label="Tasks" name="tasksTab" id="tasksTab">
+                            <apex:outputText rendered="{!tasks.size = 0}">None<br/></apex:outputText>
+                            <apex:pageBlockTable value="{!tasks}" var="t" rendered="{!tasks.size > 0}">
+                                <apex:repeat value="{!$ObjectType.Task.FieldSets.MUSW__New_Edit_Tasks}" var="tf">
+                                    <apex:column headerValue="{!tf.label}"><apex:inputField value="{!t[tf]}"/></apex:column>
+                                </apex:repeat>
+                            </apex:pageBlockTable>
+                            <apex:commandButton value="Add" action="{!addTask}" immediate="true" reRender="activityPbs"/>
+                        </apex:tab>
+                        <apex:tab label="Capacities" name="capsTab" id="capsTab" rendered="{!!isnull(capacities)}">
+                            <apex:outputText rendered="{!capacities.size = 0}">None<br/></apex:outputText>
+                            <apex:pageBlockTable value="{!capacities}" var="c" rendered="{!capacities.size > 0}">
+                                <!--<apex:column headerValue="Description"><apex:inputField value="{!c.Description__c}"/></apex:column>
+                                <apex:column headerValue="Sq ft"><apex:inputField value="{!c.MUSW__Quantity2__c}"/></apex:column>
+                                <apex:column headerValue="Load"><apex:inputField value="{!c.Load__c}"/></apex:column>-->
+                                <apex:repeat value="{!$ObjectType.MUSW__Work_Item__c.fieldSets.New_Edit_Capacities}" var="cf">
+                                <apex:column headerValue="{!cf.label}">
+                                    <apex:inputField value="{!c[cf]}" style="width:70%"/>
+                                </apex:column>
+                                </apex:repeat>
+                            </apex:pageBlockTable>
+                          
+                            <apex:commandButton value="Add" action="{!addCapacity}" oncomplete="selectTab('capsTab');" immediate="true" reRender="activityPbs"/>
+                        </apex:tab>
+                        <apex:tab label="Comments" name="comsTab" id="comsTab">
+                            <apex:outputText rendered="{!comments.size = 0}">None<br/></apex:outputText>
+                            <apex:pageBlockTable value="{!comments}" var="c" rendered="{!comments.size > 0}">
+                                <!--<apex:column headerValue="Type"><apex:inputField value="{!c.MUSW__Type__c}"/></apex:column>
+                                <apex:column headerValue="Description"><apex:inputField value="{!c.MUSW__Full_Description__c}" style="width:90%"/></apex:column>-->
+                                <apex:repeat value="{!$ObjectType.MUSW__Condition__c.fieldSets.New_Edit_Comments}" var="ff">                
+                                   <apex:column headerValue="{!ff.label}">
+                                        <apex:inputField value="{!c[ff]}" style="width:70%"/>
+                                    </apex:column>
+                                </apex:repeat>
+                            </apex:pageBlockTable>
+                            <apex:commandButton value="Add" action="{!addComment}" oncomplete="selectTab('comsTab');" immediate="true" reRender="activityPbs"/>
+                        </apex:tab>
+                        <apex:tab label="Prior Open Comments" name="otherComsTab" id="otherComsTab">
+                            <apex:outputText rendered="{!otherComments.size = 0}">None<br/></apex:outputText>
+                            <apex:pageBlockTable value="{!otherComments}" var="oc" rendered="{!otherComments.size > 0}">                               
+                                <apex:repeat value="{!$ObjectType.MUSW__Condition__c.fieldSets.New_Edit_Comments}" var="ff">                
+                                   <apex:column headerValue="{!ff.label}">
+                                        <apex:outPutField value="{!oc[ff]}" style="width:70%"/>
+                                    </apex:column>
+                                </apex:repeat>                         
+                            </apex:pageBlockTable>                            
+                        </apex:tab>
+                    </apex:tabPanel>
+                    
+                    <script>
+                    // change tab tables to default size (tables render smaller in tabs)
+                    switchClass("rich-tabpanel-content  ", "data2Col  first  last ");
+                    switchClass("rich-tabpanel-content", "data2Col  first  last");
+                    
+                    // hide spacer lines in tabs (ugly)
+                    hideImageWithSrc("spacer.gif");
+                    
+                    function hideImageWithSrc(src) {
+                        var ie = (document.all) ? true : false;
+                        var elements = (ie) ? document.all : document.getElementsByTagName('img');
+                        for (i=0; i<elements.length; i++) {
+                            if (elements[i].src != null && elements[i].src.indexOf(src) > -1) {
+                                elements[i].style.display = 'none';
+                            }
+                        }
+                    }
+                    
+                    function switchClass(class1, class2) {
+                        var ie = (document.all) ? true : false;
+                        var elements = (ie) ? document.all : document.getElementsByTagName('td');
+                        for (i=0; i<elements.length; i++) {
+                            if (elements[i].className == class1) {
+                                elements[i].className = class2;
+                            }
+                        }
+                    }
+                    
+                    function selectTab(tabName) {
+                        RichFaces.switchTab('p:f:pb:activityPbs:tabs','p:f:pb:activityPbs:'+tabName,tabName);
+                    }
+                    
+                    function showFrame(u) {
+                        document.getElementById('scm').src = u + '&sfsid={!$Api.Session_ID}&sfapiurl={!$Api.Partner_Server_URL_180}';
+                    }
+                    </script>
+                </apex:pageBlockSection>
+            </td>
+        </tr></table>
+    </apex:pageBlock>
+    
+    
+    <style>
+        .activeTab { background-color:#6699FF; color:white; background-image:none; font-weight:bold; cursor:pointer; border-top-left-radius: 10px; }
+        .inactiveTab { background-color:lightgrey; color:black; font-weight:normal; background-image:none; border-top-left-radius: 10px; }
+    </style>
+    
+    <apex:actionFunction name="filterWorkItemsJS" action="{!filterWorkItems}" reRender="wiTable" status="wiChangeStatus">
+        <apex:param name="grp" assignTo="{!wiGroupSelected}" value=""/>
+        <apex:param name="deps" assignTo="{!depPicklistVals}" value=""/>
+    </apex:actionFunction>
+    
+    <apex:includeScript value="/soap/ajax/26.0/connection.js"/>
+    <apex:includeScript value="{!$Resource.resizableTables}"/>
+    
+    
+</apex:form>
+</apex:page>

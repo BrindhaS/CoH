@@ -1,0 +1,197 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html>
+	<head>
+		<title>Add An Alert</title>
+		<link href="/dCSS/Theme2/default/common.css" type="text/css" media="handheld,print,projection,screen,tty,tv" rel="stylesheet">
+	    <script src="/soap/ajax/8.0/connection.js"></script>
+		<script id="clientEventHandlersJS" language="javascript">	
+<!-- 
+var parentAPIName = null;
+var recordID = null;
+var alertValue;
+
+//***
+//DEBUG helper functions (normally in Common, but want quick load)
+
+lgm = function() {
+};
+lgm.debug = function(control) {
+
+	// Enable Debugging
+	if (control != null) {
+		lgm.debug.flag = true;
+		lgm.debug.control = control;
+		lgm.debug.control.style.display = "block";
+		lgm.debug.addMessage ("<strong>Debug Mode</strong>");
+	} else {
+		lgm.debug.flag = false;
+	}
+	
+};
+
+lgm.debug.control = null;
+lgm.debug.flag = false;
+
+lgm.debug.addMessage = function(msg, clazz, newline) {
+	if (lgm.debug.flag)
+		if (clazz != null)
+			lgm.debug.control.innerHTML += "<p class='"+clazz+"'>"+msg+"</p>";
+		else
+		{
+			if (newline == null)
+				lgm.debug.control.innerHTML += msg + "<br/>";
+			else
+				lgm.debug.control.innerHTML += msg;
+		}
+};
+
+
+//Use this function as the entry point for your DHTML and JAVASCRIPT processing
+function setup() {
+	//"?" preceeds parameter list
+	var startTagStartPos= window.location.href.indexOf("?") + 1;
+	var startTagEndPos = window.location.href.length;
+	var paramList = window.location.href.substring(startTagStartPos, startTagEndPos);   
+
+	paramList = paramList + "&";
+	var param = new Array();
+
+	//build hash table of parameters
+ 	while (paramList.indexOf("&") != -1) {
+    	startTagStartPos = paramList.indexOf("=");
+    	startTagEndPos = paramList.indexOf("&");
+    
+    	var paramKey = paramList.substring(0,startTagStartPos);
+    	var paramValue = paramList.substring(startTagStartPos+1,startTagEndPos);
+    
+    	param[paramKey] = paramValue;
+    	paramList = paramList.substring(paramList.indexOf("&")+1, paramList.length);
+	}
+	
+	if ({!$User.Debug__c}) {
+		//turn on debug
+		lgm.debug(document.getElementById("divDebug"));
+
+	}
+	
+	if ({!$User.Step_Through__c}) { 
+		//throw uncaught exception so can step through in managed client environment
+		throw "e";
+	}
+	
+	parentAPIName = param["tableName"];
+	recordID = param["eid"];
+	alertValue = param["code"];
+
+}
+
+function saveAlertResult() {
+	var tableRecordError;
+	var activityError;
+	
+	var alertField = document.myform.alertField;
+	
+	if (document.getElementById("Comment").value == "") {
+		alert("Alert Comment is required");
+		return;
+	}
+	
+	for (i=0; i< alertField.length; i++) {
+		if (alertField[i].checked==true) {
+			alertValue = alertField[i].value;
+		}
+	}
+
+	var parent = new sforce.SObject(parentAPIName)
+	parent["Id"] = recordID;
+	parent["MUSW__AlertCode__c"] = alertValue;
+	tableRecordError = sforce.connection.update([parent]);
+
+	var alertActivity = new sforce.SObject("Task");
+	if (parentAPIName == "Contact") {
+		alertActivity["WhoId"] = recordID;
+	}
+	else {
+		alertActivity.set("WhatId", recordID);
+	} 
+	alertActivity["Description"] = document.getElementById("comment").value;
+	alertActivity["Status"] = "In Progress";
+	alertActivity["Subject"] = "Alert";
+	activityError = sforce.connection.create([alertActivity]);
+
+opener.location.reload();
+window.close();
+
+}
+
+function getFields(sobject, forUpdate) {
+	var fields = sforce.connection.describeSObject(sobject).fields;
+	var fieldList = "";
+	
+	if (!forUpdate) {
+		for (var i=0; i<fields.length; i++) {
+			fieldList = fieldList + fields[i].name + ", ";
+		}
+	} else {
+		fieldList = "Id, ";
+		for (var i=0; i<fields.length; i++) {
+			if (fields[i].updateable == true || fields[i].updateable == "true") {
+				fieldList = fieldList + fields[i].name + ", ";
+			}
+		}
+	}
+	
+	//chop off last comma
+	fieldList = fieldList.substring(0, fieldList.length-2);
+	return fieldList;
+}
+
+//-->
+		</script>
+	</head>
+	<body onload="setup();" onunload="opener.location.reload()" class=" LookupSearchFrame">	
+		<form id = "myform" name = "myform">
+			<div class="lookup">
+				<div class="bPageTitle">
+					<div class="ptBody primaryPalette">
+						<div class="content">
+							<img src="/s.gif" alt="Lookup"  class="pageTitleIcon">
+							<h1>Alerts</h1>
+						</div>
+					</div>
+				</div>
+				<table align = center>
+				<tr >
+					<td style = "padding:2px 10px 2px 2px; text-align:right; font-size: 8pt; font-weight: bold; color:#333;" valign = top>Post Alert <input type="radio" name="alertField" value="2" checked ><img src="/img/samples/light_yellow.gif" /><input type="radio" name="alertField" value="1"><img src="/img/samples/light_red.gif" />
+					</td>
+				</tr >
+				</table>
+				<br>
+				<table align = center>
+				<tr >
+						<td style = "padding:2px 10px 2px 2px; text-align:right; font-size: 8pt; font-weight: bold; color:#333;" valign = top>Comments</td>
+						<td style = "padding:2px 10px 2px 2px; text-align:left; font-size: 8pt; color:#333;" valign="top">
+							<textarea tabindex="1" id="comment" rows=3 cols=40 name="comment" ></textarea>
+						</td>
+				</tr>
+				
+				</table>
+				<br>
+				<!--<table align = center>
+					<tr >
+						<td style = "padding:2px 10px 2px 2px; text-align:right; font-size: 8pt; font-weight: bold; color:#333;" valign = top><INPUT TYPE=CHECKBOX NAME="notifyrelatedusers">
+						</td>
+						<td style = "padding:2px 10px 2px 2px; text-align:right; font-size: 8pt; font-weight: bold; color:#333;" valign = top>Notify open related users
+						</td>
+					</tr >
+				</table>
+				<br>-->
+				<div class="pBody" align = center>
+					<input id = "submit" Name = "submit" class="btn" type=button value="Add Alert" onClick="javascript:saveAlertResult();" disable = "false">
+					<input id = "cancel" Name = "cancel" class="btn" type=button value="Cancel" onClick="javascript:window.close();" disable = "false">
+				</div>				
+			</div>	
+			<DIV id="divDebug"></DIV>			
+		</form>	
+	</body>
+</html>

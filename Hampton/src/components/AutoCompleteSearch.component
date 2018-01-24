@@ -1,0 +1,70 @@
+<apex:component controller="AutoCompleteSearchController" layout="none">
+    <apex:attribute name="objectName" description="API Name of the Object" type="String"/>
+    <apex:attribute name="searchField" description="API Name of the field to be searched" type="String"/>
+    <apex:form id="f">
+        <apex:stylesheet value="{!URLFOR($Resource.jQuery183,'jquery-ui.css')}"/>
+        <apex:includeScript value="{!URLFOR($Resource.jQuery183,'jquery-1.8.3.js')}"/>
+        <apex:includeScript value="{!URLFOR($Resource.jQuery183,'jquery-ui.js')}"/>
+        
+        <script>
+            var availableTags = [];
+        </script>        
+        
+        <apex:outputPanel id="script">          
+                <script>              
+                    $("#searchText").autocomplete({
+                                 minLength:999, //don't do any searches by default (default is normally 1), can also use disable and then enable later
+                                 autoFocus: true   
+                                 });
+                    $(function() {
+                        if (document.getElementById("searchText").value.length >0)
+                        {
+                            var txt = document.getElementById("searchText").value;
+                            var txt2 = txt.substring(0,txt.indexOf(' ')).trim();  
+                                       
+                            AutoCompleteSearchController.search(txt2, function(result, event){                                                             
+                                if (event.status)
+                                {
+                                    availableTags = result;
+                                    $("#searchText").autocomplete({
+                                        source: function(request, response) {
+                                            var results = $.ui.autocomplete.filter(availableTags, request.term);
+                                    
+                                            response(results.slice(0, 8)); //cap off number of suggestions to 10 to reduce html rendering cost
+                                        },                               
+                                        minLength:txt.indexOf(' ')+1
+                                    });
+                                    $("#searchText").autocomplete("search"); //force search event to fire using current search term (even if minlength criteria is not satisfied)
+                                }
+                            });
+                        }
+                       
+                    });           
+                  
+                    
+                    function redirect(val) {
+                        AutoCompleteSearchController.redirect("{!objectName}", "{!searchField}", val, function(result, event) {
+                            if (event.status) {
+                                if (result != null && result != "")
+                                    window.parent.location = result;
+                                else
+                                    alert("No search results returned.");
+                            }
+                        });
+                    }
+        
+                </script>
+                
+                <style>
+                .ui-menu .ui-menu-item a{
+                padding:0em .5em 0em .5em;
+                line-height:1.2;
+                }        
+                </style>            
+        </apex:outputPanel>       
+        
+        <input id="searchText" size="18" autocomplete="off" onkeyUp="javascript:if ( this.value.indexOf(' ') == this.value.length-1 && (!isNaN(this.value.substring(0,this.value.length-2)))) {rerenderScriptJS();}"/>&nbsp;
+        <apex:outputPanel styleClass="btn" onclick="javascript:if (document.getElementById('searchText').value != '') redirect(document.getElementById('searchText').value);" style="float:right;">&nbsp;Go!&nbsp;</apex:outputPanel>
+        <apex:actionFunction name="rerenderScriptJS" reRender="script"/>       
+    </apex:form>
+</apex:component>

@@ -1,0 +1,5 @@
+<apex:page standardController="MUSW__Parcel__c">
+    <apex:pageMessages ></apex:pageMessages>
+    <BGBK:Notify recordIds="{!MUSW__Parcel__c.Id}"/>
+    <apex:detail relatedListHover="true" inlineEdit="true"/>
+</apex:page>

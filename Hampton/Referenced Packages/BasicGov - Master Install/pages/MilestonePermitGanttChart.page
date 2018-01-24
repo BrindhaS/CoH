@@ -1,0 +1,55 @@
+<!-- This page needs to be duplicated for every parent. Replace Permit API name with parent API name.
+  -- The Gantt chart cannot be componentized because DML doesn't run in a component (needed for snapshot) -->
+ 
+<apex:page standardController="MUSW__Permit2__c" extensions="MUSW.MilestoneGanttController" action="{!loadGanttJson}" sidebar="false" showHeader="true">
+<apex:form id="f">
+    <apex:sectionHeader title="{!plabel} Milestones" subtitle="{!pname}">
+        <apex:messages /><br/>
+    </apex:sectionHeader>
+    
+    <apex:outputPanel rendered="{!$CurrentPage.parameters.snapshot != 'true'}">
+    <input type="button" value="View Snapshot" onclick="window.open('/apex/MilestonePermitGanttChart?id={!JSINHTMLENCODE(pid)}&snapshot=true', '_self'); return false;"/>
+    </apex:outputPanel>
+    <apex:outputPanel rendered="{!$CurrentPage.parameters.snapshot = 'true'}">
+    <input type="{!IF(snapshotSaved=true || canSaveSnapshot=false,'hidden','button')}" value="Save Snapshot" onclick="saveSnapshotJS();"/>
+    </apex:outputPanel>
+    <input type="button" value="Add/Edit Milestones" onclick="window.open('/apex/musw__MilestoneAddEdit?id={!JSINHTMLENCODE(pid)}&mode=Milestone'); return false;"/>
+    
+    <apex:actionFunction name="saveSnapshotJS" action="{!storeSnapshot}" reRender="f"/>
+</apex:form>
+
+    <apex:includeScript value="{!URLFOR($Resource.MUSW__Milestone_Charts, 'jquery-1.4.4.min.js')}"/>
+    <apex:includeScript value="{!URLFOR($Resource.MUSW__Milestone_Charts, 'date.js')}"/>
+    <apex:includeScript value="{!URLFOR($Resource.MUSW__Milestone_Charts, 'jquery-ui-1.8.7.min.js')}"/>
+    <apex:includeScript value="{!URLFOR($Resource.MUSW__Milestone_Charts, 'jquery.ganttView.js')}"/>
+    
+    <apex:stylesheet value="{!URLFOR($Resource.MUSW__Milestone_Charts, 'jquery-ui-1.8.4.css')}"/>
+    <apex:stylesheet value="{!URLFOR($Resource.MUSW__Milestone_Charts, 'reset.css')}"/>
+    <apex:stylesheet value="{!URLFOR($Resource.MUSW__Milestone_Charts, 'jquery.ganttView.css')}"/>
+    
+    <div id="ganttChart{!JSINHTMLENCODE(pid)}"></div>
+
+    <script type="text/javascript">
+        document.getElementById("AppBodyHeader").style.display = "none";
+        
+        <apex:outputText value="{!json}" />
+        var g{!JSENCODE(pid)} = jQuery.noConflict();
+        g{!JSENCODE(pid)}(function () {
+            g{!JSENCODE(pid)}("#ganttChart{!JSENCODE(pid)}").ganttView({ 
+                data: ganttData{!JSENCODE(pid)},
+                slideWidth: 750,
+                behavior: {
+                    onClick: function (data) {
+                        var url = window.location.href.replace("musw.","").replace("bgbk.","").replace("visual.force","salesforce");
+                        url = url.substring(0, url.indexOf(".com")+4);
+                        var id = data.url;
+                        
+                        window.open(url+id);
+                    },
+                    draggable: false,
+                    resizable: false
+                }
+            });
+        });
+    </script>
+</apex:page>

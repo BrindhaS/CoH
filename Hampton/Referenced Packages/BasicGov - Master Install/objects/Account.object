@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fields>
+        <fullName>AlertCode__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>Alert Code</label>
+        <precision>2</precision>
+        <required>false</required>
+        <scale>0</scale>
+        <trackFeedHistory>false</trackFeedHistory>
+        <type>Number</type>
+        <unique>false</unique>
+    </fields>
+    <fields>
+        <fullName>Alert_Indicator__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <formula>HYPERLINK(&quot;/apex/musw__TaskAlert?id=&quot;+ Id, IMAGE( 
+CASE( AlertCode__c, 
+0, &quot;/img/samples/light_green.gif&quot;, 
+1, &quot;/img/samples/light_yellow.gif&quot;, 
+2, &quot;/img/samples/light_red.gif&quot;, 
+&quot;https://letterbatch.mybasicgov.com/img/light_off.gif&quot;), 
+&quot;none&quot;), &quot;_top&quot;)</formula>
+        <label>Alert</label>
+        <required>false</required>
+        <type>Text</type>
+        <unique>false</unique>
+    </fields>
+    <fields>
+        <fullName>Person_Account__c</fullName>
+        <defaultValue>true</defaultValue>
+        <deprecated>false</deprecated>
+        <description>If true, Apex creates an associated/equivalent contact. Allows for the ability to create Applicants who are companies</description>
+        <externalId>false</externalId>
+        <inlineHelpText>If you want to make this company available also as a person. Eg. also having an email address and home/mobile phone numbers</inlineHelpText>
+        <label>Person Account</label>
+        <trackFeedHistory>false</trackFeedHistory>
+        <type>Checkbox</type>
+    </fields>
+    <fields>
+        <fullName>Primary_License_Expiry__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>Primary License Expiry</label>
+        <required>false</required>
+        <trackFeedHistory>false</trackFeedHistory>
+        <type>Date</type>
+    </fields>
+    <fields>
+        <fullName>Primary_Tracking_Number__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>Primary License Number</label>
+        <length>50</length>
+        <required>false</required>
+        <trackFeedHistory>false</trackFeedHistory>
+        <type>Text</type>
+        <unique>false</unique>
+    </fields>
+</CustomObject>

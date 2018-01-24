@@ -1,0 +1,322 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <title>TaxParcel Viewer</title>
+  <link rel="stylesheet" type="text/css" href="/servlet/servlet.FileDownload?file=01560000000RC0s"><!--http://serverapi.arcgisonline.com/jsapi/arcgis/1.5/js/dojo/dijit/themes/tundra/tundra.css-->
+  <link rel="stylesheet" type="text/css" href="/servlet/servlet.FileDownload?file=01560000000RC17"><!--http://serverapi.arcgisonline.com/jsapi/arcgis/1.3/js/dojo/dojox/grid/resources/Grid.css-->
+  <link rel="stylesheet" type="text/css" href="/servlet/servlet.FileDownload?file=01560000000RC1C"><!--http://serverapi.arcgisonline.com/jsapi/arcgis/1.3/js/dojo/dojox/grid/resources/tundraGrid.css-->
+  <link rel="stylesheet" type="text/css" media="all" href="/servlet/servlet.FileDownload?file=01560000000RC1H" /><!--./appFiles/viewer.css-->
+</head>
+<script type="text/javascript">
+  djConfig = {
+    parseOnLoad:true
+  }
+</script>
+<script type="text/javascript" src="/servlet/servlet.FileDownload?file=01560000000RByw"></script>
+<script type="text/javascript" src="/servlet/servlet.FileDownload?file=01560000000RBzG"></script>
+<script type="text/javascript" src="/servlet/servlet.FileDownload?file=01560000000RBzB"></script>
+<script type="text/javascript" language="javascript">
+
+  dojo.require("esri.map");
+  dojo.require("esri.tasks.query");
+  dojo.require("dojox.grid.DataGrid");
+  dojo.require("dojo.data.ItemFileReadStore");
+  dojo.require("esri.tasks.find");
+  dojo.require("dijit.layout.BorderContainer");
+  dojo.require("dijit.layout.ContentPane");
+
+  var map, queryTask, query;
+  var featureSet, infoTemplate;
+
+  var parcelLayerNum,queryLayerStr,mapServiceStr,searchLayerStr,spRef,photoUrlPage;
+  var appFolder = "./appFiles/";
+  var appName = "TaxParcelViewer";
+  var startExtent;
+  var fields = {};
+  var keyField, addressField;
+  // run the config.js function to set the machine-specific services and related properties
+  setConfigProperties();
+
+  var findTask, findParams, searchResults;
+  var grid, store;
+  var infoWindowWidth,infoWindowHeight;
+  var addExtent = 500;
+  setLayoutProperties();
+  var iTimerID;
+  var iTimerIDs = [];
+  var dotCount = 0;
+  var lastFeatureID = "";
+  var featureID = "";
+  var mapLayer ="";
+  var mapName;
+  var consumerMap, industryMap;
+
+  isDebug = {!$User.Debug__c};
+
+  //if (isDebug) {
+  // document.getElementById("divDebugHeader").style.display = "block";
+  // document.getElementById("divDebug").style.display = "block";
+  //}
+
+  if ({!$User.Step_Through__c}) {
+   //throw uncaught exception so can step through in managed client environment
+   throw "e";
+  }
+
+  function Init(){
+
+    setupQueryTask();
+    setupFindTask();
+    initQueryCheck();
+
+    map = new esri.Map("mapDiv", {
+      extent: startExtent
+    });
+
+    consumerMap = new esri.layers.ArcGISTiledMapServiceLayer(consumerMapServiceStr);
+    setSliderLabels(consumerMap);
+    map.addLayer(consumerMap,{id:"consumerMap", visible :false});
+    industryMap = new esri.layers.ArcGISTiledMapServiceLayer(industryMapServiceStr);
+    map.addLayer(industryMap,{id:"industryMap", visible:false});
+
+    dojo.connect(map, "onExtentChange", extentChange);
+    dojo.connect(map, "onClick", executeQueryTask);
+    dojo.connect(grid, "onRowClick", onRowClickHandler);
+	//dojo.connect(map,"onResize",mapResize);
+    dojo.connect(map.infoWindow, "onHide", hidePopup);
+    infoTemplate = new esri.InfoTemplate();
+    dojo.byId("searchBox").value = "";
+    if (getUrlName(consumerMap) == mapName || mapName == undefined) {
+      changeMap([consumerMap]);
+    }
+    else if (getUrlName(industryMap) == mapName){
+      changeMap([industryMap]);
+    }
+    if(featureID != "" && featureID != undefined){
+      executeQueryTask();
+    }
+  }
+  function setupQueryTask(){
+    //build query task
+    queryTask = new esri.tasks.QueryTask(queryLayerStr);
+    query = new esri.tasks.Query();
+    query.returnGeometry = true;
+    query.spatialRelationship = esri.tasks.Query.SPATIAL_REL_WITHIN;
+    query.outFields = [
+    fields.SiteAddress ,
+    fields.LowParcelID ,
+    fields.ParcelID ,
+    fields.UseDescription ,
+    fields.SubOrCondo ,
+    fields.Building ,
+    fields.Unit ,
+    fields.TaxDistrict ,
+    fields.SchoolDistrict ,
+    fields.OwnerName ,
+    //fields.Url ,
+    fields.FloorArea ,
+    fields.StructureType ,
+    fields.AssessedValue ,
+    fields.TaxableValue ,
+    fields.CurrentTaxes
+    ];
+  }
+  function setupFindTask(){
+
+    //Create Find Task using the URL of the map service to search
+    findTask = new esri.tasks.FindTask(searchLayerStr);
+    //Create the find parameters
+    findParams = new esri.tasks.FindParameters();
+    findParams.returnGeometry = true;
+    findParams.layerIds = [parcelLayerNum];
+    findParams.searchFields = [fields.ParcelID, fields.SiteAddress, fields.SubOrCondo];
+  }
+
+
+  function showFeature(feature,evt) {
+
+    map.graphics.clear();
+    clearStatusUpdate();
+
+    var symbol = new esri.symbol.SimpleFillSymbol(esri.symbol.SimpleFillSymbol.STYLE_NULL, new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new dojo.Color([255, 255, 0]), 2), new dojo.Color([0, 0, 0, 0]));
+    var graphic = new esri.Graphic(feature.geometry, symbol, feature.attributes, infoTemplate);
+    map.graphics.add(graphic);
+    featureID = getFieldValue(graphic,fields.ParcelID);
+    var building = getFieldValue(graphic,fields.Building);
+    var unit = getFieldValue(graphic,fields.Unit);
+    var sep = "";
+
+    if( (building != "" && building != "Null") || (unit != "" && unit != "Null") ) {
+      sep = " : ";
+    }
+    else {
+      //sep = "No Building or Unit Data";
+	  sep = "Not Applicable";
+      building = "";
+      unit = "";
+    }
+    var taxDistrict = "";
+    if( getFieldValue(graphic,fields.TaxDistrict) == "Charter Township Of Bloomfield"){
+      taxDistrict = "Bloomfield Township";
+    } else {
+      taxDistrict = getFieldValue(graphic,fields.TaxDistrict);
+    }
+    var conveyanceName = getFieldValue(graphic,fields.SubOrCondo);
+    if(  conveyanceName == undefined || conveyanceName == ""){
+      conveyanceName = "No Subdivision or Condo";
+    }
+    var photoName = insertIntoHtmlURL("Photo.html");
+    var content =
+      "<table><tr><td width='45%'>TaxParcel ID </td><td width='60%'>"
+      + "<a href=\"javascript:void(0)\" onclick=\"window.open('" + photoName + "?featureID=" + getFieldValue(graphic,fields.ParcelID) + "&siteAddress=" + getFieldValue(graphic,fields.SiteAddress) + "')\">" + getFieldValue(graphic,fields.ParcelID) + "</a></td></tr>"
+      + "<tr><td>Use Description</td><td>" + getFieldValue(graphic,fields.UseDescription) + "</td></tr>"
+      + "<tr><td>Sub or Condo</td><td>" + conveyanceName + "</td></tr>"
+      + "<tr><td>Building : Unit</td><td>" + building + sep + unit + "</td></tr>"
+      + "<tr><td>Tax District</td><td>" + taxDistrict + "</td></tr>"
+      + "<tr><td>School District</td><td>" + getFieldValue(graphic,fields.SchoolDistrict) + "</td></tr>"
+      + "<tr><td>Owner Name</td><td>" + getFieldValue(graphic,fields.OwnerName) + "</td></tr>"
+      + "<tr><td>Structure Type</td><td>" + getFieldValue(graphic,fields.StructureType) + "</td></tr>"
+      + "<tr><td>Floor Area (Res)</td><td>" + formatNumber(getFieldValue(graphic,fields.FloorArea)) + " Square Feet</td></tr>"
+      + "<tr><td>Assessed Value</td><td>$ " + formatNumber(getFieldValue(graphic,fields.AssessedValue)) + "</td></tr>"
+      + "<tr><td>Taxable Value</td><td>$ " + formatNumber(getFieldValue(graphic,fields.TaxableValue)) + "</td></tr>"
+      + "<tr><td>Current Taxes</td><td>$ " + formatNumber(getFieldValue(graphic,fields.CurrentTaxes)) + "</td></tr>"
+      ;
+    map.infoWindow.setTitle(getFieldValue(graphic,fields.SiteAddress));
+    map.infoWindow.setContent(content);
+    map.infoWindow.resize(infoWindowWidth,infoWindowHeight);
+
+    if (evt != null) {
+      map.infoWindow.show(evt.screenPoint, map.getInfoWindowAnchor(evt.screenPoint));
+      lastFeatureID = getFieldValue(graphic,fields.LowParcelID)
+    }
+    else {
+      var featureExtent = graphic.geometry.getExtent();
+      var centerExt = map.toScreen(featureExtent.getCenter());
+      map.infoWindow.show(centerExt,map.getInfoWindowAnchor(centerExt));
+    }
+      }
+  function setSearchResultItems(items){
+    //Create data object to be used in store
+    var data = {
+      identifier: keyField, //This field needs to have unique values
+      label: addressField, //Name field for display. Not pertinent to a grid but may be used elsewhere.
+      items: items
+    };
+
+    dojo.byId("grid").style.visibility = "visible";
+    //Create data store and bind to grid.
+    store = new dojo.data.ItemFileReadStore({
+      data: data
+    });
+    grid.setStore(store);
+    var str = {keyField : '*'};
+    // I'll buy a beer for you in San Diego if you can make this work without hardcoding PARCELID... SG
+    grid.setQuery({PARCELID:'*'});
+    //grid.setQuery(eval(str));
+  }
+
+  function onRowClickHandler(evt){
+    //Zoom to the parcel when the user clicks a row
+    var clickedFeatureId = esri.substitute(grid.getItem(evt.rowIndex),"${" + keyField + "}");
+    var selectedFeature;
+     var found = 0;
+
+    //alert(clickedFeatureId);
+    map.graphics.clear();
+    map.infoWindow.hide();
+    var currentFeature = null;
+
+    if(featureSet != null){
+      //assume search result is a feature set
+        for (var i=0, il=featureSet.features.length; i<il; i++) {
+          currentFeature = featureSet.features[i];
+          if (getFieldValue(currentFeature,keyField) == clickedFeatureId){
+          //alert(dojo.toJson(currentFeature));
+              selectedFeature = currentFeature;
+            found = i + 1;
+              break;
+          }
+        }
+      }
+    else if (searchResults != null) {
+      // assume search result is a Find Task result
+        for (var i=0, il=searchResults.length; i<il; i++) {
+        currentFeature = searchResults[i].feature;
+        if (getFieldValue(currentFeature,keyField) == clickedFeatureId){
+              selectedFeature = currentFeature;
+            found = i + 1;
+              break;
+            }
+      }
+      }
+    else{
+      alert("featureSet and searchResult are both null");
+    }
+    if (found > 0) {
+      var featureExtent = selectedFeature.geometry.getExtent();
+      var centerExt = map.toScreen(featureExtent.getCenter());
+      featureExtent.update(featureExtent.xmin - addExtent,
+	                           featureExtent.ymin - addExtent,
+							   featureExtent.xmax + addExtent,
+							   featureExtent.ymax + addExtent,
+							   spRef);
+	  //featureExtent.expand(zoomFactor);
+      showFeature(selectedFeature, null);
+      map.infoWindow.show(centerExt, map.getInfoWindowAnchor(centerExt));
+      if (getFieldValue(selectedFeature,fields.LowParcelID) != lastFeatureID) {
+        map.setExtent(featureExtent);
+      }
+      searchMsg(clickedFeatureId + " selected");
+      lastFeatureID = getFieldValue(selectedFeature,fields.LowParcelID)
+    }
+  }
+  dojo.addOnLoad(Init);
+
+</script>
+
+<body class="tundra" onresize="mapResizeOther()">
+  <div id="borderContainer" dojotype="dijit.layout.BorderContainer" design="headline" gutters="false">
+  <div id="headerLinks" dojotype="dijit.layout.ContentPane" region="top">
+    <a href="javascript:help();" class="help">Help</a>
+    <a href="javascript:sendMail();" class="email">Email</a>
+    <a href="javascript:printMap();" class="print">Print</a>
+  </div>
+  <div id="searchCol" dojotype="dijit.layout.ContentPane" region="left">
+    <div id="inputBG"><input id="searchBox" type="text" autocomplete="on" value="" onkeypress="searchKey(event)"/></div>
+    <a href="javascript:searchMap();" id="searchButton" class="searchButton" onClick="javascript:searchMap();">Search</a>
+    <div id="searchStatus">
+  	<p>Search for Parcel ID, Address, or Subdivision/Condo Name.</p>
+	<p>You can also interact directly with the map and click on parcels to get information. </p>
+	<p>See the <a href="javascript:help();">Help</a> document if you are just getting started.</p>
+    </div>
+	<br/>
+	<br/>
+    <table dojoType="dojox.grid.DataGrid" jsid="grid" id="grid" rowsPerPage="10" rowSelector="20px" style="visibility:hidden" >
+      <thead>
+        <tr>
+          <th width="100px" field="PARCELID">Parcel ID</th>
+          <th width="185px" field="SITEADDRESS">Address</th>
+        </tr>
+      </thead>
+    </table>
+  </div>
+
+  <div id="mapArea" style="position:relative" dojotype="dijit.layout.ContentPane" region="center" onresize="mapResize()">
+    <div id="mapDiv">
+      <div id="mapButtons">
+	    <a href="javascript:changeMap([industryMap]);" class="mapButton" id="mapButton1">Tax Map</a>
+	    <a href="javascript:changeMap([consumerMap]);" class="mapButton" id="mapButton0">Public Access</a>
+      </div>
+    </div>
+  </div>
+  </div>
+  <form>
+  <DIV id="divDebugHeader" style="display: none">
+  <hr/>
+  <b>Debug Mode</b>
+  </DIV>
+<DIV id="divDebug" style="display: none"></DIV>
+</form>
+</body>
+</html>

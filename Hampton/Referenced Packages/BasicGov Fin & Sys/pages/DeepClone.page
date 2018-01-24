@@ -1,0 +1,5 @@
+<apex:page controller="BGBK.DeepCloneController" action="{!deepClone}">
+    <apex:form id="f">
+        <apex:messages id="msgs"/>
+    </apex:form>
+</apex:page>

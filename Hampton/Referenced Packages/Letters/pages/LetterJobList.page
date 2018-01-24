@@ -1,0 +1,18 @@
+<apex:page standardController="BGBL__Batch_Letter__c">
+<apex:form >
+ <apex:pageMessages />
+ <apex:detail relatedList="false"></apex:detail>
+<apex:actionFunction name="refreshStatus" rerender="jobslist" oncomplete="resetTimer()"/>
+
+</apex:form>
+<script>
+window.setTimeout('refreshStatus()',5000);
+
+function resetTimer()
+{
+	window.setTimeout('refreshStatus()',1000);
+}
+</script>
+ <apex:relatedList id="jobslist" list="Batch_Run_Jobs__r" />
+ <apex:relatedList id="queries" list="Applied_Queries__r" />
+</apex:page>

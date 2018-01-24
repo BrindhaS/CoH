@@ -1,0 +1,773 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html>
+<head>
+<title>Set Tracking Number</title>
+<link href="/dCSS/Theme2/default/common.css" type="text/css" media="handheld,print,projection,screen,tty,tv" rel="stylesheet">
+<script type="text/javascript" src="/js/functions.js"></script>
+<script src="/soap/ajax/8.0/connection.js"></script>
+<script id="clientEventHandlersJS" language="javascript"> 
+<!-- 
+
+//***************************************************************
+// function from lgmCommon, so loads faster
+//utility string functions
+function padDigits(n, totalDigits) 
+    { 
+        n = n.toString(); 
+        var pd = ''; 
+        if (totalDigits > n.length) 
+        { 
+            for (i=0; i < (totalDigits-n.length); i++) 
+            { 
+                pd += '0'; 
+            } 
+        } 
+        return pd + n.toString(); 
+    } 
+
+addMessage = function(msg, clazz, newline) {
+	if (debug)
+		if (clazz != null)
+			debugControl.innerHTML += "<p class='"+clazz+"'>"+msg+"</p>";
+		else
+		{
+			if (newline == null)
+				debugControl.innerHTML += msg + "<br/>";
+			else
+				debugControl.innerHTML += msg;
+		}
+}
+
+//*****utility date functions
+lgm = function() {
+};
+
+/**************************************************************************************
+* Class : LGM Date Library
+* Created By : Chris McLuckie
+* Created On : 01/15/2007
+* Purpose :
+**************************************************************************************/
+lgm.date = function() {
+};
+
+lgm.date.MONTH_NAMES = new Array('January','February','March','April','May','June','July','August','September','October','November','December','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec');
+lgm.date.DAY_NAMES = new Array('Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sun','Mon','Tue','Wed','Thu','Fri','Sat');
+
+lgm.date.parseDate = function(val) {
+if (typeof(val) == "date") 
+return val;
+
+var preferEuro=(arguments.length==2)?arguments[1]:false;
+var generalFormats = new Array('y-M-d','MMM d, y','MMM d,y','y-MMM-d','d-MMM-y','MMM d');
+var monthFirst = new Array('M/d/y','M-d-y','M.d.y','MMM-d','M/d','M-d');
+var dateFirst = new Array('d/M/y','d-M-y','d.M.y','d-MMM','d/M','d-M');
+
+var checkList=new Array(generalFormats,preferEuro?dateFirst:monthFirst,preferEuro?monthFirst:dateFirst);
+var d=null;
+
+for (var i=0; i<checkList.length; i++) {
+var l=checkList[i];
+for (var j=0; j<l.length; j++) {
+d=lgm.date.getDateFromFormat(val,l[j]);
+if (d!=0) { 
+return new Date(d); 
+}
+}
+}
+return null;
+}
+
+lgm.date.parseDateFormat = function (val, lang) {
+lang = lang + "";
+//Lang comes from API Name: LocaleSidKey Type: picklist
+var preferEuro = true;
+if ( /US/.test(lang) ) 
+preferEuro = false; 
+
+generalFormats = new Array('y-M-d','MMM d, y','MMM d,y','y-MMM-d','d-MMM-y','MMM d');
+monthFirst = new Array('M/d/y','M-d-y','M.d.y','MMM-d','M/d','M-d');
+dateFirst = new Array('d/MM/y','d-M-y','d.M.y','d-MMM','d/M','d-M');
+
+var checkList = new Array(generalFormats, preferEuro?dateFirst:monthFirst, preferEuro?monthFirst:dateFirst);
+var d = null;
+for (var i=0; i<checkList.length; i++) {
+var l=checkList[i];
+for (var j=0; j<l.length; j++) {
+d = lgm.date.getDateFromFormat(val,l[j]);
+if (d!=0) { 
+return l[j];
+}
+}
+}
+
+return "M/d/y"; // a default
+}
+
+//return a date from a string in the given format
+lgm.date.getDateFromFormat = function (val,format) {
+val=val+"";
+format=format+"";
+var i_val=0;
+var i_format=0;
+var c="";
+var token="";
+var token2="";
+var x,y;
+var now=new Date();
+var year=now.getYear();
+var month=now.getMonth()+1;
+var date=1;
+var hh=now.getHours();
+var mm=now.getMinutes();
+var ss=now.getSeconds();
+var ampm="";
+while (i_format < format.length) {
+c=format.charAt(i_format);
+token="";
+while ((format.charAt(i_format)==c) && (i_format < format.length)) {
+token += format.charAt(i_format++);
+}
+if (token=="yyyy" || token=="yy" || token=="y") {
+if (token=="yyyy") { 
+x=4;y=4; 
+}
+if (token=="yy") {
+x=2;y=2; 
+}
+if (token=="y") { 
+x=2;y=4; 
+}
+year=lgm.numeric.getInt(val,i_val,x,y);
+if (year==null) { 
+return 0; 
+}
+i_val += year.length;
+if (year.length==2) {
+if (year > 70) { 
+year=1900+(year-0); 
+} else { 
+year=2000+(year-0); 
+}
+}
+}else if (token=="MMM"||token=="NNN"){
+month=0;
+for (var i=0; i<lgm.date.MONTH_NAMES.length; i++) {
+var month_name=lgm.date.MONTH_NAMES[i];
+if (val.substring(i_val,i_val+month_name.length).toLowerCase()==month_name.toLowerCase()) {
+if (token=="MMM"||(token=="NNN"&&i>11)) {
+month=i+1;
+if (month>12) { 
+month -= 12; 
+}
+i_val += month_name.length;break;
+}
+}
+}
+if ((month < 1)||(month>12)){
+return 0;
+}
+}else if (token=="EE"||token=="E") {
+for (var i=0; i<DAY_NAMES.length; i++) {
+var day_name=DAY_NAMES[i];
+if (val.substring(i_val,i_val+day_name.length).toLowerCase()==day_name.toLowerCase()) {
+i_val += day_name.length;
+break;
+}
+}
+}else if (token=="MM"||token=="M") {
+month=lgm.numeric.getInt(val,i_val,token.length,2);
+if(month==null||(month<1)||(month>12)){
+return 0;
+}
+i_val+=month.length;
+}else if (token=="dd"||token=="d") {
+date=lgm.numeric.getInt(val,i_val,token.length,2);
+if(date==null||(date<1)||(date>31)){
+return 0;
+}
+i_val+=date.length;
+}else if (token=="hh"||token=="h") {
+hh=lgm.numeric.getInt(val,i_val,token.length,2);
+if(hh==null||(hh<1)||(hh>12)){
+return 0;
+}
+i_val+=hh.length;
+}else if (token=="HH"||token=="H") {
+hh=lgm.numeric.getInt(val,i_val,token.length,2);
+if(hh==null||(hh<0)||(hh>23)){
+return 0;
+}
+i_val+=hh.length;
+}else if (token=="KK"||token=="K") {
+hh=lgm.numeric.getInt(val,i_val,token.length,2);
+if(hh==null||(hh<0)||(hh>11)){
+return 0;
+}
+i_val+=hh.length;
+}else if (token=="kk"||token=="k") {
+hh=lgm.numeric.getInt(val,i_val,token.length,2);
+if(hh==null||(hh<1)||(hh>24)){
+return 0;
+}
+i_val+=hh.length;hh--;
+}else if (token=="mm"||token=="m") {
+mm=lgm.numeric.getInt(val,i_val,token.length,2);
+if(mm==null||(mm<0)||(mm>59)){
+return 0;
+}
+i_val+=mm.length;
+}else if (token=="ss"||token=="s") {
+ss=lgm.numeric.getInt(val,i_val,token.length,2);
+if(ss==null||(ss<0)||(ss>59)){
+return 0;
+}
+i_val+=ss.length;
+}else if (token=="a") {
+if (val.substring(i_val,i_val+2).toLowerCase()=="am") {ampm="AM";
+}else if (val.substring(i_val,i_val+2).toLowerCase()=="pm") {ampm="PM";
+}else {
+return 0;
+}
+i_val+=2;
+}else {
+if (val.substring(i_val,i_val+token.length)!=token) {
+return 0;
+}else {
+i_val+=token.length;
+}
+
+}
+}
+if (month==2) {
+if ( ( (year%4==0)&&(year%100 != 0) ) || (year%400==0) ) { 
+if (date > 29){ 
+return 0; 
+}
+}else { 
+if (date > 28) { 
+return 0; 
+} 
+}
+}
+
+if ((month==4)||(month==6)||(month==9)||(month==11)) {
+if (date > 30) { 
+return 0; 
+}
+}
+if (hh<12 && ampm=="PM") { 
+hh=hh-0+12; 
+}else if (hh>11 && ampm=="AM") { 
+hh-=12; 
+}
+var newdate=new Date(year,month-1,date,hh,mm,ss);
+return newdate.getTime();
+}
+
+//return a string in the given format when given a date
+lgm.date.formatDate = function (date, format) {
+format=format+"";
+var result="";
+var i_format=0;
+var c="";
+var token="";
+var y=date.getYear()+"";
+var M=date.getMonth()+1;
+var d=date.getDate();
+var E=date.getDay();
+var H=date.getHours();
+
+var m=date.getMinutes();
+
+var s=date.getSeconds();
+var yyyy,yy,MMM,MM,dd,hh,h,mm,ss,ampm,HH,H,KK,K,kk,k;
+var value=new Object();
+if (y.length < 4) {
+y = ""+(y-0+1900);
+} 
+value["y"] = ""+y;
+value["yyyy"] = y;
+value["yy"] = y.substring(2,4);
+value["M"] = M;
+value["MM"] = lgm.numeric.lZ(M);
+value["MMM"] = lgm.date.MONTH_NAMES[M-1];
+value["NNN"] = lgm.date.MONTH_NAMES[M+11];
+value["d"] = d;
+value["dd"] = lgm.numeric.lZ(d);
+value["E"] = lgm.date.DAY_NAMES[E+7];
+value["EE"] = lgm.date.DAY_NAMES[E];
+value["H"] = H;
+value["HH"] = lgm.numeric.lZ(H);
+if (H==0){
+value["h"]=12;
+} else if (H>12){
+value["h"] = H-12;
+} else {
+value["h"] = H;
+}
+value["hh"]=lgm.numeric.lZ(value["h"]);
+if (H>11){
+value["K"]=H-12;
+} else {
+value["K"]=H;
+}
+value["k"]=H+1;
+value["KK"]=lgm.numeric.lZ(value["K"]);
+value["kk"]=lgm.numeric.lZ(value["k"]);
+if (H > 11) { 
+value["a"]="PM"; 
+} else { 
+value["a"]="AM"; 
+}
+value["m"] = m;
+value["mm"] = lgm.numeric.lZ(m);
+value["s"]=s;
+value["ss"]=lgm.numeric.lZ(s);
+while (i_format < format.length) {
+c=format.charAt(i_format);
+token="";
+while ((format.charAt(i_format)==c) && (i_format < format.length)) {
+token += format.charAt(i_format++);
+}
+if (value[token] != null) { 
+result=result + value[token]; 
+} else { 
+result=result + token; 
+}
+}
+return result;
+}
+
+/**************************************************************************************
+* Class : LGM Numeric Library
+* Created By : Chris McLuckie
+* Created On : 01/15/2007
+* Purpose :
+**************************************************************************************/
+lgm.numeric = function() {
+};
+
+lgm.numeric.lZ = function (x) {return(x<0||x>9?"":"0")+x}
+
+lgm.numeric.getInt = function (str,i,minlength,maxlength) {str=str+""; for (var x=maxlength; x>=minlength; x--) {var token=str.substring(i,i+x);if (token.length < minlength) { return null; }if (lgm.numeric.isInteger(token)) { return token; }}return null;};
+
+lgm.numeric.isInteger = function (val) {var digits="1234567890";for (var i=0; i < val.length; i++) {if (digits.indexOf(val.charAt(i))==-1) { return false; }}return true;};
+
+lgm.numeric.isNumeric = function (x) 
+{
+// I use this function like this: if (isNumeric(myVar)) { } regular expression that validates a value is numeric 
+var RegExp = /^(-)?(\d*)(\.?)(\d*)$/; // Note: this WILL allow a number that ends in a decimal: -452. 
+
+// compare the argument to the RegEx the 'match' function returns 0 if the value didn't match 
+var result = x.match(RegExp);
+return result;
+}
+
+
+/**************************************************************************************
+* Class : LGM Sequence Number Update
+* Created By : James Wikkerink
+* Created On : 03/15/2007
+* Purpose :
+**************************************************************************************/
+var dformat;
+var debug;
+
+var TRtype;
+var TRcreatedDate;
+var TRnextNumber;
+
+var issuedNo; //formatted number only portion of the track no.
+
+var trackingNumber = "";
+
+var promptManual = false; //whether to prompt for a manual number
+var lastManualEntry; //the manual entry entry when we last prompted
+
+var sequence; //sobject
+var recordID; //recordID of parent
+var pObject; //name of parent object
+var trackField; //name of tracking number field on parent
+
+var setIssuanceDate; //the issue date field name if also updating this field (optional)
+var setStatus; //the status field name if also updating this field (optional)
+
+var field; //document field to set if using this as a popup
+
+var param = new Array(); //array of URL parameters
+
+var instruct; //if blank, issue a new number, else refresh portion of number
+
+//Use this function as the entry point for your DHTML and JAVASCRIPT processing
+function setup() 
+{ 
+
+//? is preceeds parameters
+var startTagStartPos= window.location.href.indexOf("?") + 1; 
+var startTagEndPos = window.location.href.length; 
+var paramList = window.location.href.substring(startTagStartPos, startTagEndPos); 
+
+	paramList = unescape(paramList); 
+	paramList = paramList + "&"; 
+
+
+//build hash table of parameters 
+while (paramList.indexOf("&") != -1) { 
+startTagStartPos = paramList.indexOf("="); 
+startTagEndPos = paramList.indexOf("&"); 
+
+var paramKey = paramList.substring(0,startTagStartPos); 
+var paramValue = paramList.substring(startTagStartPos+1,startTagEndPos); 
+
+param[paramKey] = paramValue; 
+paramList = paramList.substring(paramList.indexOf("&")+1, paramList.length); 
+} 
+
+if ({!$User.Debug__c} == true) {
+	//turn on debug
+	debugControl= document.getElementById("divDebug");
+	debugControl.style.display = "block";
+	debug = true;
+	addMessage ("<strong>Debug Mode</strong>");
+}
+
+if ({!$User.Step_Through__c} == true) {
+	//throw uncaught exception so can step through in managed client environment
+	throw "e";
+}
+
+try {
+
+	
+
+
+	var recordType= param["type"];
+	pObject = param["object"];
+	var year = param["year"];
+	var month= param["month"];
+	var day= param["day"];
+	
+	recordID= param["Id"];
+	
+	setIssuanceDate=param["setIssuanceDate"]; //
+	setStatus=param["setStatus"]; //also requires param StatusField
+	
+	field=param["field"]; //the field to set when this scontrol is used as a popup window (no update to database)
+	
+	instruct=param["instruct"]; //if blank, issue number, else receive renewal instructions
+	
+	var qr = sforce.connection.query("Select Id, MUSW__Next_Number__c, MUSW__Sequence_Field__c, MUSW__Format__c, MUSW__Type__c, MUSW__Yearly_Reset__c, MUSW__Last_Year_Issued__c, MUSW__Last_Manual_Entry__c FROM MUSW__Sequence_Number__c where Name = '" + recordType+"' and MUSW__Object__c = '" + pObject + "' and (MUSW__Mode__c = '' or MUSW__Mode__c = 'Request' or MUSW__Mode__c = 'Auto/Request')");
+	if (qr.size > 1 ) 
+	 throw "Did not find one " + recordType + "recordtype for "+pObject;
+	 
+	if (qr.size < 1 ) //no record configured for this type, get default 
+	{
+		recordtype = "DEFAULT";
+		var qr = sforce.connection.query("Select Id, MUSW__Next_Number__c, MUSW__Sequence_Field__c, MUSW__Format__c, MUSW__Type__c, MUSW__Yearly_Reset__c, MUSW__Last_Year_Issued__c, MUSW__Last_Manual_Entry__c FROM MUSW__Sequence_Number__c where Name = '" + recordType+"' and MUSW__Object__c = '" + pObject + "' and (MUSW__Mode__c = '' or MUSW__Mode__c = 'Request' or MUSW__Mode__c = 'Auto/Request')");
+	}
+	
+	if (qr.size != 1)
+		throw "Did not find " + recordType + "recordtype for "+pObject;
+	
+	TRtype= qr.records["MUSW__Type__c"];
+	
+	trackField= qr.records["MUSW__Sequence_Field__c"];
+		
+	var TRformat = qr.records["MUSW__Format__c"];
+	
+	addMessage("Track Number type: " + TRtype + "  Object: " + pObject);
+	
+	var uInfo = sforce.connection.getUserInfo(); // has the locale
+	dformat = lgm.date.parseDateFormat("{!Today}", uInfo.userLocale);
+	
+	if ((year != null) && (month!= null) && (day != null)) {
+		TRcreatedDate = lgm.date.getDateFromFormat (year+ padDigits(month,2)+padDigits(day,2),"yyyyMMdd");
+		TRcreatedDate = new Date(TRcreatedDate );
+	} else { //no date passed in so using today
+		TRcreatedDate = lgm.date.getDateFromFormat("{!Today}", dformat);
+		TRcreatedDate = new Date(TRcreatedDate);
+	}
+	
+	//get year as string
+	year = lgm.date.formatDate(TRcreatedDate,"yyyy");
+	
+	//issue new number
+	if (instruct == null) { //issue new number
+	
+		TRnextNumber = qr.records.getInt("MUSW__Next_Number__c");
+		addMessage("Next Number: " + TRnextNumber);
+		if (qr.records.getBoolean("MUSW__Yearly_Reset__c")) {
+			if ((qr.records["MUSW__Last_Year_Issued__c"] != year) && (qr.records["MUSW__Last_Year_Issued__c"] != null)) {
+				TRnextNumber =1;
+			}
+		}
+				
+		lastManualEntry = qr.records["MUSW__Last_Manual_Entry__c"]; //applicable only when track number format contains the {manual} prompt eg. {type}-{manual}-{yy}
+		
+		//get the tracking number in the given format
+		trackingNumber = createTRNumber(TRformat);
+		
+		//if NOT have to wait for manual input
+		
+		//create update objects for parent and sequence tables
+		
+		sequence = new sforce.SObject("MUSW__Sequence_Number__c");
+		sequence["Id"] = qr.records["Id"]; 
+		sequence["MUSW__Next_Number__c"] = TRnextNumber+1;
+		sequence["MUSW__Last_Year_Issued__c"] =year;
+		
+	} else if (instruct == "RENEWDATEONLY") { //do not issue a new number, only change date portion  (RENEW vs ISSUE)
+	
+		var qr = sforce.connection.query("Select Id, MUSW__Issued_Number__c, " + trackField + " FROM " + pObject + " where Id = '" + recordID+"'");
+		
+		if (qr.size == 1 ) {
+		
+			TRnextNumber = qr.records["MUSW__Issued_Number__c"];
+			addMessage("Issue Number: " + TRnextNumber);
+			if (TRnextNumber == null) {
+				throw "Error: no number was issued before renewal";
+			}
+		} else {
+			throw "No object data to renew";
+		}
+		 
+		//parse existing number and replace 
+		trackingNumber = createTRNumber(TRformat);
+	} else {
+		throw "Unhandled Track Number instruction";
+	}
+	
+	addMessage("new Track Number: " + trackingNumber);
+	
+	if (!promptManual) {
+		saveResult();
+	} else {
+		//set right
+		document.getElementById("right").value = trackingNumber;
+		if (document.getElementById("right").value == "") document.getElementById("right").style.display = "none"; //hide if no content
+	}
+
+}
+catch(err)
+	{
+		addMessage("Fault: " + err.toString());
+	}
+
+}
+
+//build the number
+function createTRNumber(formatValue) {
+
+var contentTagStart = "{"; var contentTagEnd = "}";
+var replaceValue;
+var formatValue;
+
+//***search and replace content between content tags
+while (formatValue.indexOf(contentTagStart) != -1 ){
+
+
+	var startTagPos = formatValue.indexOf(contentTagStart);
+
+	var endTagPos = formatValue.indexOf(contentTagEnd, startTagPos ); //get next end Tag position
+	if (endTagPos == -1) {
+		throw "No content end tag was found";
+	}
+
+
+	var mask = formatValue.substring(startTagPos+1,endTagPos);
+
+	addMessage("mask: " + mask + "\nreplaceValue: " + replaceValue);
+
+	//get table.field pair
+	replaceValue = merge(mask );
+
+	if (replaceValue == null) {
+		throw " Failed to find value for: " + mask ;
+	}
+	if (replaceValue != "manual" ) {
+		formatValue = formatValue.substring(0,startTagPos) + replaceValue + formatValue.substring(endTagPos+1);
+	} else if (!promptManual) { //not prompting yet (setup left side of number)
+		//prompt manual entry
+		document.getElementById("status").innerHTML = "Enter Number:";
+		//set left
+		document.getElementById("left").value = formatValue.substring(0,startTagPos);
+		if (document.getElementById("left").value == "") document.getElementById("left").style.display = "none"; //hide if no content
+		//set last entry
+		if (lastManualEntry == null) lastManualEntry = ""; //for the first time prompts only
+		document.getElementById('lastEntry').innerHTML = lastManualEntry;
+		//unhide prompt
+		document.getElementById("divManual").style.display = "block";
+		formatValue = formatValue.substring(endTagPos+1); //clear left portion
+		promptManual = true;
+	}
+}
+
+return formatValue;
+
+}
+
+function merge(mask) {
+
+if (mask== "type")
+	return TRtype;
+else if (mask.indexOf("0") != -1 ) {
+	issuedNo = padDigits(TRnextNumber, mask.length);
+	return issuedNo;
+	}
+else if (mask.indexOf("manual") != -1 ) {
+	return "manual";
+}
+else
+ return lgm.date.formatDate(TRcreatedDate, mask);
+
+}
+
+
+//save the manual
+function saveManualResult() {
+
+	if (document.getElementById("manualNumber").value == "") {
+		alert("Please enter number");
+		return;
+	}
+	
+	sequence["MUSW__Last_Manual_Entry__c"] = document.getElementById("manualNumber").value; //remember latest manual entry
+	
+	trackingNumber = document.getElementById("left").value + document.getElementById("manualNumber").value + document.getElementById("right").value;
+	saveResult();
+}
+
+//send changes to host
+function saveResult() 
+{	 
+	// if updating back end and refreshing window (vs not having to populate a field on parent window )
+	if (field == null) {
+		var parent= new sforce.SObject(pObject );
+		parent["Id"] = recordID; 
+		parent[trackField] = trackingNumber;
+		parent["MUSW__Issued_Number__c"] = issuedNo;
+		//also update Name field if updating track number
+		//JAW REVIEW add back once Name fields are Text again
+		/*if ((trackField == 'MUSW__Tracking_Number__c') || (trackField == 'MUSW__Track_No__c')){
+			//parent['Name'] = trackingNumber; 
+			
+		}*/
+		//set parent issue date field?
+		if (setIssuanceDate!=null) {
+			parent[param["issuanceDateField"]] = TRcreatedDate;
+		}
+		
+		//set parent status via the status field?
+		if (setStatus !=null) {
+			parent[param["statusField"]] = setStatus;
+		}
+		
+		//save
+		if (instruct == null) {
+			var saveError = sforce.connection.update([parent,sequence]); //set next TRnumber, and update parent
+		} else {
+			var saveError = sforce.connection.update([parent]); //re-use existing TRnumber
+		}
+		
+		if (saveError[0].success = "false") 
+		{
+			if (saveError[0].errors != null) {
+				//addMessage (saveError[0].errors.message + "\nPlease click Browser Back button and correct fields" );
+				document.getElementById("status").innerHTML = "Error: "+saveError[0].errors.message + "\nPlease click Browser Back button and correct fields";
+			} 
+			else {
+					window.location =window.location.protocol+"//"+window.location.hostname+"/"+recordID;
+			}
+		}
+		
+	} else {
+		//save
+		if (instruct == null) {  //set next TRnumber
+			var saveError = sforce.connection.update([sequence]); 
+		}
+		
+		if (saveError[0].success = "false") 
+		{	if (saveError[0].errors != null) {
+				//addMessage (saveError[0].errors.message + "\nPlease click Browser Back button and correct fields" );
+				document.getElementById("status").innerHTML = "Error: "+saveError[0].errors.message + "\nPlease close this window and correct fields";
+			}
+			else 
+			{
+				//set field on parent window
+				opener.document.getElementById(field).value = trackingNumber;
+				//exit
+				window.close();
+			}
+		}
+	}
+}
+
+//cancel tracknumber (only used if manual prompt)
+function cancelUpdate() 
+{	 
+	// if updating back end and refreshing window (vs not having to populate a field on parent window )
+	if (field == null) {
+			
+		window.location =window.location.protocol+"//"+window.location.hostname+"/"+recordID;
+		
+	} else {
+		//exit
+		window.close();
+	}
+}
+
+</script>
+</head>
+<body onload="setup()" >
+<form id = "myform" name = "myform">
+<div class="lookup">
+<div class="bPageTitle">
+<div class="ptBody primaryPalette">
+<div class="content">
+<img src="/s.gif" alt="Lookup" class="pageTitleIcon">
+<h1>New No.</h1>
+</div>
+</div>
+</div>
+<table cellspacing = 0 cellpadding = 0 border = 0>
+<tr>
+<td width = 5></td>
+<td width = 100%></td>
+<td width = 5></td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td ID="status" style = "padding:2px 10px 2px 2px; text-align:center; font-size: 8pt; font-weight: bold; color:#333;">Processing...</td>
+<td>&nbsp;</td>
+</table>
+</div>
+<DIV id="divManual" style="display: none">
+<table cellspacing = 0 cellpadding = 0 border = 0 width=250 align="center">
+		<tr>
+			<td  style = "align:center;padding:2px 2px 2px 2px; text-align:center; font-size: 8pt; font-weight: bold; color:#333;width:25%">
+				<INPUT NAME="left" ID="left" maxlength="12" size=5 type="text" style = "height:20px" ></INPUT></TD>
+			<td style = "align:center;padding:2px 2px 2px 2px; text-align:center; font-size: 8pt; font-weight: bold; color:#333;width:50%">
+				<INPUT NAME="manualNumber" ID="manualNumber" maxlength="15" size=7 type="text" style = "height:20px">&nbsp;</INPUT></td>
+			<td style = "align:center;padding:2px 2px 2px 2px; text-align:center; font-size: 8pt; font-weight: bold; color:#333;width:25%">
+				<INPUT NAME="right" ID="right" maxlength="12" size=5 type="text" style = "height:20px" ></INPUT></TD>
+		</tr>	
+		<tr>
+			<td  colspan = 3 style = "align:center;padding:2px 2px 2px 2px; text-align:center; font-size: 8pt; font-weight: bold; color:#333;width:25%">
+				Last Entry: <span id = "lastEntry" name = "lastEntry">
+			</TD>
+			
+		</tr>				
+		<tr>
+			<td align = "center" colspan="3">
+				<input id = "submit" Name = "submit" class="btn" type=button value="Save" onClick="javascript:return saveManualResult();" disable = "true">
+				<input id = "cancel" Name = "cancel" class="btn" type=button value="Cancel" onClick="javascript:cancelUpdate()" disable = "true">
+			</td>
+		</tr>
+	</table>
+</DIV>
+
+<DIV id="divDebug"></DIV>
+</form> 
+</body>
+</html>

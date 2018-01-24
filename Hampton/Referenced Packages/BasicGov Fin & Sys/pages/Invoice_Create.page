@@ -1,0 +1,82 @@
+<!-- James Wikkerink - james.wikkerink@basicgov.com, September 16 2009 -->
+
+<apex:page standardController="BGBK__Bill__c" extensions="BGBK.InvoiceController" action="{!initialize}">
+    <apex:form >
+    
+        <apex:sectionHeader title="Invoice" subtitle="">
+            <apex:messages />
+            <apex:commandLink action="{!cancel}" value="{!parentObjectLabel}: {!parentTrackno}" id="backToParent" />
+        </apex:sectionHeader>
+                
+        <apex:pageblock title="New Invoice">
+            <apex:pageblockbuttons >
+                <apex:commandbutton action="{!save}" value="Save" />
+                <apex:commandbutton action="{!cancel}" value="Cancel" />
+            </apex:pageblockbuttons>
+            
+            Here you can create an Invoice for unpaid, uninvoiced Fees.<br/><br/>
+            
+            <apex:pageblockSection title="Regarding" >
+                <apex:outputField value="{!BGBK__Bill__c.BGBK__Recipient2__c}" rendered="{!BGBK__Bill__c.BGBK__Recipient2__c<>null}"/>
+                <apex:inputField value="{!BGBK__Bill__c.BGBK__Recipient2__c}" rendered="{!BGBK__Bill__c.BGBK__Recipient2__c==null}"/>
+                <!--<apex:inputField value="{!BGBK__Bill__c.BGBK__Recipient2__c}" required="true"/>-->
+                <apex:selectRadio value="{!scope}">
+                    <apex:selectOptions value="{!scopeItems}"/>
+                </apex:selectRadio>
+            </apex:pageblockSection>
+            <apex:pageblockSection title="Time Frame" >
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="" for="frameType"/>
+                    <apex:selectRadio value="{!frameType}">
+                        <apex:selectOptions value="{!frameTypeItems}" id="frameType"/>
+                    </apex:selectRadio>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >
+                </apex:pageBlockSectionItem>
+
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Start Date" for="startDate"/>
+                    <apex:inputfield value="{!myVirtualObj1.Birthdate}"  id="startDate"  required="true" />
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="End Date" for="endDate"/>
+                    <apex:inputfield value="{!myVirtualObj2.Birthdate}"  id="endDate" required="true" />
+                </apex:pageBlockSectionItem>
+                            
+                <apex:commandButton action="{!preview}" value="Preview" id="preview" style="float:center;" reRender="fees, messages"/>
+            </apex:pageblockSection>
+            
+        <apex:pageblockSection title="Uninvoiced Fees" id="fees">
+            <apex:pageBlockSectionItem >
+                <apex:outputLabel value="Invoice Amount" for="totalDue"/>
+                <apex:outputField value="{!BGBK__Bill__c.BGBK__Total_Fees__c}" id="totalDue"/>
+            </apex:pageBlockSectionItem>
+            <apex:pageBlockSectionItem >
+                <apex:outputText style="color:red" value="{!message}" id="messages"/>
+            </apex:pageBlockSectionItem>
+                <apex:outputPanel id="previewPanel" layout="block">
+                        
+                    <table border="0" >
+                    <tr><td><b>Related To</b></td><td><b>Tracking No.</b></td><td><b>Type</b></td><td><b>Outstanding</b></td><td><b>Created Date</b></td></tr>
+                    <tr>
+                        <apex:repeat value="{!wrapFees}" var="wrap" id="forEachFee">
+                            <tr>
+                                <td>
+                                    <apex:outputField value="{!wrap.fee.MUSW__Permit__c}" rendered="{!IF(LOWER(wrap.parent)='musw__permit__c', true, false)}"/>
+                                    <apex:outputField value="{!wrap.fee.MUSW__Complaint__c}" rendered="{!IF(LOWER(wrap.parent)='musw__complaint__c', true, false)}"/>
+                                    <apex:outputField value="{!wrap.fee.MUSW__Permit2__c}" rendered="{!IF(LOWER(wrap.parent)='musw__permit2__c', true, false)}"/>
+                                    <apex:outputField value="{!wrap.fee.MUSW__Complaint2__c}" rendered="{!IF(LOWER(wrap.parent)='musw__complaint2__c', true, false)}"/>
+                                    <apex:outputField value="{!wrap.fee.MUSW__License2__c}" rendered="{!IF(LOWER(wrap.parent)='musw__license2__c', true, false)}"/>
+                                    <apex:outputField value="{!wrap.fee.MUSW__Application2__c}" rendered="{!IF(LOWER(wrap.parent)='musw__application2__c', true, false)}"/>
+                                </td>
+                                <td>{!wrap.parentTrackingNo}</td><td>{!wrap.fee.MUSW__Type__c}</td><td><apex:outputField value="{!wrap.fee.MUSW__Outstanding_Fee__c}"/></td><td><apex:outputField value="{!wrap.fee.CreatedDate}"/></td></tr>
+                        </apex:repeat> 
+                    </tr>
+                </table>
+                </apex:outputPanel>
+        </apex:pageblockSection>
+        
+        </apex:pageblock>
+
+    </apex:form>
+</apex:page>

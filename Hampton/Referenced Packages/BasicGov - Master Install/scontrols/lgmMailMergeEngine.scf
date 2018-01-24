@@ -1,0 +1,1075 @@
+<script id="clientEventHandlersJS" language="javascript">	
+<!-- 
+/**************************************************************************************
+* Class : LGM Mail Merge Engine Library
+* Created By : James Wikkerink
+* Created On : 03/28/2007
+* Purpose :
+* Requires : $SControl.lgmCommon
+**************************************************************************************/
+//*** params is an associative array (ie. hashtable)
+lgmMailMergeEngine = function(params) {
+
+	
+	var that = this;  // Required for Javascript limitation of 'this' operator
+	
+	this.recordID = null;
+	this.dateFormat = "MM/dd/yyyy";  // Default Value
+	this.timeFormat = "hh:mm a";  // Default Value
+	
+	var userInfo = sforce.connection.getUserInfo();
+	
+	this.baseMergeData = new Array();
+	
+	// Retrieve Merge Fields
+	this.baseMergeData["UserInfo.FullName"] = userInfo.userFullName;
+	this.baseMergeData["UserInfo.Email"] = userInfo.userEmail;
+	this.baseMergeData["UserInfo.OrganizationId"] = userInfo.organizationId;
+	this.baseMergeData["UserInfo.Today"] = lgm.date.formatDate(new Date(), this.dateFormat);
+	this.baseMergeData["UserInfo.Now"] = lgm.date.formatDate(new Date(), this.dateFormat+ " " + this.timeFormat);
+	this.baseMergeData["UserInfo.Time"] = lgm.date.formatDate(new Date(), this.timeFormat);
+	
+	for (var paramName in params) {
+		this.baseMergeData["Parameter."+paramName] = params[paramName];
+	}
+	
+	this.currentLetter = null;
+	
+	lgmMailMergeEngine.prototype.attachLetter = function(letterName,recordID) {
+	
+		//lgmMailMergeEngine.initialize(paramList);
+		that.recordID = recordID;
+		
+		//create new letter container
+		that.currentLetter = lgmMailMergeEngine.createLetter(letterName);
+		
+		// Load the selected Document into Memory
+		notify("Retrieving Template...");
+		that.currentLetter.originalDocument = lgmMailMergeEngine.getLetterTemplate(letterName);
+
+		//set letter reference info (used by word plugin to find letter later)
+		//!REF[a0u60000000bnIkAAI>2010-09-10T12:29:01>Testdoc.rtf]  //yyyy-MM-dd'T'HH:mm:ss
+		this.baseMergeData["Letter.REF"] = "!REF["+ recordID+">"+ lgm.date.formatDate(new Date(),"yyyy-MM-ddTHH:mm:ss") + ">" + lgmMailMergeEngine.documentNamer() +"]";
+			
+		notify("Getting Letter Data...");
+		//Grab Query Tags and Remove them from the Document
+		lgmMailMergeEngine.processQueryTags(that.currentLetter.originalDocument);
+
+	};
+	
+	//letter factory
+	lgmMailMergeEngine.createLetter = function(letterName) {
+		return new lgmMailMergeEngine.letter(letterName, that.baseMergeData);
+	}
+	
+	/************************************************************************************
+	**	Document Open, Close and Save Operations
+	************************************************************************************/
+	lgmMailMergeEngine.getLetterTemplate = function(documentName) {
+		// Return False if the requested document doesn't exist.  
+		// Return the content of the document otherwise.
+		
+		//Override the salesforce encoding methods with a more efficent procedure
+		sforce.Base64Binary.prototype.decode = function(input) { return b64.decode(input) };
+		sforce.Base64Binary.prototype.encode = function(input) { return b64.encode(input) };
+		
+		notify("Retrieving Document Template..." );
+		
+	 	var query = "Select id, name, type, body, bodylength, description, authorid from Document where Id = '" + documentName + "'";
+		var result = sforce.connection.query(query);
+		var document = result.getArray("records");
+		 
+	 	if (document.length == 1) {
+	  		var savedDocument = document[0];
+	  		that.currentLetter.originalDocumentName = savedDocument["Name"];
+	  		var b64raw = savedDocument["Body"];
+	
+	  		//REVIEW - JAW - use MySforce.Util.Base64 for Base64 type properties (fields)
+			//REVIEW - JAW - this uses a more effecient decode process
+	  		var b64rawdata = "";
+	
+	  		if (typeof(b64raw) == "string") {
+	   			// If the saved file is short, <4k (I think), it's an encoded string
+	   			b64rawdata = b64raw;
+	  		} else {
+	   			// If there's a lot of data, it's a DOM Body element.
+	   			for (var i=0;i<b64raw.childNodes.length; i++) {
+					b64rawdata += b64raw.childNodes[i].data;
+	   			}
+			}  
+	  		// and decode it...
+	  		
+	  		var b64data = b64.decode(b64rawdata);
+	  		return b64data;
+	  		
+	 	} else {
+	  		return false;
+	 	}
+	};	
+	
+	lgmMailMergeEngine.saveDocument = function(documentContent) {
+		notify("Attaching Letter..." );
+		var attachmentRecord = new sforce.SObject("Attachment"); 
+		attachmentRecord["ParentId"] = that.recordID;
+		attachmentRecord["Name"] = lgmMailMergeEngine.documentNamer();
+		attachmentRecord.set("Body", b64.encode(documentContent));
+		
+		
+		try {
+			var error = sforce.connection.create([attachmentRecord]);
+			if (error.toString().indexOf("errors") != -1 ) {
+				throw lgm.error("Document Save Error: " + error.toString());
+			}
+			
+			notify("Letter Attached, Please Close this Window.");
+			opener.location.reload();
+			if (lgm.debug.flag != true ) { //see debug statements remaining
+				window.close();
+			}
+			
+		}
+		catch (err) {
+			lgm.debug.addMessage(err.toString());
+			retval = false;
+		}
+	};
+	
+	lgmMailMergeEngine.applyTemplate = function() {
+	
+		that.currentLetter.originalDocument = lgmMailMergeEngine.merge(that.currentLetter.originalDocument);
+		lgm.debug.addMessage("saving document" + new Date(),"debug");
+		lgmMailMergeEngine.saveDocument(that.currentLetter.originalDocument);
+		lgm.debug.addMessage("done saving" + new Date(),"debug");
+	}
+	
+	lgmMailMergeEngine.documentNamer = function() {
+		var originalDocumentName = that.currentLetter.originalDocumentName.replace(/.rtf/g, "");
+		originalDocumentName = originalDocumentName + ".rtf";
+		return(originalDocumentName);
+	};
+	
+	
+	
+	/************************************************************************************
+	**	Specific Tag Operations
+	************************************************************************************/
+	lgmMailMergeEngine.processQueryTags = function(source) {
+		var count = 0;
+	
+		lgm.debug.addMessage("Begin processing Query Tags.", "debug");
+		while (source.indexOf(queryStart) != -1) {
+			// Get the First data Tag
+			var tag = getTag (source, queryStart, queryEnd);
+			var filter = getInnerXML (tag, queryStart, queryEnd);
+			var param = getParametersXML (tag, queryStart);
+			param["Filter"] = filter;
+			
+			// Load the databse content
+			that.currentQueryObject = param["Table"];
+			var prefix = param["Order"] + ". ";
+			that.currentLetter.metaData[count] = param;
+	
+			// Remove the tag from the content		
+			source = replaceTag (source, tag, "");
+			count++;
+		}
+		
+		// Get the Date Format
+		while (source.indexOf(dateStart) != -1) {
+			var tag = getTag (source, dateStart, dateEnd);
+			that.dateFormat = getInnerXML (tag, dateStart, dateEnd);
+			source = replaceTag (source, tag, "");
+			that.baseMergeData["UserInfo.Today"] = lgm.date.formatDate(new Date(), that.dateFormat);
+		}
+	
+		// Get the Time Format
+		while (source.indexOf(timeStart) != -1) {
+			var tag = getTag (source, timeStart, timeEnd);
+			that.timeFormat = getInnerXML (tag, timeStart, timeEnd);
+			source = replaceTag (source, tag, "");
+			that.baseMergeData["UserInfo.Now"] = lgm.date.formatDate(new Date(), that.dateFormat+ " " + that.timeFormat);
+			that.baseMergeData["UserInfo.Time"] = lgm.date.formatDate(new Date(), that.timeFormat);
+		}
+		
+		that.currentLetter.originalDocument = source;
+		lgmMailMergeEngine.execNextQuery();
+	};
+	
+	lgmMailMergeEngine.execNextQuery = function() {
+		if (that.currentLetter.currentQuery < that.currentLetter.metaData.length-1) {
+			that.currentLetter.currentQuery++;
+			var query = that.currentLetter.metaData[that.currentLetter.currentQuery];
+			that.currentQueryObject = query["Table"];
+
+			var prefix = query["Order"] + ". ";
+			var filter = query["Filter"];
+			var idValue = null;
+			
+			lgm.debug.addMessage(query["Order"] + " Processing Query: " + that.currentQueryObject, "debug");
+			try {
+				var nameLabel = formatObjectName(that.currentQueryObject);
+				notify("Retrieving : "+nameLabel+"s");
+				if (filter.indexOf("Retrieve") == 0) {
+					var idField = filter.substring(filter.indexOf(":")+1);
+					var idArray = new Array();
+					if (idField.lastIndexOf(".n") == idField.length-2) {
+						var fieldPrefix = idField.substring(0,idField.length-1);
+						var recordNumber = 0;
+						var mergeField = fieldPrefix+recordNumber;
+						while (that.currentLetter.mergeData[mergeField] != null) {
+						
+							// check if we already have this id in idArray
+							var found = false;
+							for (var i = 0; i < idArray.length; i++) {
+								if (idArray[i] == that.currentLetter.mergeData[mergeField]) {
+									found = true;
+								}
+							}		
+						
+							// push id if not found in idArray
+							if (!found ){
+								idArray.push(that.currentLetter.mergeData[mergeField]);
+								lgm.debug.addMessage(prefix+"retrieve multi row - "+that.currentQueryObject+":"+that.currentLetter.mergeData[mergeField],"debug");
+							}	
+							recordNumber++;
+							mergeField = fieldPrefix+recordNumber;
+						}
+					} else {
+						var singleId = that.currentLetter.mergeData[idField];		
+						if (singleId != null) {		
+							idArray.push(singleId);
+							lgm.debug.addMessage(prefix+"retrieve single row - " + that.currentQueryObject + ":" + singleId, "debug");					
+						}
+					}
+					if (idArray.length == 0) {
+						lgm.debug.addMessage("No ids found for retrieve","debug");
+						lgmMailMergeEngine.execNextQuery();
+					} else {
+						sforce.connection.retrieve(getFields(that.currentQueryObject, false), that.currentQueryObject, idArray, {onSuccess:lgmMailMergeEngine.processQuery, onFailure:processFailure, source : query});
+					}
+				} else {
+					lgm.debug.addMessage(prefix+lgmMailMergeEngine.getQuery(that.currentQueryObject, filter),"debug");
+					sforce.connection.query(lgmMailMergeEngine.getQuery(that.currentQueryObject, filter), {onSuccess:lgmMailMergeEngine.processQuery, onFailure:processFailure, source : query});
+				}
+	
+			} catch (err) {
+				filter = '';
+				lgm.debug.addMessage(prefix+lgmMailMergeEngine.getQuery(that.currentQueryObject, filter),"debug");
+				sforce.connection.query(lgmMailMergeEngine.getQuery(that.currentQueryObject, filter), {onSuccess:lgmMailMergeEngine.processQuery, onFailure:processFailure, source : query});
+			}
+	
+		} else {
+			notify("Applying Letter Template");
+			lgmMailMergeEngine.applyTemplate();
+		}		
+	}
+	
+	lgmMailMergeEngine.chooseSingular = function(records, fieldList, alias) {
+		
+		if (that.currentQueryObject == null) 
+			that.currentQueryObject = that.currentLetter.metaData[that.currentLetter.currentQuery]["Table"];
+		
+		var promptObject = alias;
+		if (promptObject == null)
+			promptObject = that.currentQueryObject;
+			
+		notify("Please choose a " + formatObjectName(promptObject));
+		that.currentLetter.singularRecords = records;
+		that.currentLetter.singularRecords.alias = alias;
+		var fields = fieldList;
+	
+		var selectorTable = document.getElementById("selector");
+		while (selectorTable.hasChildNodes()) { selectorTable.removeChild(selectorTable.firstChild); }
+	
+		var fieldArray = new Array();
+		do {
+			if (fields.indexOf(",") == -1) {
+				fieldArray.push(fields);
+				fields = "";
+			} else {
+				fieldArray.push(fields.substring(0,fields.indexOf(",")));
+				fields = fields.substring(fields.indexOf(",")+1);
+			}
+		} while (fields.length > 0);
+	
+		selectorTable.style.display = "block";
+		//add prompt in first row (for users that do not see browser status bar)
+		newRow = selectorTable.insertRow(-1);
+		newRow.insertCell(-1);
+		newCell = newRow.insertCell(-1);
+		newCell.innerHTML = "<b>Please choose a " + formatObjectName(promptObject)+ ":</b>";
+		
+		for (i=0; i < that.currentLetter.singularRecords.length; i++) {
+			newRow = selectorTable.insertRow(-1);
+			newCell = newRow.insertCell(-1);
+			newCell.innerHTML = "<input type='radio' onClick='lgmMailMergeEngine.processChoice("+i+");'>";
+			for (j=0; j < fieldArray.length; j++) {
+				newCell = newRow.insertCell(-1);
+				newCell.className="selector";
+				try {
+					if (that.currentLetter.singularRecords[i] != null) { //if have access to data
+						value = that.currentLetter.singularRecords[i].get(fieldArray[j]);
+						if (value != null) {
+							newCell.innerHTML = value;
+						}
+					}
+				} catch (badField) {
+					alert(badField+". Please remove any whitespace in your field list");
+				}
+			}
+		}
+	};
+	
+	lgmMailMergeEngine.merge = function(source) {
+		var result = source;
+		if (result == null || result =="") {
+			return result;
+		}
+	
+		// process repeat tags
+		while (result.indexOf(subsectionStart) != -1) {
+			var startTagStartPos = result.indexOf(subsectionStart);
+			var startTagEndPos = result.indexOf(">", startTagStartPos);
+	
+			var startQuotePos = result.indexOf("record=\"", startTagStartPos)+7;
+			var endQuotePos = result.indexOf("\"", startQuotePos+1);
+	
+			var repeatingRecord = result.substring(startQuotePos+1,endQuotePos);
+
+			var endTagStartPos = result.indexOf(subsectionEnd, startTagStartPos);
+			if (endTagStartPos == -1) {
+				throw "No repeat end tag was found";
+			}
+			
+			var endTagEndPos = result.indexOf(">", endTagStartPos);
+			
+			var repeatString = result.substring(startTagEndPos+1,endTagStartPos);
+	
+			//optional field (used in making lists separated by other text eg. value1,value2 etc. where separator=","
+			var separator = "";
+			var startQuotePos = result.indexOf("separator=\"", startTagStartPos)+ 10;
+			
+			if (startQuotePos > 9) //found	
+				if (startQuotePos < endTagEndPos) {
+					var endQuotePos = result.indexOf("\"", startQuotePos + 1);
+					separator = result.substring(startQuotePos + 1, endQuotePos);
+				}
+
+			var repeatCount = that.currentLetter.mergeData[repeatingRecord+".COUNT"];
+			var repeatResult = "";
+			for (i=0; i < repeatCount; i++) {
+				if (i < repeatCount-1)
+					repeatResult += repeatString.replace(/\.n/g,"."+i) + separator;
+				else
+					repeatResult += repeatString.replace(/\.n/g,"."+i);
+			}
+			
+			result = result.substring(0,startTagStartPos) + repeatResult + result.substring(endTagEndPos+1);
+		}
+		//process content
+		result = lgmMailMergeEngine.replaceMergeFields(result, contentStart, contentEnd);
+	
+		// process reference related tags
+		while (result.indexOf("<ReferenceRelated") != -1) {
+	
+			var startTagStartPos = result.indexOf("<ReferenceRelated");
+			var startTagEndPos = result.indexOf(">", startTagStartPos);
+	
+			var startQuotePos = result.indexOf("relation=\"", startTagStartPos)+ 9;
+			var endQuotePos = result.indexOf("\"", startQuotePos + 1);
+			var relatedField = result.substring(startQuotePos + 1, endQuotePos);
+			
+			var startQuotePos = result.indexOf("value=\"", startTagStartPos)+ 6;
+			var endQuotePos = result.indexOf("\"", startQuotePos + 1);
+			var searchValue = result.substring(startQuotePos+1, endQuotePos);
+			
+			//optional second level reference
+			var startQuotePos = result.indexOf("relation2=\"", startTagStartPos)+ 10;
+			var endQuotePos = result.indexOf("\"", startQuotePos + 1);
+			var relatedField2 = result.substring(startQuotePos + 1, endQuotePos);
+			
+			var startQuotePos = result.indexOf("value2=\"", startTagStartPos)+ 7;
+			var endQuotePos = result.indexOf("\"", startQuotePos + 1);
+			var searchValue2 = result.substring(startQuotePos+1, endQuotePos);
+	
+			var endTagStartPos = result.indexOf("</ReferenceRelated", startTagStartPos);
+			if (endTagStartPos == -1) {
+				throw "No related end tag was found";
+			}
+			var endTagEndPos = result.indexOf(">", endTagStartPos);
+	
+			//get fields in related table to merge (related Merge Fields = RMF)
+			var relatedMergeFields = result.substring(startTagEndPos+1,endTagStartPos); 
+					
+			// check that property prefix of related merge fields matches the related field prefix
+			// ie. both are pulling from the same related table.
+			var relatedFieldPrefix = relatedField.substring(0,relatedField.indexOf("."));
+			var verifyRMF = relatedMergeFields;
+			while (verifyRMF.indexOf("<rf>") != -1) {
+			
+				var startPosVer = verifyRMF.indexOf("<rf>");
+				var endPosVer = verifyRMF.indexOf("</rf>", startPosVer);
+	
+				var fieldNameVer = verifyRMF.substring(startPosVer + 4, endPosVer);
+	
+				var specVer = fieldNameVer.indexOf(":");
+				
+	
+				var fieldNamePrefixVer = fieldNameVer.substring(specVer+1,fieldNameVer.indexOf("."));
+				if (fieldNamePrefixVer != relatedFieldPrefix) {
+					throw "Related merge fields table " + relatedFieldPrefix + "does not match the field relation table: " + fieldNamePrefixVer;
+				}
+				verifyRMF = verifyRMF.substring(endPosVer+1);
+				
+			}
+					
+			// check that property prefix of **2nd-level** related merge fields matches the 2nd-level related field prefix
+			// ie. both are pulling from the same related table.
+			var relatedFieldPrefix = relatedField2.substring(0,relatedField2.indexOf("."));
+			var verifyRMF = relatedMergeFields;
+			var secondLevel = false;
+			while (verifyRMF.indexOf("<rf2>") != -1) {
+				var secondLevel = true;
+				var startPosVer = verifyRMF.indexOf("<rf2>");
+				var endPosVer = verifyRMF.indexOf("</rf2>", startPosVer);
+	
+				var fieldNameVer = verifyRMF.substring(startPosVer + 5, endPosVer);
+	
+				var specVer = fieldNameVer.indexOf(":");
+				
+	
+				var fieldNamePrefixVer = fieldNameVer.substring(specVer+1,fieldNameVer.indexOf("."));
+				if (fieldNamePrefixVer != relatedFieldPrefix) {
+					throw "Related merge fields table " + relatedFieldPrefix + "does not match the field relation table: " + fieldNamePrefixVer;
+				}
+				verifyRMF = verifyRMF.substring(endPosVer+1);
+				
+			}
+					
+			
+			//find record number in related table
+			var fieldPrefix = relatedField + "."; 
+			var recordNumber = 0;
+			var mergeField = fieldPrefix+recordNumber;
+			while ((that.currentLetter.mergeData[mergeField] != that.currentLetter.mergeData[searchValue]) && (that.currentLetter.mergeData[mergeField] != null))  {
+				lgm.debug.addMessage(relatedField+"retrieve single row - "+mergeField+":"+that.currentLetter.mergeData[mergeField],"debug");
+				recordNumber++;
+				mergeField = fieldPrefix+recordNumber;
+			}
+			
+			// we now have the recordNumber for the related table entry for the related mergeField
+			// replace related merge field end tags "</rf>" with .recordNumber + "</rf>" 
+			// eg. <rf>User.Id</rf> becomes <rf>User.Id.1</rf>
+			relatedMergeFields = relatedMergeFields.replace(/<\/rf>/g,"."+recordNumber+"</rf>");
+			// -----------------
+			// replace related field
+			
+			relatedMergeFields = lgmMailMergeEngine.replaceMergeFields(relatedMergeFields,"<rf>","</rf");
+			// -----------------
+	
+			
+			if (secondLevel) {
+			
+				//replace optional second level relation with first level record number
+				//sets the relationship
+				searchValue2 = searchValue2.replace(/\.r/g,"."+recordNumber);
+			
+			
+				//find record number in 2nd-level related table
+				var fieldPrefix = relatedField2 + "."; 
+				var recordNumber = 0;
+				var mergeField = fieldPrefix+recordNumber;
+				while ((that.currentLetter.mergeData[mergeField] != that.currentLetter.mergeData[searchValue2]) && (that.currentLetter.mergeData[mergeField] != null))  {
+					lgm.debug.addMessage(relatedField+"retrieve single row - "+mergeField+":"+that.currentLetter.mergeData[mergeField],"debug");
+					recordNumber++;
+					mergeField = fieldPrefix+recordNumber;
+				}
+				
+				// we now have the recordNumber for the related table entry for the related mergeField
+				// replace related merge field end tags "</rf>" with .recordNumber + "</rf>" 
+				// eg. <rf2>User.Id</rf2> becomes <rf2>User.Id.1</rf2>
+				relatedMergeFields = relatedMergeFields.replace(/<\/rf2>/g,"."+recordNumber+"</rf2>");
+				// -----------------
+				// replace related field
+				
+				relatedMergeFields = lgmMailMergeEngine.replaceMergeFields(relatedMergeFields,"<rf2>","</rf2");
+				// -----------------
+		
+			}
+			
+			result = result.substring(0,startTagStartPos) + relatedMergeFields + result.substring(endTagEndPos+1);
+		}	
+	
+		// remove any conditional content
+		while (result.indexOf("<Hide") != -1) {
+	
+			var startTagStartPos = result.indexOf("<Hide");
+			var startTagEndPos = result.indexOf(">", startTagStartPos);
+	
+			var startQuotePos = result.indexOf("\"", startTagStartPos);
+			var endQuotePos = result.indexOf("\"", startQuotePos+1);
+	
+			var conditionalField = result.substring(startQuotePos+1,endQuotePos);
+	
+			var endTagStartPos = result.indexOf("</Hide", startTagStartPos);
+			if (endTagStartPos == -1) {
+				throw "No Hide end tag was found";
+			}
+			var endTagEndPos = result.indexOf(">", endTagStartPos);
+	
+			var conditionalString = result.substring(startTagEndPos+1,endTagStartPos);
+	
+			var conditionalValue = that.currentLetter.mergeData[conditionalField];
+			if (conditionalValue == null || conditionalValue == "") {
+				conditionalString = "";
+			}
+			
+			result = result.substring(0,startTagStartPos) + conditionalString + result.substring(endTagEndPos+1)
+		}
+		
+		// Execute the Sum tags - i.e. <Sum></Sum>
+		while (result.indexOf(sumStart) != -1) {
+			
+			// Get the First data Tag
+			var tag = getTag (result, sumStart, sumEnd);
+			var filter = getInnerXML (tag, sumStart, sumEnd);
+			var param = getParametersXML (tag, sumStart);
+			param["Filter"] = filter;
+			
+			// Remove formar specifer before looking up values
+			var cleanFilter = filter;
+			if (filter.split(":").length == 2) {
+				cleanFilter = filter.split(":")[1];
+			}
+			
+			// Load the variable content
+			var addValue = 0;
+			if (that.currentLetter.calcData[cleanFilter] != null) {			
+				if (that.currentLetter.calcData[cleanFilter].length > 0) {
+					for (var i=0; i<that.currentLetter.calcData[cleanFilter].length; i++) {
+						if (that.currentLetter.calcData[cleanFilter][i] != null) { //ignore null values
+							addValue = addValue + parseFloat(that.currentLetter.calcData[cleanFilter][i]);
+						}								
+					}				
+				}
+			}
+			
+			lgmMailMergeEngine.addMergeField(cleanFilter, addValue); //store the add value to the merge data
+				//if nothing to sum, this tag will be zero
+			
+			// store the value to a variable if declared (Must be done prior to formatting!)
+			if (param["id"] != null) {
+				if (that.currentLetter.calcData[param["id"]] == null) {
+					that.currentLetter.calcData[param["id"]] = new Array();
+				}
+				that.currentLetter.calcData[param["id"]][that.currentLetter.calcData[param["id"]].length] = addValue;
+			}		
+			
+			// Remove the tag from the content		
+			result = replaceTag (result, tag, lgmMailMergeEngine.replaceMergeFields(tag, sumStart, sumEnd));
+		}	
+		
+		
+		// Execute the Max tags - i.e. <Max></Max>
+
+		while (result.indexOf(maxStart) != -1) {
+			
+			// Get the First data Tag
+			var tag = getTag (result, maxStart, maxEnd);
+			var filter = getInnerXML (tag, maxStart, maxEnd);
+			var param = getParametersXML (tag, maxStart);
+			param["Filter"] = filter;
+			
+			// Remove formar specifer before looking up values
+			var cleanFilter = filter;
+			if (filter.split(":").length == 2) {
+				cleanFilter = filter.split(":")[1];
+			}
+			
+			// Load the variable content
+			var maxValue = -1;
+			if (that.currentLetter.calcData[cleanFilter] != null) {			
+				if (that.currentLetter.calcData[cleanFilter].length > 0) {
+					for (var i=0; i<that.currentLetter.calcData[cleanFilter].length; i++) {
+						if (that.currentLetter.calcData[cleanFilter][i] != null) { //ignore null values
+							if (parseFloat(that.currentLetter.calcData[cleanFilter][i]) > maxValue)
+								maxValue = parseFloat(that.currentLetter.calcData[cleanFilter][i]);								
+						}
+					}				
+				}
+			}
+			
+			lgmMailMergeEngine.addMergeField(cleanFilter, maxValue); //store the add value to the merge data
+				//if nothing to sum, this tag will be zero
+			
+			// store the value to a variable if declared (Must be done prior to formatting!)
+			if (param["id"] != null) {
+				if (that.currentLetter.calcData[param["id"]] == null) {
+					that.currentLetter.calcData[param["id"]] = new Array();
+				}
+				that.currentLetter.calcData[param["id"]][that.currentLetter.calcData[param["id"]].length] = maxValue;
+			}		
+			
+			// Remove the tag from the content		
+			result = replaceTag (result, tag, lgmMailMergeEngine.replaceMergeFields(tag, maxStart, maxEnd));
+		}	
+		
+		// Execute the NWAdd tags - i.e. <NWAdd></NWAdd> 
+		// Add distinct list of id's
+		// (do math after everything else is done- ie. post)
+		while (result.indexOf(nwAddStart) != -1) {
+			// Get the First data Tag
+			var tag = getTag (result, nwAddStart, nwAddEnd);
+			var filter = getInnerXML (tag, nwAddStart, nwAddEnd);
+			var param = getParametersXML (tag, nwAddStart);
+			param["Filter"] = filter;
+			var list = param["list"];
+			
+			// Remove former specifer before looking up values
+			var cleanFilter = filter;
+			if (filter.split(":").length == 2) {
+				cleanFilter = filter.split(":")[1];
+			}
+			
+			//get id's of fields to add
+			var listArray = list.split(",");
+			
+			// Load the variable content
+			var addValue = 0;
+			for (var i=0; i<listArray.length; i++) {
+				if (that.currentLetter.calcData[listArray[i]] != null) {			
+					if (that.currentLetter.calcData[listArray[i]].length = 1) {
+						addValue = addValue + parseFloat(that.currentLetter.calcData[listArray[i]]);
+					}								
+				}				
+				
+			}
+			lgmMailMergeEngine.addMergeField(cleanFilter, addValue); //store the add value to the merge data
+			
+			// store the value to a variable if declared (Must be done prior to formatting!)
+			if (param["id"] != null) {
+				if (that.currentLetter.calcData[param["id"]] == null) {
+					that.currentLetter.calcData[param["id"]] = new Array();
+				}
+				that.currentLetter.calcData[param["id"]][that.currentLetter.calcData[param["id"]].length] = addValue;
+			}	
+			
+			// Remove the tag from the content	(also format)	
+			result = replaceTag (result, tag, lgmMailMergeEngine.replaceMergeFields(tag, nwAddStart, nwAddEnd));
+		}	
+		
+		return result;
+	}
+	
+	lgmMailMergeEngine.replaceMergeFields = function(result, beginFieldTag, endFieldTag) {		
+			
+		// replace any merge fields
+		while (result.indexOf(beginFieldTag) != -1) {
+			// Get the First data Tag
+			var tag = getTag (result, beginFieldTag, endFieldTag);
+			var fieldName = getInnerXML (tag, beginFieldTag, endFieldTag);
+			var param = getParametersXML (tag, beginFieldTag);
+				
+			// var startPos = result.indexOf(beginFieldTag);
+			// var startLen = beginFieldTag.length;
+			// var endPos = result.indexOf(endFieldTag, startPos);
+			// var endLen = endFieldTag.length;
+			// var fieldName = result.substring(startPos + startLen + 1, endPos);		
+			
+			if (param["rf"] == null ? true : param["rf"].toLowerCase() != "true") {
+				// Retrieve the format specifiers
+				var isDate = (fieldName.indexOf(specDate) == 0);
+				if (isDate) {
+					fieldName = fieldName.substring(5);
+				}
+		
+				var isTime = (fieldName.indexOf(specTime) == 0);
+				if (isTime) {
+					fieldName = fieldName.substring(5);
+				}
+		
+				var isDateTime = (fieldName.indexOf(specDateTime) == 0);
+				if (isDateTime) {
+					fieldName = fieldName.substring(9);
+				}
+		
+				var isSysDateTime = (fieldName.indexOf(specSysDateTime) == 0);
+				if (isSysDateTime) {
+					fieldName = fieldName.substring(6);
+				}
+		
+				var isCurrency = (fieldName.indexOf(specCurrency) == 0);
+				if (isCurrency) {
+					fieldName = fieldName.substring(9);
+				}
+		
+				//*** retreive data
+				var fieldValue = that.currentLetter.mergeData[fieldName];
+				//***
+
+				//store the value to a variable if declared (Must be done prior to formatting!)
+				if (param["id"] != null)  {
+					if (that.currentLetter.calcData[param["id"]] == null) {
+						that.currentLetter.calcData[param["id"]] = new Array();
+					}
+					that.currentLetter.calcData[param["id"]][that.currentLetter.calcData[param["id"]].length] = fieldValue;
+				}			
+		
+				// Apply any format specifiers before merging
+				if (fieldValue != null) {
+					if (isDate) {
+						var jsDate = lgm.date.parseDate(fieldValue);
+						fieldValue = lgm.date.formatDate(jsDate, that.dateFormat);
+		
+					} else if (isTime) {
+						var jsDate = lgm.date.parseISODateTime(fieldValue);
+						fieldValue = lgm.date.formatDate(jsDate, that.timeFormat);
+		
+					} else if (isDateTime) {
+						var jsDate = lgm.date.parseISODateTime(fieldValue);
+						fieldValue = lgm.date.formatDate(jsDate, that.dateFormat + " " + that.timeFormat);
+						
+					} else if (isSysDateTime) {
+						var jsDate = lgm.date.parseDate(fieldValue);
+						fieldValue = lgm.date.isoDateTime(jsDate);
+						
+					} else if (isCurrency) {
+						fieldValue = lgm.numeric.formatCurrency(fieldValue);
+					}
+					
+					//if content has linebreaks, replace with \par tag for rtf output
+					if (typeof(fieldValue) == "string")
+						if (fieldValue.indexOf("\n") != -1 )
+							fieldValue = fieldValue.replace(/\n/g,"\\par ");
+				}
+			
+				
+				
+				// Remove the tag  and replace with formatted value
+				// if value is null, letter tag is replaced with empty string
+				if (param["merge"] == null ? true : param["merge"].toLowerCase() != "false") {
+					result = replaceTag (result, tag, nvl(fieldValue,""));	// replace the tag with its value
+				} else {
+					result = replaceTag (result, tag, "");	// remove the tag from the content
+				}
+				//result = result.substring(0,startPos) + nvl(fieldValue,"") + result.substring(endPos+endLen+1);		
+			}			
+		}
+	
+		return result;
+	}
+	
+	lgmMailMergeEngine.addMergeField = function(name, value) {
+		lgm.debug.addMessage("adding merge field - " + name + " = " + value, "merge");
+		that.currentLetter.mergeData[name] = value;
+	};
+	
+	/************************************************************************************
+	**	Database Operations
+	************************************************************************************/
+	lgmMailMergeEngine.processQuery = function(qr, query) {
+		var records = extractResult(qr);
+		var singleRecordFields = query["SelectField"];
+		var isSingleRecordQuery = (singleRecordFields != null);
+	
+		lgm.debug.addMessage("Alias: " + query["Alias"], "debug");
+		
+		if (isSingleRecordQuery) {
+			if (records != null) {
+				if ((records.length > 1) && (records[0] != null)) {
+					lgmMailMergeEngine.chooseSingular(records, singleRecordFields,query["Alias"]);
+				} else {
+					if ((records.length == 1) && (records[0] != null)) {
+						lgmMailMergeEngine.addMergeData(records[0], 0, null, query["Alias"]);
+					} else {
+						lgm.debug.addMessage("No records returned for single record query", "debug");
+					}
+					lgmMailMergeEngine.execNextQuery();
+				}
+			} else {
+				lgmMailMergeEngine.execNextQuery();
+			}
+		} else {
+			if (records != null) {
+				if (records.length > 0) {
+					if (query["Alias"] == null) {
+						countField = query.Table;
+						countField += ".COUNT";
+					} else {
+						countField = query["Alias"];
+						countField += ".COUNT";
+					}
+					
+					lgmMailMergeEngine.addMergeField(countField, records.length, query["Alias"]);
+					for (var i = 0; i < records.length; i++) {
+						lgmMailMergeEngine.addMergeData(records[i], 0, i, query["Alias"]);
+					}
+				}
+				else {
+					lgm.debug.addMessage("No records returned for multi record query", "debug");
+				}
+			} else {
+				lgm.debug.addMessage("No records returned for multi record query", "debug");
+			}
+			lgmMailMergeEngine.execNextQuery();
+		}
+	};
+	
+	lgmMailMergeEngine.getQuery = function(tableName, filter) {
+		var result = "select ";
+		result += getFields(tableName, false);
+		result += " from ";
+		result += tableName;
+		result += " ";
+		result += filter;
+		return lgmMailMergeEngine.merge(result);
+	};
+	
+	lgmMailMergeEngine.getEntityQueryNumber = function(entity) {
+		lgm.debug.addMessage("getEntityQueryNumber", "debug");
+		var current = that.currentLetter.entityQueryCounts[entity];
+		if (current == null) {
+			current = 0;
+		} else {
+			current++;
+		}
+		that.currentLetter.entityQueryCounts[entity] = current;
+		lgm.debug.addMessage("getEntityQueryNumber : "+current, "debug");
+		return current+1;
+	};
+	
+	lgmMailMergeEngine.addMergeData = function(record, entityQueryNumber, recordNumber, alias) {
+	
+		if (record != null) { //if have access to data
+			var props = sforce.connection.describeSObject(record.type).fields;
+		
+			for (var i=0; i<props.length; i++) {
+				if (record[props[i].name] != null) {
+					var name = record.type;
+					if (alias != null) {	//Use the alternate name if provided
+						name = alias;
+					}
+		
+					name += "." + props[i].name;
+					
+					if (recordNumber != null) {
+						name += "." + recordNumber;
+					}
+					var val = record.get(props[i].name);
+					
+					//replace non-compliant rtf characters
+					if (typeof(val) == "string")
+						val = val.replace(/\“|\”/g,"\"").replace(/\’|\‘/g,"\'").replace(/\–/g," - ").replace(/\…/g,"...");
+					
+					lgmMailMergeEngine.addMergeField(name, val);
+				}
+			}
+		}
+	};
+	
+	lgmMailMergeEngine.processChoice = function(selected) {
+		var selectorTable = document.getElementById("selector");
+		selectorTable.style.display = "none";
+		lgmMailMergeEngine.addMergeData(that.currentLetter.singularRecords[selected], lgmMailMergeEngine.getEntityQueryNumber(that.currentLetter.singularRecords[selected].type), null,that.currentLetter.singularRecords.alias);
+		lgmMailMergeEngine.execNextQuery();
+	};
+	
+};
+
+//letter constructor
+lgmMailMergeEngine.letter = function(name, baseMergeData) {
+
+	if (lgmMailMergeEngine.letter.caller != lgmMailMergeEngine.createLetter) {
+       throw new Error("Use MailMergeEngine createLetter constructor to create letter.");
+   	}
+	
+	this.name = name;
+	this.metaData = new Array();
+	this.calcData = new Array();
+	this.currentQuery = -1;
+	this.currentQueryObject = "";
+	this.entityQueryCounts = {};
+	this.originalDocument = null;
+	this.originalDocumentName = "System Generated Letter";
+	this.singularRecords = null;
+
+	this.mergeData = baseMergeData;
+
+};
+
+/************************************************************************************
+**	Page Setup 
+************************************************************************************/
+var b64 = new lgmBase64();
+
+//Content Tags
+var contentStart = "<content"; var contentEnd = "</content";
+var refRelatedStart = "<ReferenceRelated"; var refRelatedEnd = "</ReferenceRelated";
+var subsectionStart = "<Subsection"; var subsectionEnd = "</Subsection";
+
+// Database Operations
+var queryStart = "<QueryObject"; var queryEnd = "</QueryObject";
+
+// Format Specifiers
+var dateStart = "<DateFormat"; var dateEnd = "</DateFormat";
+var timeStart = "<TimeFormat"; var timeEnd = "</TimeFormat";
+
+// Aggregate Functionalities
+var sumStart = "<Sum"; var sumEnd = "</Sum";
+var countStart = "<Count"; var countEnd = "</Count";  // Future Implementation
+var avgStart = "<Avg"; var avgEnd = "</Avg";  // Future Implementation
+var firstStart = "<First"; var firstEnd = "</First";  // Future Implementation
+var lastStart = "<Last"; var lastEnd = "</Last";  // Future Implementation
+var maxStart = "<Max"; var maxEnd = "</Max";  // Future Implementation
+var minStart = "<Min"; var minEnd = "</Min";  // Future Implementation
+
+var minStart = "<Subtract"; var minEnd = "</Subtract";  // Future Implementation i.e. <Substract Value = "id1">id2</Substract> = 1
+
+// Format Specifier
+var specDate = "DATE:"; var specTime = "TIME:"; var specDateTime = "DATETIME:"; var specSysDateTime = "SYSDT:"; var specCurrency = "CURRENCY:";
+ 
+
+//***JAW REVIEW - Norwalk specific - replace when engine has this functionality built in properly
+var nwAddStart = "<NWAdd"; var nwAddEnd = "</NWAdd";
+
+
+
+
+function formatObjectName(myObjectName) {
+
+return lgm.string.replaceAll(lgm.string.replaceAll(lgm.string.replaceAll(myObjectName,"MUSW__",""),"__c",""),"_", " ");// format table/field name
+}
+
+
+
+
+
+
+function processFailure(error) {
+	lgm.debug.addMessage("Query Error:" + error.toString(), "debug");
+}
+
+
+function getFields(sobject, forUpdate) {
+	var fields = sforce.connection.describeSObject(sobject).fields;
+	var fieldList = "";
+	
+	if (!forUpdate) {
+		for (var i=0; i<fields.length; i++) {
+			if ((fields[i].name != "IsDeleted") && (fields[i].name != "IsPublic") && (fields[i].name != "IsArchived")) {
+				fieldList = fieldList + fields[i].name + ", ";
+			}
+		}
+	} else {
+		fieldList = "Id, ";
+		for (var i=0; i<fields.length; i++) {
+			if (fields[i].updateable == true || fields[i].updateable == "true") {
+				if ((fields[i].name != "IsDeleted") && (fields[i].name != "IsPublic") && (fields[i].name != "IsArchived")) {
+					fieldList = fieldList + fields[i].name + ", ";
+				}
+			}
+		}
+	}
+	
+	//chop off last comma
+	fieldList = fieldList.substring(0, fieldList.length-2);
+	return fieldList;
+}
+
+function extractResult(result) {
+	if (result.done == "true" || result.done == true) {
+		lgm.debug.addMessage("Result : query response. Count : " + result.size, "debug");
+		if (result.size > 0) {
+			return result.getArray("records");
+		} else {
+			return null;		
+		}
+	} else if (result.length) {
+		lgm.debug.addMessage("Result : array. Count : " + result.length, "debug");
+		return result;
+	} else {
+		return null;
+	}
+}
+
+
+/************************************************************************************
+**	Generic Tag Operations
+************************************************************************************/
+function getTag (source, beginFieldTag, endFieldTag) {
+	var startPos = source.indexOf(beginFieldTag);
+	var startLen = beginFieldTag.length;
+	var endPos = source.indexOf(endFieldTag, startPos);
+	var endLen = endFieldTag.length + 1;
+
+	return (source.substring(startPos, endPos + endLen));
+}
+
+function getInnerXML (source, beginFieldTag, endFieldTag) {
+	var startTagEndPos = source.indexOf(">") + 1;
+	var endTagStartPos = source.indexOf(endFieldTag);
+
+	return (source.substring(startTagEndPos, endTagStartPos));
+}
+
+function getParametersXML (source, beginFieldTag) {
+	var param = new Array();
+	var startTagStartPos = source.indexOf(beginFieldTag);
+	var startTagTagLen = beginFieldTag.length;
+	var startTagEndPos = source.indexOf(">");
+	var parmString = source.substring(startTagStartPos + startTagTagLen, startTagEndPos);
+	
+	rawData = source.substring(startTagStartPos + startTagTagLen, startTagEndPos).split(new RegExp( "[= ]{1}", "g" ));
+	var subCount = 0;
+   	var paramKey;
+   	var paramValue;
+	for (i=0; i<rawData.length; i++) {
+		if (!IsEmpty(rawData[i])) {
+			if (subCount == 0) {
+				paramKey = rawData[i];
+				subCount++;
+			}
+			else if (subCount == 1){
+				subCount = 0;
+				paramValue = rawData[i];
+				param[paramKey] = paramValue.replace(/"/g,"").replace(/'/g,"");
+			}
+		}
+	}
+
+	return (param);
+}
+
+function replaceTag (source, tag, replacement) { 
+	return source.replace (tag, replacement);
+}
+
+
+
+/************************************************************************************
+**	General Utility Functions
+************************************************************************************/
+function IsEmpty(aTextField) {
+   	if ((aTextField.length == 0) || (aTextField == null)) {
+      	return true;
+   	}
+   	else { return false; }
+}	
+
+function nvl(value, defaultvalue) {
+
+	if (value == null) {
+		return defaultvalue;
+	} else {
+		return value;
+	}
+}
+
+//function notify(message) {
+	//if (document.getElementById("divProgress").style.display != "block") 
+	//	document.getElementById("divProgress").style.display = "block";
+	//document.getElementById("divProgress").innerHTML = "<p>"+message+"</p>";
+//	window.status = message;
+//}
+//-->
+</script>

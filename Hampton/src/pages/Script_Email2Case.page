@@ -1,0 +1,4 @@
+<apex:page >
+    <flow:interview name="X311_Script_Email2Case">
+    </flow:interview>
+</apex:page>

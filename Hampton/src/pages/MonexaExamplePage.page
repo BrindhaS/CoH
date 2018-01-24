@@ -1,0 +1,326 @@
+<apex:page controller="MonexaExampleController" >
+	<apex:pageMessages />
+	<apex:tabPanel switchType="server" id="theTabPanel">
+		<apex:tab label="Login" name="login" id="loginTab">	
+			<apex:pageBlock title="Login">		
+				<apex:form >
+					<apex:panelGrid columns="2">
+						<apex:outputLabel value="User Name:" /><apex:inputText value="{!administratorLoginName}" />
+						<apex:outputLabel value="Password:" /><apex:inputSecret value="{!adminPassword}" />
+						<apex:commandButton value="Login" action="{!doLogin}" rendered="{!version == null}" />
+						<apex:commandButton value="Login Again" action="{!doLogin}" rendered="{!version != null}" />
+					</apex:panelGrid>
+				</apex:form>		
+			</apex:pageBlock>
+		</apex:tab>
+		<apex:tab label="Create Subscriber" name="createSubscriber" id="createSubscriberTab" rendered="{!version != null}">
+			<apex:pageBlock title="Create Subscriber" >
+				<apex:form >
+					<apex:outputLabel >Account Information</apex:outputLabel>
+					<apex:panelGrid columns="2" columnClasses="labelCol,dataCol">			
+						<apex:outputLabel value="login_id" /><apex:inputText value="{!creSub_AccountInfo.login_id}" />
+						
+						<apex:outputLabel value="external_group_id" /><apex:inputText value="{!creSub_AccountInfo.external_group_id}" />
+						<apex:outputLabel value="provider_id" /><apex:inputText value="{!creSub_AccountInfo.provider_id}" />
+						<apex:outputLabel value="password" /><apex:inputText value="{!creSub_AccountInfo.password}" />
+						<apex:outputLabel value="office_id" /><apex:inputText value="{!creSub_AccountInfo.office_id}" />
+
+						<apex:outputLabel value="sales_representative_name" /><apex:inputText value="{!creSub_AccountInfo.sales_representative_name}" />
+						<apex:outputLabel value="sales_representative_email" /><apex:inputText value="{!creSub_AccountInfo.sales_representative_email}" />
+					</apex:panelGrid>					
+					
+					<apex:outputLabel >Contact Information</apex:outputLabel>
+					<apex:panelGrid columns="2" columnClasses="labelCol,dataCol">
+						<apex:outputLabel value="Company" /><apex:inputText value="{!creSub_ContactInfo.company}" />
+						<apex:outputLabel value="First Name" /><apex:inputText value="{!creSub_ContactInfo.first_name}" />
+						<apex:outputLabel value="Last Name" /><apex:inputText value="{!creSub_ContactInfo.last_name}" />
+						<apex:outputLabel value="Phone #" /><apex:inputText value="{!creSub_ContactInfo.phone_number_1}" />
+						<apex:outputLabel value="External Account ID" /><apex:inputText value="{!creSub_ContactInfo.external_account_id}" />
+					</apex:panelGrid>										
+					<apex:commandButton value="Confirm" action="{!doCreateSubscriber}" />					
+				</apex:form>	
+			</apex:pageBlock>
+		</apex:tab>				
+		<apex:tab label="Subscriber Search" name="subSearch" id="subSearchTab" rendered="{!version != null}">
+			<apex:pageBlock title="Subscriber Search" >
+				<apex:form >
+					<apex:panelGrid columns="2">
+					
+						<apex:outputLabel value="Account ID:" /><apex:inputText value="{!seaSub_account_id}" />
+						<apex:outputLabel value="First Name:" /><apex:inputText value="{!seaSub_first_name}" />
+						<apex:outputLabel value="Last Name:" /><apex:inputText value="{!seaSub_last_name}" />
+						<apex:outputLabel value="Company:" /><apex:inputText value="{!seaSub_company}" />
+						<apex:outputLabel value="Phone Number:" /><apex:inputText value="{!seaSub_phone_number_1}" />
+						<apex:outputLabel value="External Account ID:" /><apex:inputText value="{!seaSub_external_account_id}" />
+						
+						<apex:commandButton value="Search" action="{!doSearchSubscribers}" />
+					</apex:panelGrid>
+				</apex:form>
+				<apex:outputPanel rendered="{searchSubs != null}">
+					<apex:panelGrid columns="2">
+						<apex:outputLabel value="Records found:" /><apex:outputText value="{!searchSubs.size}" />
+					</apex:panelGrid>
+				</apex:outputPanel>
+				<apex:pageBlockSection title="Results" columns="1" rendered="{!searchSubs != null && searchSubs.size > 0}">
+					<apex:pageBlockTable value="{!searchSubs}" var="sub">
+						<apex:column headerValue="Account ID">{!sub.Account_Information.account_id}</apex:column>
+						<apex:column headerValue="Login ID">{!sub.Account_Information.login_id}</apex:column>
+						<apex:column headerValue="Office Name">{!sub.Account_Information.office_name}</apex:column>
+						<apex:column headerValue="First Name">{!sub.Contact_Information.first_name}</apex:column>
+						<apex:column headerValue="Last Name">{!sub.Contact_Information.last_name}</apex:column>			
+						<apex:column headerValue="Company">{!sub.Contact_Information.company}</apex:column>		
+					</apex:pageBlockTable>	
+				</apex:pageBlockSection>		
+			</apex:pageBlock>
+		</apex:tab>
+		<apex:tab label="Lookup Subscriber" name="subLookup" id="subLookupTab" rendered="{!version != null}">			
+			<apex:pageBlock title="Subscriber Lookup" >
+				<apex:form >
+					<apex:panelGrid columns="2">			
+						<apex:outputLabel value="Account ID:" /><apex:inputText value="{!lookSub_account_id}" />				
+						<apex:commandButton value="Lookup" action="{!doLookupSubscriber}" />
+					</apex:panelGrid>
+				</apex:form>
+				<apex:pageBlockSection columns="1" title="Results" rendered="{!lookupSub != null}">
+					<apex:panelGrid columns="4" columnClasses="labelCol,dataCol,labelCol,dataCol">
+						<apex:outputLabel value="Account ID:" /><apex:outputText value="{!lookupSub.Account_Information.account_id}" />
+						<apex:outputLabel value="Office Name:" /><apex:outputText value="{!lookupSub.Account_Information.office_name}" />
+						<apex:outputLabel value="Account Status:" /><apex:outputText value="{!lookupSub.Account_Information.account_status}" />
+						<apex:outputLabel value="Login ID:" /><apex:outputText value="{!lookupSub.Account_Information.login_id}" />
+		
+						<apex:outputLabel value="First Name:" /><apex:outputText value="{!lookupSub.Contact_Information.first_name}" />
+						<apex:outputLabel value="Last Name:" /><apex:outputText value="{!lookupSub.Contact_Information.last_name}" />
+						<apex:outputLabel value="Company:" /><apex:outputText value="{!lookupSub.Contact_Information.company}" />
+						<apex:outputLabel value="Language:" /><apex:outputText value="{!lookupSub.Contact_Information.language}" />				
+					</apex:panelGrid>
+				</apex:pageBlockSection>
+			
+			</apex:pageBlock>
+		</apex:tab>
+
+		<apex:tab label="Search Transactions" name="searchTrans" id="searchTransTab" rendered="{!version != null}">
+			<apex:pageBlock title="Search Transactions">
+				<apex:form >
+					<apex:panelGrid columns="2" columnClasses="labelCol,dataCol,labelCol,dataCol">				
+						<apex:outputLabel value="provider_id" /><apex:inputText value="{!seaTrans_provider_id}" />
+						<apex:outputLabel value="account_id" /><apex:inputText value="{!seaTrans_account_id}" />
+						<apex:outputLabel value="transaction_type" /><apex:inputText value="{!seaTrans_transaction_type}" />
+						<apex:outputLabel value="further_action" /><apex:inputText value="{!seaTrans_further_action}" />
+						<apex:outputLabel value="payment_method" /><apex:inputText value="{!seaTrans_payment_method}" />
+						<apex:outputLabel value="transaction_token" /><apex:inputText value="{!seaTrans_transaction_token}" />
+						<apex:outputLabel value="Start_Date" /><apex:inputText value="{!seaTrans_Start_Date}" />
+						<apex:outputLabel value="End_Date" /><apex:inputText value="{!seaTrans_End_Date}" />
+						<apex:outputLabel value="Last_Updated_Start_Date" /><apex:inputText value="{!seaTrans_Last_Updated_Start_Date}" />
+						<apex:outputLabel value="Last_Updated_End_Date" /><apex:inputText value="{!seaTrans_Last_Updated_End_Date}" />
+						<apex:outputLabel value="status" /><apex:inputText value="{!seaTrans_status}" />
+						
+					</apex:panelGrid>
+					<apex:commandButton value="Search" action="{!doSearchTransaction}" />				
+				</apex:form>
+
+				<apex:pageBlockSection title="Results" columns="1" rendered="{!seaTrans_Transactions != null && seaTrans_Transactions.size > 0}">
+					<apex:pageBlockTable value="{!seaTrans_Transactions}" var="trans">
+						<apex:column headerValue="Mxa Txn ID">{!trans.monexa_transaction_id}</apex:column>
+						<apex:column headerValue="Type">{!trans.transaction_type}</apex:column>
+						<apex:column headerValue="Status">{!trans.status}</apex:column>
+						<apex:column headerValue="Approval Code">{!trans.approval_code}</apex:column>
+						<apex:column headerValue="Response Code">{!trans.response_code}</apex:column>			
+						<apex:column headerValue="Resp. Desc.">{!trans.response_description}</apex:column>
+						<apex:column headerValue="AVS">{!trans.avs_code}</apex:column>
+						<apex:column headerValue="Amount">{!trans.amount}</apex:column>		
+					</apex:pageBlockTable>	
+				</apex:pageBlockSection>		
+
+			</apex:pageBlock>
+		</apex:tab>
+
+		<apex:tab label="Lookup Transaction" name="transLookup" id="transLookupTab" rendered="{!version != null}">			
+			<apex:pageBlock title="Lookup Transaction" >
+				<apex:form >
+				
+					<apex:panelGrid columns="2">			
+						<apex:outputLabel value="Account ID:" /><apex:inputText value="{!lookTrans_account_id}" />
+						<apex:outputLabel value="Information Type:" /><apex:inputText value="{!lookTrans_information_type}" />
+						<apex:outputLabel value="Monexa Transaction ID:" /><apex:inputText value="{!lookTrans_monexa_transaction_id}" />
+										
+						<apex:commandButton value="Lookup" action="{!doLookupTransaction}" />
+					</apex:panelGrid>
+				</apex:form>
+				
+				<apex:pageBlockSection columns="1" title="Results" rendered="{!lookTrans_Transaction != null}">
+					<apex:panelGrid columns="4" columnClasses="labelCol,dataCol,labelCol,dataCol">
+			  			<apex:outputLabel value="Monexa Txn ID" /><apex:outputText value="{!lookTrans_Transaction.Transaction_Information.Transaction_x.monexa_transaction_id}" />
+			  			<apex:outputLabel value="Transaction Type" /><apex:outputText value="{!lookTrans_Transaction.Transaction_Information.Transaction_x.transaction_type}" />
+			  			<apex:outputLabel value="Transaction Date/Time" /><apex:outputText value="{0,date,long}">
+			  				<apex:param value="{!lookTrans_Transaction.Transaction_Information.Transaction_x.Local_Transaction_Time}" />
+			  			</apex:outputText>
+			  			<apex:outputLabel value="Transaction Amount" /><apex:outputText value="{!lookTrans_Transaction.Transaction_Information.Transaction_x.amount}" />
+			  			<apex:outputLabel value="Transaction Status" /><apex:outputText value="{!lookTrans_Transaction.Transaction_Information.Transaction_x.status}" />
+			  			<apex:outputLabel value="" /><apex:outputText value="" />
+			  			<apex:outputLabel value="Available Refund Amount" /><apex:outputText value="{!lookTrans_Transaction.Transaction_Information.Transaction_x.available_refund_amount}" />
+
+			  			<apex:outputLabel value="Further Action Available" /><apex:outputText value="{!lookTrans_Transaction.Transaction_Information.Transaction_x.further_action}" />
+			  			<apex:outputLabel value="Comments" /><apex:outputText value="{!lookTrans_Transaction.Transaction_Information.Transaction_x.comment}" />
+			  			<apex:outputLabel value="" /><apex:outputText value="" />
+			  			<apex:outputLabel value="Transaction ID" /><apex:outputText value="{!lookTrans_Transaction.Transaction_Information.Transaction_x.transaction_id}" />
+			  			<apex:outputLabel value="Reference Number" /><apex:outputText value="{!lookTrans_Transaction.Transaction_Information.Transaction_x.reference_number}" />
+			  			<apex:outputLabel value="Reference ID" /><apex:outputText value="{!lookTrans_Transaction.Transaction_Information.Transaction_x.reference_id}" />
+					</apex:panelGrid>
+				</apex:pageBlockSection>
+			
+			</apex:pageBlock>
+		</apex:tab>
+
+
+
+		<apex:tab label="Search Invoices" name="searchInvoices" id="searchInvoicesTab" rendered="{!version != null}">
+			<apex:pageBlock title="Search Invoices">
+				<apex:form >
+					<apex:panelGrid columns="2" columnClasses="labelCol,dataCol,labelCol,dataCol">				
+						<apex:outputLabel value="provider_id" /><apex:inputText value="{!seaInv_provider_id}" />
+						<apex:outputLabel value="account_id" /><apex:inputText value="{!seaInv_account_id}" />
+						<apex:outputLabel value="information_type" /><apex:inputText value="{!seaInv_information_type}" />
+						<apex:outputLabel value="invoice_status" /><apex:inputText value="{!seaInv_invoice_status}" />
+						<apex:outputLabel value="external_invoice_number" /><apex:inputText value="{!seaInv_external_invoice_number}" />
+					</apex:panelGrid>
+					<apex:commandButton value="Search" action="{!doSearchInvoice}" />				
+				</apex:form>
+
+				<apex:pageBlockSection title="Results" columns="1" rendered="{!seaInv_Invoices != null && seaInv_Invoices.size > 0}">
+					<apex:pageBlockTable value="{!seaInv_Invoices}" var="inv">
+						<apex:column headerValue="Date">{!inv.Invoice.Invoice_Date}</apex:column>
+						<apex:column headerValue="Invoice #">{!inv.Invoice.invoice_number}</apex:column>
+						<apex:column headerValue="external_invoice_number">{!inv.Invoice.external_invoice_number}</apex:column>
+						<apex:column headerValue="Amount">{!inv.Invoice.invoice_amount}</apex:column>
+					</apex:pageBlockTable>	
+				</apex:pageBlockSection>		
+
+			</apex:pageBlock>
+		</apex:tab>
+		<apex:tab label="Lookup Invoice" name="invLookup" id="invLookupTab" rendered="{!version != null}">			
+			<apex:pageBlock title="Lookup Invoice" >
+				<apex:form >
+				
+					<apex:panelGrid columns="2">			
+						<apex:outputLabel value="Account ID:" /><apex:inputText value="{!lookInv_account_id}" />
+						<apex:outputLabel value="Information Type:" /><apex:inputText value="{!lookInv_information_type}" />
+						<apex:outputLabel value="Monexa Invoice ID:" /><apex:inputText value="{!lookInv_invoice_number}" />
+										
+						<apex:commandButton value="Lookup" action="{!doLookupInvoice}" />
+					</apex:panelGrid>
+				</apex:form>
+				
+				<apex:pageBlockSection columns="1" title="Results" rendered="{!lookInv_Invoice != null}">
+			  		<apex:panelGrid columns="2" columnClasses="labelCol,dataCol">
+			  			<apex:outputLabel value="Invoice #" /><apex:outputText value="{!lookInv_Invoice.invoice_number}" />
+			  			<apex:outputLabel value="External Invoice #" /><apex:outputText value="{!lookInv_Invoice.external_invoice_number}" />
+			  			<apex:outputLabel value="Invoice Due Date" />
+			  			<apex:outputText value="{0,date,short}">
+			  				<apex:param value="{!lookInv_Invoice.invoice_due_date}" />
+			  			</apex:outputText>
+			  			<apex:outputLabel value="Invoice Amount" /><apex:outputText value="{!lookInv_Invoice.invoice_amount}" />	  			
+			  		</apex:panelGrid>
+			  		<apex:pageBlockSection title="Invoice Items" columns="1">
+			  			<apex:pageBlockTable value="{!lookInv_Invoice.Invoice_Detail}" var="line" columnClasses="dataCol,dataCol,dataCol" columnsWidth="30%,50%,20%" style="width:100%">
+			  				<apex:column headerValue="Date">
+			  					<apex:outputText value="{0,date,short}">
+			  						<apex:param value="{!line.Invoice_Detail_Date}" />
+			  					</apex:outputText>		  					
+			  				</apex:column>
+			  				<apex:column headerValue="Description" value="{!line.description}" />
+			  				<apex:column headerValue="Amount ($)" value="{!line.amount}" />
+			  			</apex:pageBlockTable>
+			  		</apex:pageBlockSection>
+				</apex:pageBlockSection>
+			
+			</apex:pageBlock>
+		</apex:tab>
+
+		<apex:tab label="Silent Order Post" name="silentOrder" id="silentOrderTab" rendered="{!version != null}">
+			<apex:pageBlock title="Get Session Key" >
+				<apex:form >
+					<apex:panelGrid columns="2">			
+						<apex:outputLabel value="Account ID:" /><apex:inputText value="{!getKey_account_id}" />
+						<apex:outputLabel value="Session Type:" /><apex:inputText value="{!getKey_session_type}" />
+										
+						<apex:outputLabel value="Session Information:" /><apex:inputText value="{!getKey_session_info}" />
+						<apex:commandButton value="Get Session Key" action="{!doGetSessionKey}" />
+					</apex:panelGrid>
+				</apex:form>	
+				<apex:pageBlockSection columns="1" title="Result" rendered="{!getKey_SessionKey != null}">
+					<apex:panelGrid columns="2" columnClasses="labelCol,dataCol">
+						<apex:outputLabel value="Session Key:" /><apex:outputText value="{!getKey_SessionKey.session_key}" />
+					</apex:panelGrid>
+				</apex:pageBlockSection>			
+				<apex:pageBlockSection columns="1" title="Manual Transaction" rendered="{!getKey_SessionKey != null}">
+					<form id="silent_order_post_form" class="silent_order_form"  action="https://api.monexa.com/v05_24/XML/silent_order_post.cgi" method="POST">
+						<apex:outputPanel id="ccPanel">
+							<h3>Payment Information</h3>													
+							
+							<apex:panelGrid columns="2"> 								
+						 		<apex:outputLabel value="Credit Card Number" /><input type="text" name="credit_card_number" size="40" value="4111111111111111" />
+						 		<apex:outputLabel value="Expiry Date" /><input type="text" name="credit_card_expiry_date" size="40" value="12/12" />
+								<apex:outputLabel value="Name on Credit Card" /><input type="text" name="name_on_credit_card" size="40" value="John Smith" />
+								<apex:outputLabel value="Security Code" /><input type="text" name="card_security_code" size="40" value="123" />
+							</apex:panelGrid>	
+																											
+							<h3>Billing Information</h3>
+													
+							<apex:panelGrid columns="2">
+								<apex:outputLabel value="ZIP/Postal Code" /><input type="text" name="billing_zip_or_postal_code" size="40" value="V6B4N4" /> 
+								<apex:outputLabel value="Address" /><input type="text" name="billing_address" size="40" value="1100-555 West Hastings Street" /> 
+								<apex:outputLabel value="City" /><input type="text" name="billing_city" size="40" value="Vancouver" /> 
+								<apex:outputLabel value="Country" /><input type="text" name="billing_country" size="40" value="CA" /> 
+								<apex:outputLabel value="State/Province" /><input type="text" name="billing_state_or_province" size="40" value="BC" /> 
+								<apex:outputLabel value="Phone #" /><input type="text" name="phone_number" size="40" value="604.630.5660" /> 
+								<apex:outputLabel value="Email" /><input type="text" name="contact_email" size="40" value="sop_test_form_email@monexa.com" />
+							</apex:panelGrid>
+							
+							<input type="submit" value="Submit" />
+						
+	
+							<input type="hidden" name="session_key_failure_redirect_url" value="https://www.google.ca/search?q=sessionkeyfailure" />	
+							<apex:outputPanel id="sessionKeyPanel">
+								<input type="hidden" value="{!getKey_SessionKey.session_key}" id="session_key" name="session_key" />
+							</apex:outputPanel>
+						</apex:outputPanel>
+					</form>					
+				</apex:pageBlockSection>
+			</apex:pageBlock>
+		</apex:tab>
+		<apex:tab label="Process Transaction" name="processTransaction" id="processTransactionTab" rendered="{!version != null}">
+			<apex:pageBlock title="Process Transaction" >
+				<apex:form >
+					<apex:panelGrid columns="2">			
+						<apex:outputLabel value="Account ID:" /><apex:inputText value="{!procTrans_account_id}" />
+						<apex:outputLabel value="Monexa Txn ID:" /><apex:inputText value="{!procTrans_monexa_transaction_id}" />
+						<apex:outputLabel value="Type:" />
+						<apex:selectlist value="{!procTrans_transaction_type}" multiselect="false" size="1">
+						    <apex:selectOption itemValue="refund" itemLabel="Refund"/>
+						    <apex:selectOption itemValue="void" itemLabel="Void"/>
+						    <apex:selectOption itemValue="auth" itemLabel="Auth"/>
+						    <apex:selectOption itemValue="capture" itemLabel="Capture"/>
+						    <apex:selectOption itemValue="auth_and_capture" itemLabel="Auth and Capture"/>
+						</apex:selectlist>										
+						<apex:outputLabel value="Amount:" /><apex:inputText value="{!procTrans_amount}" />
+						<apex:outputLabel value="Apply Outstanding Amounts:" />
+						<apex:selectlist value="{!procTrans_apply_outstanding_amounts}" multiselect="false" size="1">
+						    <apex:selectOption itemValue="do_not_apply" itemLabel="Do not apply"/>
+						    <apex:selectOption itemValue="pre_payment_first" itemLabel="Pre payment first"/>
+						    <apex:selectOption itemValue="negative_invoice_only" itemLabel="Negative invoice only"/>
+						    <apex:selectOption itemValue="pre_payment_only" itemLabel="Pre payment only"/>
+						</apex:selectlist>																
+						<apex:outputLabel value="Comment:" /><apex:inputText value="{!procTrans_comment}" style="width:100%;height:75px;"  />
+						<apex:commandButton value="Confirm" action="{!doProcessTransaction}" />
+					</apex:panelGrid>
+				</apex:form>	
+				<apex:pageBlockSection columns="1" title="Result" rendered="{!getKey_SessionKey != null}">
+					<apex:panelGrid columns="2" columnClasses="labelCol,dataCol">
+						<apex:outputLabel value="Session Key:" /><apex:outputText value="{!getKey_SessionKey.session_key}" />
+					</apex:panelGrid>
+				</apex:pageBlockSection>			
+			</apex:pageBlock>
+		</apex:tab>						
+	
+	</apex:tabPanel>
+</apex:page>

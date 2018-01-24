@@ -1,0 +1,175 @@
+<html>
+<head>
+	<title>Link Attachment</title>
+	<link href="/dCSS/Theme2/default/common.css" type="text/css" media="handheld,print,projection,screen,tty,tv" rel="stylesheet">
+    <script type="text/javascript" src="/js/functions.js"></script>
+    <script src="/soap/ajax/8.0/connection.js"></script>
+    {!INCLUDE($SControl.lgmCommon)}
+    <script id="clientEventHandlersJS" language="javascript" type="text/javascript">
+
+    <!--  
+var b64 = new lgmBase64();
+
+function setup() {
+
+	lgm.href.getParameters();
+	
+	if ({!$User.Debug__c}) {
+		//turn on debug
+		lgm.debug(document.getElementById("divDebug"));
+	}
+	
+	if ({!$User.Step_Through__c}) {
+		//throw uncaught exception so can step through in managed client environment
+		throw "e";
+	}
+
+//	try {
+var isIE=(navigator.appName.indexOf("Microsoft")!=-1)?1:0;
+//if (!isIE) {document.write("Sorry, you cannot link to files because of security settings in Firefox"); return false; }
+//if (!isIE) netscape.security.PrivilegeManager.enablePrivilege("UniversalFileRead");
+//	} catch (err) {   
+//		document.write("Sorry, you cannot link to files because of " +err+ ".");
+//		return false;
+//	}
+
+}
+
+
+function submit2(pfileName) {
+var fileName = "";
+var placeholder = "";
+var nameSuffix = " (LINK)";
+
+	lgm.debug.addMessage('path :' + pfileName);
+var fileField = document.getElementById("file");
+	var fullFileName = fileField.value;
+	lgm.debug.addMessage('path :' + fullFileName );
+
+	//get just file name
+	if (fullFileName.indexOf('/') > -1)
+        fileName = fullFileName.substring(fullFileName.lastIndexOf('/')+1,fullFileName.length);
+    else
+        fileName = fullFileName.substring(fullFileName.lastIndexOf('\\')+1,fullFileName.length);
+	
+	//make filename URL friendly
+	URLfullFileName = "file:\/\/\/" +  fullFileName.replace(/\\/g,"/");
+	
+	//local file links not allowed
+	if (fullFileName.indexOf("fakepath") > -1) { //instruct on how to get around IE8 security upgrade
+		alert("IE8 requires a setting change so that you can link to external files. \nHere's how to set us a trusted site so BasicGov can serve you better.\n Select Tools\n Select Internet Options\n Select Security Tab\n Click on Trusted Sites\n Click on Sites\n Add this website to the zone: text box should contain the URL https://*.salesforce.com\n (Please note *)\nClick Add\n Click Close\n Click Ok");
+		
+	}
+	else if ((fullFileName.indexOf("C:\\") > -1)  || (fullFileName.indexOf("D:\\") > -1) || (fullFileName.indexOf("E:\\") > -1) || (fullFileName.indexOf("My Documents") > -1)) {
+	
+		alert("Local files are not accessible to other users and not allowed. Move file to the shared network before attaching.");
+		//var x = window.confirm("Local files are not accessible to other users and not allowed. Move file to the shared network before attaching."); 
+		//if (!x)
+		//	return true;
+		
+	}
+	else {
+		if (URLfullFileName.indexOf("'") > -1 ) {
+			alert("File names or paths containing single quotes (') are not allowed. Please rename file name or path.");
+		} else {
+		
+			placeholder = "<html><head><meta http-equiv='refresh' content='1;url=" + URLfullFileName + "'></head>"+
+						"<body><br><center>Opening file <a href='" + URLfullFileName + "' target='_blank'>" + URLfullFileName + "</a> <br>" +
+						"Click or copy link if file does not automatically open.</center></body></html>";
+			
+			var attachmentRecord = new sforce.SObject("Attachment"); 
+			attachmentRecord["ParentId"] = lgm.href.param["eid"];
+			attachmentRecord["Name"] = fileName + nameSuffix;
+			attachmentRecord["ContentType"] = "text/html";
+			attachmentRecord["IsPrivate"] = false;
+			attachmentRecord["Body"] =b64.encode(placeholder);// b64.encode(documentContent)
+			
+			
+			try {
+				var error = sforce.connection.create([attachmentRecord]);
+				if (error.toString().indexOf("errors") != -1 ) {
+					throw ("Document Save Error: " + error.toString());
+				}
+				
+				opener.location.reload();
+				if (lgm.debug.flag != true ) { //see debug statements remaining
+					window.close();
+				}
+				
+			}
+			catch (err) {
+				addMessage(err.toString());
+				retval = false;
+			}
+		}
+	}
+return true;
+}
+function isUrl(s) {
+	var regexp = /(ftp|http|https|file):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?/
+	return regexp.test(s);
+}
+
+//-->
+</script>
+</head>
+
+<body onload="setup()">
+		<form id = "myform" name = "myform">
+			<div class="lookup">
+				<div class="bPageTitle">
+					<div class="ptBody primaryPalette">
+						<div class="content">
+							<img src="/s.gif" alt="Lookup"  class="pageTitleIcon">
+							<h1>Link Attachment</h1>
+						</div>
+					</div>
+				</div>
+				<table cellspacing = 0 cellpadding = 0 border = 0>
+					<tr>
+						<td width = 5>&nbsp;</td>
+						<td width = 100% style = "padding:2px 10px 2px 2px; font-size: 9pt; font-weight: bold; color:#333;">Select the File</td>
+						
+						<td width = 5>&nbsp;</td>
+					</tr>
+					<tr>
+						<td width = 5>&nbsp;</td>
+						<td width = 100% style = "padding:2px 10px 2px 2px; font-size: 9pt; color:#333;">Ensure file path is accessible to entire organization.
+						<br>Note: Do not move or rename file after linking
+						<td width = 5>&nbsp;</td>
+					</tr>
+					<tr>
+						<td width = 5>&nbsp;</td>
+						<td width = 100%>&nbsp;</td>
+						<td width = 5>&nbsp;</td>
+					</tr>
+					<tr>
+						<td>&nbsp;</td>
+						<td align = left><input  id="file" name="file" size="35" title="Type the path of the file or click the Browse button to find the file." type="file" /></td>
+						<td>&nbsp;</td>
+					</tr>	
+					<tr>
+						<td>&nbsp;</td>
+						<td align = center>&nbsp;</td>
+						<td>&nbsp;</td>
+					</tr>
+				
+					<br>
+					<tr>
+						<td>&nbsp;</td>
+						<td align = center>
+							<div class="pBody" align = center>
+								<input id = "submit" Name = "submit" class="btn" type=button value="Submit" onClick="submit2();" disable = "true">
+								<input id = "cancel" Name = "Cancel" class="btn" type=button value="Cancel" onClick="window.close();" disable = "true">					
+							&nbsp;&nbsp;&nbsp;&nbsp;
+							</div>	
+							
+						</td>
+						<td>&nbsp;</td>
+					</tr>
+				</table>							
+			</div>
+			<DIV id="divDebug"></DIV>	
+		</form>	
+	</body>
+</html>

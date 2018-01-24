@@ -1,0 +1,228 @@
+<apex:page showHeader="false" sidebar="false">
+    <b>Address Search</b>
+    <c:AutoCompleteSearch objectName="MUSW__Parcel__c" searchField="MUSW__Street__c"/>
+    
+    <br/>
+    <ul id="expandmenu">
+        <li><img src="/img/icon/custom51_100/pencil16.png"/>&nbsp;&nbsp;Inspections
+            <ol>
+                <li><a target="_top" href="/apex/InspectionMassRequest">Request</a></li>
+                <!--<li><a target="_top" href="">Check Status</a></li>-->
+            </ol>
+        </li>
+        <li><img src="/img/icon/hammer16.png"/>&nbsp;&nbsp;Permits
+            <ol>
+                <li><a target="_top" href="/apex/InitiateRequest?requestType=permit">Apply</a></li>
+                <!--<li><a target="_top" href="">Check Status</a></li>-->
+            </ol>
+        </li>
+        <li><img src="/img/icon/hammer16.png"/>&nbsp;&nbsp;Portal
+            <ol>
+<li><a target="_top" href="/apex/InitiateRequest?requestType=permit&Is_Portal=true&Current_UserId_Var=005M0000005aU3w">Apply Online as User Contact implementation</a></li>
+                <!--<li><a target="_top" href="">Check Status</a></li>-->
+            </ol>
+        </li>
+        <li><img src="/img/icon/desk16.png"/>&nbsp;&nbsp;Complaints
+            <ol>
+                <li><a target="_top" href="/apex/InitiateRequest?requestType=complaint">Report</a></li>
+                <!--<li><a target="_top" href="">Check Status</a></li>-->
+                <!--<li><a target="_top" href="">Upload Photos</a></li>-->
+                <!--<li><a target="_top" href="">View History</a></li>-->
+            </ol>
+        </li>
+        <li><img src="/img/icon/contracts16.png"/>&nbsp;&nbsp;Land Use Applications
+            <ol>
+                <li><a target="_top" href="/apex/InitiateRequest?requestType=application">Apply</a></li>
+                <!--<li><a target="_top" href="">Check Status</a></li>-->
+            </ol>
+        </li>
+        <!--<li>Other Applications
+            <ol>
+                <!--<li><a target="_top" href="">Submit Subdivision Appl</a></li>--
+                <!--<li><a target="_top" href="">Submit Conceptual Appl</a></li>--
+                <!--<li><a target="_top" href="">Submit Site Plan Appl</a></li>--
+                <!--<li><a target="_top" href="">Check Status</a></li>--
+            </ol>
+        </li>-->
+        <!--<li>Property
+            <ol>
+                <!--<li><a target="_top" href="">Inquiry</a></li>--
+                <!--<li><a target="_top" href="">View Complaint History</a></li>--
+                <!--<li><a target="_top" href="">View Permit History</a></li>--
+            </ol>
+        </li>-->
+    </ul>
+    
+    <style type="text/css">
+    body {
+    background-color: #CFEEF8;
+    margin: 0;
+    padding: 0 0 0 0;
+    }
+    
+    ul#expandmenu {
+    width: 150px;
+    list-style-type: none;
+    /*border-top: solid 1px #b9a894;*/
+    margin: 0;
+    padding: 0;
+    }
+    
+    ul#expandmenu ol {
+    display: none;
+    text-align: left;
+    list-style-type: none;
+    margin: 0;
+    padding: 5px;
+    }
+    
+    ul#expandmenu li {
+    border-bottom: solid 1px #b9a894;
+    line-height: 12px;
+    margin-left: 0;
+    }
+    
+    ul#expandmenu ol li {
+    border-bottom: none;
+    margin-left: 18px;
+    }
+    
+    ul#expandmenu ol li:before {
+    content: "- ";
+    }
+    
+    ul#expandmenu a {
+    text-decoration: none;
+    outline: none;
+    }
+    </style>
+    
+    <script type="text/javascript">
+    // ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+    // 
+    // Coded by Sawanbanna
+    // http://www.sawanbanna.com | http://extreme.50webs.net
+    // email: webmaster@sawanbanna.com | sawan.banna@gmail.com
+    // If want to use this code, feel free to do so, but please leave this message intact.
+    //
+    // ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+    // --- version date: 06/02/03 ---------------------------------------------------------
+    
+    // ||||||||||||||||||||||||||||||||||||||||||||||||||
+    // Node Functions
+    
+    if(!window.Node){
+        var Node = {ELEMENT_NODE : 1, TEXT_NODE : 3};
+    }
+    function checkNode(node, filter){
+        return (filter == null || node.nodeType == Node[filter] || node.nodeName.toUpperCase() == filter.toUpperCase());
+    }
+    function getChildren(node, filter){
+        var result = new Array();
+        var children = node.childNodes;
+        for(var i = 0; i < children.length; i++){
+            if(checkNode(children[i], filter)) result[result.length] = children[i];
+        }
+        return result;
+    }
+    function getChildrenByElement(node){
+        return getChildren(node, "ELEMENT_NODE");
+    }
+    function getFirstChild(node, filter){
+        var child;
+        var children = node.childNodes;
+        for(var i = 0; i < children.length; i++){
+            child = children[i];
+            if(checkNode(child, filter)) return child;
+        }
+        return null;
+    }
+    function getFirstChildByText(node){
+        return getFirstChild(node, "TEXT_NODE");
+    }
+    function getNextSibling(node, filter){
+        for(var sibling = node.nextSibling; sibling != null; sibling = sibling.nextSibling){
+            if(checkNode(sibling, filter)) return sibling;
+        }
+        return null;
+    }
+    function getNextSiblingByElement(node){
+        return getNextSibling(node, "ELEMENT_NODE");
+    }
+    
+    // ||||||||||||||||||||||||||||||||||||||||||||||||||
+    // Menu Functions & Properties
+    
+    var activeMenu = null;
+    
+    function showMenu(){
+        if(activeMenu){
+            activeMenu.className = "";
+            getNextSiblingByElement(activeMenu).style.display = "none";
+        }
+        if(this == activeMenu){
+            activeMenu = null;
+        }else{
+            this.className = "active";
+            getNextSiblingByElement(this).style.display = "block";
+            activeMenu = this;
+        }
+        return false;
+    }
+    function initMenu(){
+        var menus, expandmenu, text, a, i;
+        menus = getChildrenByElement(document.getElementById("expandmenu"));
+        for(i = 0; i < menus.length; i++){
+            menu = menus[i];
+            text = getFirstChildByText(menu);
+            a = document.createElement("a");
+            menu.replaceChild(a, text);
+            a.appendChild(text);
+            a.href = "#";
+            a.onclick = showMenu;
+            a.onfocus = function(){this.blur()};
+        }
+    }
+    
+    // ||||||||||||||||||||||||||||||||||||||||||||||||||
+    
+    if(document.createElement) window.onload = initMenu;
+    </script>
+    
+    <!--<apex:panelBar style="foreground-color:none;border:none;">
+        <apex:panelBarItem label="Inspections" headerStyle="background-image:none;background-color:#1797C0;" contentStyle="padding:5px">
+            <apex:outputLink target="_top" value="/apex/InspectionMassRequest">Request</apex:outputLink><br/>
+            <apex:outputLink target="_top" value="">Check Status</apex:outputLink>
+        </apex:panelBarItem>
+        <apex:panelBarItem label="Permits" headerStyle="background-image:none;background-color:#1797C0;" contentStyle="padding:5px">
+            <apex:outputLink target="_top" value="/apex/InitiateRequest?requestType=permit">Apply</apex:outputLink><br/>
+            <apex:outputLink target="_top" value="">Check Status</apex:outputLink><br/>
+        </apex:panelBarItem>
+        <apex:panelBarItem label="Portal Test" headerStyle="background-image:none;background-color:#1797C0;" contentStyle="padding:5px">
+            <apex:outputLink target="_top" value="/apex/InitiateRequest?requestType=permit&Is_Portal=true&Current_UserId_Var=005M0000005aU3w">Apply Online as User Contact implementation</apex:outputLink><br/>
+            <apex:outputLink target="_top" value="">Check Status</apex:outputLink><br/>
+        </apex:panelBarItem>        
+        <apex:panelBarItem label="Complaints" headerStyle="background-image:none;background-color:#1797C0;" contentStyle="padding:5px">
+            <apex:outputLink target="_top" value="/apex/InitiateRequest?requestType=complaint">Report</apex:outputLink><br/>
+            <apex:outputLink target="_top" value="">Check Status</apex:outputLink><br/>
+            <apex:outputLink target="_top" value="">Upload Photos</apex:outputLink><br/>
+            <apex:outputLink target="_top" value="">View History</apex:outputLink><br/>
+        </apex:panelBarItem>
+        <apex:panelBarItem label="Land Use Applications" headerStyle="background-image:none;background-color:#1797C0;" contentStyle="padding:5px">
+            <apex:outputLink target="_top" value="/apex/InitiateRequest?requestType=application">Apply</apex:outputLink><br/>
+            <apex:outputLink target="_top" value="">Check Status</apex:outputLink><br/>
+        </apex:panelBarItem>
+        <apex:panelBarItem label="Other Applications" headerStyle="background-image:none;background-color:#1797C0;" contentStyle="padding:5px">
+            <apex:outputLink target="_top" value="">Submit Subdivision Appl</apex:outputLink><br/>
+            <apex:outputLink target="_top" value="">Submit Conceptual Appl</apex:outputLink><br/>
+            <apex:outputLink target="_top" value="">Submit Site Plan Appl</apex:outputLink><br/>
+            <apex:outputLink target="_top" value="">Check Status</apex:outputLink><br/>
+        </apex:panelBarItem>
+        <apex:panelBarItem label="Property" headerStyle="background-image:none;background-color:#1797C0;">
+            <apex:outputLink target="_top" value="">Inquiry</apex:outputLink><br/>
+            <apex:outputLink target="_top" value="">View Complaint History</apex:outputLink><br/>
+            <apex:outputLink target="_top" value="">View Permit History</apex:outputLink><br/>
+        </apex:panelBarItem>
+        <BODY style="background: #CFEEF8;"/>
+    </apex:panelBar>-->
+</apex:page>

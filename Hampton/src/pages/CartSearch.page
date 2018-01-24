@@ -1,0 +1,39 @@
+<apex:page controller="CartSearchController">
+<apex:form >
+    <apex:sectionHeader title="Carts" >
+        <apex:messages />
+    </apex:sectionHeader>
+    
+    <apex:pageBlock >
+        <apex:pageblockbuttons >
+            <apex:commandbutton action="{!search}" value="Search"/>
+            <apex:commandbutton action="{!cancel}" value="Cancel" immediate="true"/>           
+        </apex:pageblockbuttons>
+        
+        <apex:pageblockSection >
+            <apex:inputField label="Contact" value="{!virtualObj.Contact__c}"/>      
+             <apex:inputText label="Cart Number" value="{!cartNumber}"/>      
+        </apex:pageblockSection> 
+        
+        <apex:pageBlockSection columns="1" title="{!IF(virtualObj.Contact__c = null && cartNumber = null,'Today Carts','Results')}" collapsible="false">        
+            <apex:outputText rendered="{!carts.size = 0 && (virtualObj.Contact__c != null || cartNumber != null)}">No carts were found.</apex:outputText>
+            <apex:pageBlockTable value="{!carts}" var="cc" rendered="{!carts != null && carts.size > 0}">
+                <apex:column >
+                    <apex:outputPanel styleClass="btn" onclick="window.location.href='FeeProcess?cartId={!cc.Id}';">View Cart</apex:outputPanel>
+                </apex:column>
+                <apex:repeat value="{!$ObjectType.Cart__c.FieldSets.CartSearch}" var="ff">                
+                    <apex:column headerValue="{!ff.label}">
+                        <apex:outputField value="{!cc[ff]}" />
+                    </apex:column>
+                </apex:repeat>                        
+            </apex:pageBlockTable>
+        </apex:pageBlockSection>
+    </apex:pageBlock>
+</apex:form>
+<script>
+    function redirectUrl(){
+        alert('Sending you back to ');
+        window.top.location.href = 'www.google.com';
+    }
+</script>
+</apex:page>

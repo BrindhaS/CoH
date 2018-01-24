@@ -1,0 +1,210 @@
+<script id="clientEventHandlersJS" language="javascript">	
+<!-- 
+	var lgmTimerStart = new Date();
+	var baseDir = "";
+	var LGM_UNLOADED=0; var LGM_LOAD_CORE=1; var LGM_LOAD_CONFIG=2; var LGM_PROCESS_CONFIG=3; var LGM_LOADED=4; 
+	
+	/**************************************************************************************
+	* 	Class		: LGM XML Library Manager
+	*	Created By	: Chris McLuckie
+	*	Created On  : 02/15/2007
+	*	Purpose		:
+	**************************************************************************************/
+	lgmLibraryManager = function() {
+		
+		//**********************************
+		// private properties
+		//**********************************
+		var that = this;  // Required for Javascript limitation of 'this' operator
+		var lgmConfigURL = "/servlet/servlet.FileDownload?file=01560000000FcMI";
+				
+		//**********************************
+		// public properties
+		//**********************************
+		this.loadState=LGM_UNLOADED;
+		this.loadingScripts=new Array();
+		this.scriptsTimer=null;
+		this.lgmLibraries=new Array();
+
+	
+		//**********************************
+		// public methods
+		//**********************************
+		lgmLibraryManager.prototype.checkScriptsLoaded=function() {
+			if(document.readyState!=null) {
+				while(this.loadingScripts.length>0 && (this.loadingScripts[0].readyState == "loaded" || this.loadingScripts[0].readyState == "complete" || this.loadingScripts[0].readyState == null)) {
+					this.loadingScripts.shift();
+				}
+				if(this.loadingScripts.length==0) {
+					this.setLoadState(this.loadState+1);
+				}
+			}
+			else {
+				if(this.loadState==LGM_LOAD_CORE&&config!=null){
+					this.setLoadState(LGM_LOAD_CONFIG);
+				} else if (this.loadState==LGM_PROCESS_CONFIG) {
+					this.setLoadState(LGM_LOADED);
+				}
+			}
+		}
+		
+		lgmLibraryManager.prototype.setLoadState=function(newState) {
+			this.loadState=newState;
+			switch(newState){
+				case LGM_LOAD_CORE:
+					this.loadScript("/util/sarissa/Sarissa.js", "/servlet/servlet.Integration?lid=01N600000008oZV");
+					this.loadScript("/util/sarissa/sarissa_ieemu_xpath.js", "/servlet/servlet.Integration?lid=01N600000008oZp");
+					//REMOVE the four below libraries when uploading package
+					//END REMOVE
+					break;
+				case LGM_LOAD_CONFIG:
+					if(document.readyState){
+						if (this.lgmLibraries.length==0) {
+							this.doc=Sarissa.getDomDocument();
+							this.doc.async=false;
+							this.doc.validateOnParse=false;
+							this.doc.load(lgmConfigURL);
+							if(this.doc.parseError<0){
+								alert("error loading config document: "+lgmConfigURL);
+							} else {	
+								if (this.doc.childNodes.length == 1) {
+									var libraries = this.doc.childNodes[0].childNodes;
+									for(var i=0; i<libraries.length; i++) {	
+										this.lgmLibraries[i] = {Name:"",VirtualDirectory:"",ActualDirectory:"",Load:false,LoadState:false};
+										for(var ii=0; ii<libraries[i].attributes.length; ii++) {
+											if (libraries[i].attributes[ii].nodeName == "Name") {
+												this.lgmLibraries[i].Name = libraries[i].attributes[ii].nodeValue;
+											} else if (libraries[i].attributes[ii].nodeName == "VirtualDirectory") {
+												this.lgmLibraries[i].VirtualDirectory = libraries[i].attributes[ii].nodeValue;
+											} else if (libraries[i].attributes[ii].nodeName == "ActualDirectory") {
+												this.lgmLibraries[i].ActualDirectory = libraries[i].attributes[ii].nodeValue;
+											} else if (libraries[i].attributes[ii].nodeName == "Load") {
+												this.lgmLibraries[i].Load = libraries[i].attributes[ii].nodeValue;
+											} else if (libraries[i].attributes[ii].nodeName == "LoadState") {
+												this.lgmLibraries[i].LoadState = libraries[i].attributes[ii].nodeValue;
+											}
+										}
+									}
+								}
+							}
+						}
+							
+						for (var i=0; i<this.lgmLibraries.length; i++) {
+							if ((this.lgmLibraries[i].Load != "false" && this.lgmLibraries[i].Load != false) && (this.lgmLibraries[i].LoadState != "true" && this.lgmLibraries[i].LoadState != true)) {
+								this.loadScript(this.lgmLibraries[i].VirtualDirectory, this.lgmLibraries[i].ActualDirectory);
+								this.lgmLibraries[i].Load = false; 
+								this.lgmLibraries[i].LoadState = true; 
+							}
+						}
+					}else {
+						this.setLoadState(LGM_LOADED);
+					}
+					break;
+				case LGM_PROCESS_CONFIG:
+					config = new Config(mbConfigUrl);
+					config.loadConfigScripts();														
+					break;
+				case LGM_LOADED:
+					mapbuilder.continueFunc();		
+					clearInterval(this.scriptsTimer);
+					break;
+			}
+		}
+			
+		lgmLibraryManager.prototype.loadScript=function(name, url) {
+			var processScript = false;
+			if(!document.getElementById(name)) { 
+				processScript = true;
+			} else {
+				if(!document.getElementById(name).id != name) {  //  !document.getElementById(url) 
+					processScript = true;
+				} 
+			} 
+			
+			if (processScript) {
+				if (url == null || url == "") {
+					url = this.returnScriptName(name);
+				}
+				var script=document.createElement('script'); 
+				script.defer=false;
+				script.type="text/javascript"; 
+				script.src=url;
+				script.id=name; 
+				document.getElementsByTagName('head')[0].appendChild(script); 
+				this.loadingScripts.push(script); 			
+			}
+		} 
+
+		lgmLibraryManager.prototype.returnScriptName=function(url) {
+			var scriptName = "";
+			
+			for (var i=0; i<this.lgmLibraries.length; i++) {
+				if (this.lgmLibraries[i].VirtualDirectory == url || this.lgmLibraries[i].ActualDirectory == url) {
+					scriptName = this.lgmLibraries[i].ActualDirectory;
+				}
+			}
+			
+			if (scriptName == "" || scriptName == null)
+				scriptName = url;
+			
+			return scriptName;
+		}
+
+		lgmLibraryManager.prototype.loadScriptsFromXpath = function(nodes, dir){
+			for(var i=0;i<nodes.length;i++){
+				if(nodes[i].selectSingleNode("mb:scriptFile")==null){
+					scriptFile = "/" + dir+nodes[i].nodeName + ".js";
+					this.loadScript(scriptFile, this.returnScriptName(scriptFile));
+				}
+			}
+		}
+		
+		lgmLibraryManager.prototype.loadDocFromProxy = function(callback){
+		    sforce.connection.remoteFunction(callback);		
+		}
+
+		//**********************************
+		// Constructor Code
+		//**********************************
+		
+		// set the run interval timer
+		this.setLoadState(LGM_LOAD_CORE); 
+		this.scriptsTimer=setInterval('mapbuilder.checkScriptsLoaded()',100); 	
+	}
+		
+
+	function checkIESecurity() {
+		var testPrefixes=["Msxml2.DOMDocument.5.0","Msxml2.DOMDocument.4.0","Msxml2.DOMDocument.3.0","MSXML2.DOMDocument","MSXML.DOMDocument","Microsoft.XMLDOM"];
+		var bFound=false;
+		for(var i=0;i<testPrefixes.length&&!bFound;i++){
+			try{
+				var oDoc=new ActiveXObject(testPrefixes[i]);
+				bFound=true;
+			}
+			catch(e){
+			}
+		}
+		if(!bFound)
+			window.open("/mapbuilder/docs/help/IESetup.html");
+	}
+	
+	/*
+	if(navigator.userAgent.toLowerCase().indexOf("msie")>-1)
+		checkIESecurity(); 
+		
+	var mapbuilder = new lgmLibraryManager();
+	mapbuilder.continueFunc = setup;	
+	*/
+	
+	function libraryManagerInit() { 
+		if(mapbuilder && mapbuilder.loadState==LGM_LOADED){ 
+			clearInterval(lgmTimerId);	
+		}
+	} 
+	
+	var lgmTimerId; 
+	function lgmDoLoad(initFunction) { 
+		lgmTimerId=setInterval('libraryManagerInit()',100);
+	} 
+//-->
+</script>

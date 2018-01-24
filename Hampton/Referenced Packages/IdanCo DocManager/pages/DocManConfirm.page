@@ -1,0 +1,28 @@
+<apex:page showHeader="false" standardController="Document">
+
+<style type="text/css">
+    body {background: #F3F3EC; padding-top: 15px}
+</style>
+
+<apex:sectionHeader title="Document was uploaded to folder {!HTMLENCODE($CurrentPage.parameters.fn)}"/>
+
+<apex:form >
+  <apex:commandButton onclick="confirmAdd()" value="Close" />
+  <br /><br />
+  <apex:detail />
+  <apex:commandButton onclick="confirmAdd()" value="Close" />
+</apex:form>
+
+<script>
+var winMain=window.opener;
+if (null==winMain)
+    winMain=window.parent.opener;
+winMain.onUploaded('{!JSENCODE($CurrentPage.parameters.did)}', '{!JSENCODE($CurrentPage.parameters.fid)}', '{!JSENCODE($CurrentPage.parameters.dfid)}');
+
+function confirmAdd()
+{
+      winMain.closeForm('Confirm', 'Upload');
+}
+</script>
+     
+</apex:page>

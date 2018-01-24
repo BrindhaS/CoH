@@ -1,0 +1,243 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <actionOverrides>
+        <actionName>Accept</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>CancelEdit</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>Clone</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>Delete</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>Edit</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>Follow</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>List</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>New</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>SaveEdit</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>Tab</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>View</actionName>
+        <type>Default</type>
+    </actionOverrides>
+    <allowInChatterGroups>false</allowInChatterGroups>
+    <compactLayoutAssignment>SYSTEM</compactLayoutAssignment>
+    <customHelp>MUSW__HelpInterface</customHelp>
+    <deploymentStatus>Deployed</deploymentStatus>
+    <deprecated>false</deprecated>
+    <description>Queries required by letter including any unique instructions eg. order, parent query and attach</description>
+    <enableActivities>false</enableActivities>
+    <enableBulkApi>true</enableBulkApi>
+    <enableEnhancedLookup>true</enableEnhancedLookup>
+    <enableFeeds>false</enableFeeds>
+    <enableHistory>false</enableHistory>
+    <enableReports>false</enableReports>
+    <enableSearch>true</enableSearch>
+    <enableSharing>true</enableSharing>
+    <enableStreamingApi>true</enableStreamingApi>
+    <fields>
+        <fullName>Attachment_To_Object__c</fullName>
+        <defaultValue>false</defaultValue>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <inlineHelpText>This assigned query object is the object the letter will attach to</inlineHelpText>
+        <label>Attach</label>
+        <trackTrending>false</trackTrending>
+        <type>Checkbox</type>
+    </fields>
+    <fields>
+        <fullName>Batch_Letter__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>Batch Letter</label>
+        <referenceTo>Batch_Letter__c</referenceTo>
+        <relationshipName>Applied_Queries</relationshipName>
+        <relationshipOrder>0</relationshipOrder>
+        <reparentableMasterDetail>false</reparentableMasterDetail>
+        <trackTrending>false</trackTrending>
+        <type>MasterDetail</type>
+        <writeRequiresMasterRead>false</writeRequiresMasterRead>
+    </fields>
+    <fields>
+        <fullName>Child_Iterate_Query__c</fullName>
+        <defaultValue>false</defaultValue>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <inlineHelpText>if true, each record returned by this query will result in a letter copy</inlineHelpText>
+        <label>Child Iterate Query</label>
+        <trackTrending>false</trackTrending>
+        <type>Checkbox</type>
+    </fields>
+    <fields>
+        <fullName>Execution_Order__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>Order</label>
+        <picklist>
+            <picklistValues>
+                <fullName>1</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>2</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>3</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>4</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>5</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>6</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>7</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>8</fullName>
+                <default>false</default>
+            </picklistValues>
+            <picklistValues>
+                <fullName>9</fullName>
+                <default>false</default>
+            </picklistValues>
+            <sorted>false</sorted>
+        </picklist>
+        <required>false</required>
+        <trackTrending>false</trackTrending>
+        <type>Picklist</type>
+    </fields>
+    <fields>
+        <fullName>Object_Name_Alias__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <inlineHelpText>Use when querying against the same object more than once.  For example, all Accounts are queried for address, but a specific Account is also queried to provide your organization&apos;s information for all letters (e.g., return address):  this field = &quot;MyOrg&quot;</inlineHelpText>
+        <label>Object Name (Alias)</label>
+        <length>80</length>
+        <required>false</required>
+        <trackTrending>false</trackTrending>
+        <type>Text</type>
+        <unique>false</unique>
+    </fields>
+    <fields>
+        <fullName>Object_Name_Plural__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <inlineHelpText>The parent&apos;s relationship name to this assigned query object. Ensure to include pre &quot;MUSW__&quot; and postfix &quot;__r&quot;. eg. MUSW__listname__r.</inlineHelpText>
+        <label>Object Name (Plural)</label>
+        <length>80</length>
+        <required>false</required>
+        <trackTrending>false</trackTrending>
+        <type>Text</type>
+        <unique>false</unique>
+    </fields>
+    <fields>
+        <fullName>Parent_Query__c</fullName>
+        <deleteConstraint>SetNull</deleteConstraint>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>Parent Query</label>
+        <referenceTo>Query__c</referenceTo>
+        <relationshipLabel>Child Letter Queries</relationshipLabel>
+        <relationshipName>Children_Queries</relationshipName>
+        <required>false</required>
+        <trackTrending>false</trackTrending>
+        <type>Lookup</type>
+    </fields>
+    <fields>
+        <fullName>Query__c</fullName>
+        <deleteConstraint>SetNull</deleteConstraint>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>Query</label>
+        <referenceTo>Query__c</referenceTo>
+        <relationshipLabel>Letter Queries</relationshipLabel>
+        <relationshipName>Applied_Queries</relationshipName>
+        <required>false</required>
+        <trackTrending>false</trackTrending>
+        <type>Lookup</type>
+    </fields>
+    <fields>
+        <fullName>Select_Fields__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <inlineHelpText>Field values to display when giving user to choose one or many letter copies for. This field is case-sensitive and its values must be identical to the field API names. eg. MUSW__Contact__r.Name, MUSW__Contact__r.MailingStreet</inlineHelpText>
+        <label>Select Fields</label>
+        <required>false</required>
+        <trackTrending>false</trackTrending>
+        <type>TextArea</type>
+    </fields>
+    <label>Letter Query</label>
+    <nameField>
+        <displayFormat>AQ-{0000}</displayFormat>
+        <label>Number</label>
+        <type>AutoNumber</type>
+    </nameField>
+    <pluralLabel>Letter Queries</pluralLabel>
+    <searchLayouts>
+        <lookupDialogsAdditionalFields>Query__c</lookupDialogsAdditionalFields>
+        <lookupDialogsAdditionalFields>Parent_Query__c</lookupDialogsAdditionalFields>
+        <lookupDialogsAdditionalFields>Execution_Order__c</lookupDialogsAdditionalFields>
+        <lookupDialogsAdditionalFields>Attachment_To_Object__c</lookupDialogsAdditionalFields>
+        <lookupPhoneDialogsAdditionalFields>Query__c</lookupPhoneDialogsAdditionalFields>
+        <lookupPhoneDialogsAdditionalFields>Parent_Query__c</lookupPhoneDialogsAdditionalFields>
+        <lookupPhoneDialogsAdditionalFields>Execution_Order__c</lookupPhoneDialogsAdditionalFields>
+        <searchFilterFields>NAME</searchFilterFields>
+        <searchFilterFields>Query__c</searchFilterFields>
+        <searchFilterFields>Parent_Query__c</searchFilterFields>
+        <searchFilterFields>Execution_Order__c</searchFilterFields>
+    </searchLayouts>
+    <sharingModel>ControlledByParent</sharingModel>
+    <validationRules>
+        <fullName>Child_Iterate_Query_must_be_1</fullName>
+        <active>true</active>
+        <errorConditionFormula>AND(Child_Iterate_Query__c ,  NOT(ISPICKVAL(Execution_Order__c,&apos;1&apos;) ))</errorConditionFormula>
+        <errorMessage>Child Iterate Query must be specified as Order 1</errorMessage>
+    </validationRules>
+    <validationRules>
+        <fullName>Child_Iterate_Query_must_not_have_parent</fullName>
+        <active>true</active>
+        <errorConditionFormula>AND(Child_Iterate_Query__c , NOT(ISBLANK(Parent_Query__c )))</errorConditionFormula>
+        <errorMessage>This is a Child Iterate Query, do not specify Parent Query</errorMessage>
+    </validationRules>
+    <validationRules>
+        <fullName>Parent_Query_without_relationship_name</fullName>
+        <active>true</active>
+        <errorConditionFormula>AND( NOT(ISBLANK(Parent_Query__c )),ISBLANK( Object_Name_Plural__c  ))</errorConditionFormula>
+        <errorDisplayField>Object_Name_Plural__c</errorDisplayField>
+        <errorMessage>Object Name (Plural) is Required when Parent Query is specified. Eg. MUSW__Fees__r</errorMessage>
+    </validationRules>
+</CustomObject>

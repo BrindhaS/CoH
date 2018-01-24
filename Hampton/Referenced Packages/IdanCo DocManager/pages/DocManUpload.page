@@ -1,0 +1,152 @@
+<apex:page showHeader="false" standardController="Document" extensions="idan_dm.DocManUploadControllerExtension" sidebar="false" id="fileUpload">
+
+<style type="text/css">
+    body {background: #F3F3EC; padding-top: 15px}
+</style>
+
+<apex:sectionHeader title="Upload new document to folder {!HTMLENCODE($CurrentPage.parameters.fn)}"/>
+
+<apex:form id="theForm">
+    <apex:pageBlock mode="edit" title=" " id="pageBlock">
+        <apex:pageMessages />
+        <apex:pageBlockSection title="1. Enter details" columns="1" collapsible="false" id="enterDetails">
+            <apex:pageBlockSectionItem id="sectionDocumentName">
+                <apex:outputLabel for="documentName">Document name</apex:outputLabel>
+                <apex:outputPanel styleClass="requiredInput" layout="block">
+                <apex:outputPanel styleClass="requiredBlock" layout="block"/>
+                <apex:inputText id="documentName" value="{!document.name}" size="80" required="false" style="{!docNameErrorStyle}"/>
+                <apex:pageMessage rendered="{!docNameError}" summary="Error: You must enter a value" severity="error"/>
+                </apex:outputPanel>
+            </apex:pageBlockSectionItem>
+            <apex:pageBlockSectionItem >
+                <apex:outputLabel for="intUseOnly">Internal use only</apex:outputLabel>
+                <apex:inputCheckbox id="intUseOnly" value="{!document.isInternalUseOnly}"/>
+            </apex:pageBlockSectionItem>
+            <apex:pageBlockSectionItem >
+                <apex:outputLabel for="extAvailImg">Externally available image</apex:outputLabel>
+                <apex:inputCheckbox id="extAvailImg" value="{!document.IsPublic}"/>
+            </apex:pageBlockSectionItem>
+             <apex:pageBlockSectionItem >
+                <apex:outputLabel for="documentDesc">Description</apex:outputLabel>
+                <apex:inputTextarea id="documentDesc" value="{!document.description}" rows="3" cols="70"/>
+             </apex:pageBlockSectionItem>
+             <apex:pageBlockSectionItem >
+                <apex:outputLabel for="documentKeywords">Keywords</apex:outputLabel>
+                <apex:inputText id="documentKeywords" value="{!document.keywords}" size="80"/>
+             </apex:pageBlockSectionItem>
+       </apex:pageBlockSection>
+         
+        <apex:pageBlockSection title="2. Select the file" columns="1" collapsible="false" id="selectFile">
+            <p>
+            <input type="radio" name="doctype" onclick='onClickRadio(0);' id='radioDocType_file'/>Enter the path of the file or click browse to find the file.<br />
+            <apex:pageBlockSectionItem id="sectionFile">
+                <apex:outputLabel for="docFileName">File to upload</apex:outputLabel>
+                <apex:outputPanel layout="block" id="requiredInputFile">
+                <apex:outputPanel styleClass="requiredBlock" layout="block"/>
+                <apex:inputFile id="docFileName" value="{!document.body}" 
+                    filename="{!docPath}" size="70" required="false" style="{!docBodyErrorStyle}" 
+                    onblur="onFilePathBlur();"/>
+                <apex:pageMessage rendered="{!docBodyError}" 
+                    summary="Error: Please specify a file to upload. Type in the path to the file, or use the [Browse] button to locate it in your local filesystem." 
+                    severity="error"/>
+                </apex:outputPanel>
+             </apex:pageBlockSectionItem>
+            <i>Or:</i><br />
+            <input type="radio" name="doctype" onclick='onClickRadio(1);' id='radioDocType_url'/>Create a reference link to the file. Enter a file location that others can access.<br />
+             <apex:pageBlockSectionItem id="sectionUrl">
+                <apex:outputLabel for="docUrl">Path/URL to reference</apex:outputLabel>
+                <apex:outputPanel layout="block" id="requiredInputUrl">
+                <apex:outputPanel styleClass="requiredBlock" layout="block"/>
+                <apex:inputText id="docUrl" value="{!document.URL}" size="70" required="false" style="{!docUrlErrorStyle}"/>
+                <apex:pageMessage rendered="{!docUrlError}" summary="Error: You must enter a value" severity="error"/>
+                </apex:outputPanel>
+             </apex:pageBlockSectionItem>
+            </p>
+        </apex:pageBlockSection>
+        
+        <apex:pageBlockSection title="3. Click the Save button to upload" columns="1" collapsible="false">
+            <apex:commandButton value="Save" action="{!doSave}" />
+        </apex:pageBlockSection>
+       
+        <apex:pageBlockSection title="Click the Cancel to cancel the upload" columns="1" collapsible="false">
+             <apex:commandButton onclick="cancelAdd()" value="Cancel" />
+        </apex:pageBlockSection>
+
+        <apex:inputHidden value="{!docType}" id="docType"/>
+
+    </apex:pageBlock>
+</apex:form>
+
+<script>
+
+try
+{
+    var docType = document.getElementById('fileUpload:theForm:pageBlock:docType');
+    if ( docType.value != 'url' )
+    {
+        var radioFile = document.getElementById('radioDocType_file');
+        radioFile.checked = true;
+        var blockFile = document.getElementById('fileUpload:theForm:pageBlock:selectFile:sectionFile:requiredInputFile');
+        blockFile.className = 'requiredInput';
+    }        
+    else
+    {
+        var radioUrl = document.getElementById('radioDocType_url');
+        radioUrl.checked = true;
+        var blockUrl = document.getElementById('fileUpload:theForm:pageBlock:selectFile:sectionUrl:requiredInputUrl');
+        blockUrl.className = 'requiredInput';
+    }        
+}
+catch ( e )
+{
+    alert( 'Error: ' + e.message );
+}
+ 
+function onClickRadio( index )
+{
+    try
+    {
+        var docType = document.getElementById('fileUpload:theForm:pageBlock:docType');
+        docType.value = ( index == 0 ) ? 'file' : 'url';
+    }
+    catch ( e )
+    {
+        alert( 'Error: ' + e.message );
+    }
+}   
+
+function onFilePathBlur()
+{
+    try
+    {
+        // Get the path specified by the user
+        var elems = document.getElementsByName('fileUpload:theForm:pageBlock:selectFile:sectionFile:docFileName:inputFile:file');
+        if ( elems && elems[ 0 ] )
+        {
+            var docPath = elems[ 0 ];
+            if ( docPath.value && docPath.value != '' )
+            {   // We have a path
+                var docName = document.getElementById('fileUpload:theForm:pageBlock:enterDetails:sectionDocumentName:documentName');
+                if ( docName.value == '' )
+                {   // There is no document name. Use the file name from the path...
+                    docName.value = docPath.value.split('\\').pop().split('/').pop();
+                }
+            } 
+        }
+    }
+    catch ( e )
+    {
+        alert( 'Error: ' + e.message );
+    }
+}   
+
+function cancelAdd()
+{
+      var winMain = window.opener;
+      if (null == winMain)
+         winMain = window.parent.opener;
+      winMain.closeForm('Cancel', 'Upload');
+}
+</script>
+
+</apex:page>

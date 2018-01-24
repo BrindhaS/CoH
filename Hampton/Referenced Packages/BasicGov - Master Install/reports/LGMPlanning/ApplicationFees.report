@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Report xmlns="http://soap.sforce.com/2006/04/metadata">
+    <columns>
+        <field>FK_$Planning_Application__c.Type__c</field>
+    </columns>
+    <columns>
+        <field>FK_$Planning_Application__c.Status__c</field>
+    </columns>
+    <columns>
+        <field>FK_CREATED_DATE</field>
+    </columns>
+    <columns>
+        <field>CUST_NAME</field>
+    </columns>
+    <columns>
+        <field>Fee__c.Type__c</field>
+    </columns>
+    <columns>
+        <aggregateTypes>Sum</aggregateTypes>
+        <field>Fee__c.Amount__c</field>
+    </columns>
+    <columns>
+        <field>Fee__c.Fee_Paid_Date2__c</field>
+    </columns>
+    <columns>
+        <field>Fee__c.Payment_Method__c</field>
+    </columns>
+    <columns>
+        <field>Fee__c.Receipt_Number__c</field>
+    </columns>
+    <columns>
+        <field>Fee__c.Check_Number__c</field>
+    </columns>
+    <description>Fees with Planning Application: All project application fees (paid/unpaid)</description>
+    <format>Summary</format>
+    <groupingsDown>
+        <dateGranularity>Day</dateGranularity>
+        <field>FK_$Planning_Application__c.Project__c</field>
+        <sortOrder>Asc</sortOrder>
+    </groupingsDown>
+    <groupingsDown>
+        <dateGranularity>Day</dateGranularity>
+        <field>FK_NAME</field>
+        <sortOrder>Asc</sortOrder>
+    </groupingsDown>
+    <name>Application Fees</name>
+    <reportType>CustomEntity$Fee__c@Fee__c.Planning_Application__c</reportType>
+    <scope>organization</scope>
+    <showDetails>true</showDetails>
+    <timeFrameFilter>
+        <dateColumn>FK_CREATED_DATE</dateColumn>
+        <interval>INTERVAL_PREVCURFY</interval>
+    </timeFrameFilter>
+</Report>

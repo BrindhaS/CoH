@@ -1,0 +1,201 @@
+<apex:page sidebar="false" standardStylesheets="false" controller="MUSW.GISViewerController" showHeader="false" title="BasicGov GIS">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+        <meta http-equiv="X-UA-Compatible" content="IE=7" />
+        <title>BasicGov GIS Viewer</title>
+        <apex:stylesheet value="https://serverapi.arcgisonline.com/jsapi/arcgis/1.2/js/dojo/dijit/themes/tundra/tundra.css"/>
+        <apex:stylesheet value="https://serverapi.arcgisonline.com/jsapi/arcgis/1.2/js/dojo/dojo/resources/dojo.css"/>
+        <apex:stylesheet value="{!URLFOR($Resource.MUSW__ArcGIS, 'js/com/esri/solutions/jsviewer/themes/darkangel/darkangel.css')}"/>
+        <apex:stylesheet value="{!URLFOR($Resource.MUSW__ArcGIS, 'js/com/esri/solutions/jsviewer/themes/darkangel/override.css')}"/>
+        <apex:stylesheet value="{!URLFOR($Resource.MUSW__ArcGIS, 'jsviewer.css')}"/>
+        
+        <!-- Fix for PNG transparency with IE6 -->
+        <style type="text/css">
+            div { behavior: url({!URLFOR($Resource.ArcGIS, 'iepngfix.htc')}) }
+        </style>
+        
+        <!-- bootstrap the ArcGIS Server Javascript API -->
+        <script type="text/javascript">
+            djConfig = {
+                parseOnLoad: true,
+                baseUrl:'./',
+                modulePaths:{'com.esri.solutions.jsviewer':'{!URLFOR($Resource.ArcGIS, 'js/com/esri/solutions/jsviewer')}'},
+                isDebug: false,
+                usePlainJson: true
+                //locale: 'fr'
+            };
+        </script>
+        <script type="text/javascript" src="https://serverapi.arcgisonline.com/jsapi/arcgis/?v=1.2"></script>
+        <script type="text/javascript" src="{!URLFOR($Resource.ArcGIS, 'js/com/esri/solutions/jsviewer/json2.js')}"></script>
+        <script type="text/javascript">
+            dojo.require("dojo.parser");
+            
+            dojo.require("esri.map");
+            esriConfig.defaults.io.proxyUrl = "{!URLFOR($Resource.ArcGIS, 'proxy.php')}";
+            esriConfig.defaults.configUrl = "{!URLFOR($Resource.ArcGIS, 'config.xml')}";
+            
+            // Site Starter classes
+            dojo.require("com.esri.solutions.jsviewer.ConfigManager");
+            dojo.require("com.esri.solutions.jsviewer.WidgetContainer");
+            dojo.require("com.esri.solutions.jsviewer.Controller");
+            dojo.require("com.esri.solutions.jsviewer.DataManager");
+            dojo.require("com.esri.solutions.jsviewer.MapManager");
+            dojo.require("com.esri.solutions.jsviewer.WidgetManager");
+            dojo.require("com.esri.solutions.jsviewer.util");
+            
+            dojo.subscribe("BGQueryEvent", this, "BGQueryHandler");
+            dojo.subscribe("BGFindEvent", this, "BGFindHandler");
+            dojo.subscribe("BGLoadEvent", this, "BGLoadHandler");
+            dojo.subscribe("largeRequestEvent", this, "largeRequestHandler");
+            dojo.subscribe("BGLoadRelatedParcelsEvent", this, "BGLoadRelatedParcelsHandler");
+            dojo.subscribe("BGLoadParcelRelatedObjectsEvent", this, "BGLoadParcelRelatedObjectsHandler");
+            dojo.subscribe("BGAttachEvent", this, "BGAttachHandler");
+            dojo.subscribe("BGProximitySearchEvent", this, "BGProximitySearchHandler");
+            
+            function BGQueryHandler(qName) {
+                QueryJS(qName);
+            };
+            
+            function BGFindHandler(text, findObjName, isRelated) {
+                FindJS(text, findObjName, isRelated);
+            };
+            
+            function BGLoadHandler(json, objName, relatedObjName, type, primaryParcel) {
+                json = json.replace(/!!/g, "\"");
+                LoadJS(json, objName, relatedObjName, type, primaryParcel);
+            };
+            
+            function largeRequestHandler(url) {
+                LargeRequestJS(url);
+            };
+            
+            function BGLoadRelatedParcelsHandler(objId) {
+                LoadRelatedParcelsJS(objId);
+            };
+            
+            function BGLoadParcelRelatedObjectsHandler(apn, objName) {
+                LoadParcelRelatedObjectsJS(apn, objName);
+            };
+            
+            function BGAttachHandler(json, objName, parentNumber, parentName, type) {
+                json = json.replace(/!!/g, "\"");
+                AttachJS(json, objName, parentNumber, parentName, type);
+            };
+            
+            function BGProximitySearchHandler(x, y, queryName, dist) {
+                ProximitySearchJS(x, y, queryName, dist);
+            };
+            
+            function onPageResizeHandler() {
+                try {
+                    // Comment out these lines, and the onresize on body
+                    // if you dont want full-screen
+                    if (com.esri.solutions.jsviewer.util) {
+                        var screen = com.esri.solutions.jsviewer.util.pageBox();
+                        dojo.publish("mapResizeRequestEvent", [screen])
+                    }
+                }
+                catch (err) {}
+            };
+            
+            /*  Add support for trim() in IE8 */
+            function initTrim() {
+                if(typeof String.prototype.trim !== 'function') {
+                  String.prototype.trim = function() {
+                    return this.replace(/^\s+|\s+$/, ''); 
+                  }
+                }
+            }
+            
+            /*  Add support for indexOf() in IE8 */
+            function initArrays() {
+                if (!Array.prototype.indexOf)
+                {
+                  Array.prototype.indexOf = function(elt /*, from*/)
+                  {
+                    var len = this.length;
+                
+                    var from = Number(arguments[1]) || 0;
+                    from = (from < 0)
+                         ? Math.ceil(from)
+                         : Math.floor(from);
+                    if (from < 0)
+                      from += len;
+                
+                    for (; from < len; from++)
+                    {
+                      if (from in this &&
+                          this[from] === elt)
+                        return from;
+                    }
+                    return -1;
+                  };
+                }
+            }
+            
+            dojo.addOnLoad(onPageResizeHandler);
+            dojo.addOnLoad(initTrim);
+            //dojo.addOnLoad(initArrays);
+        </script>
+    </head>
+    <body class="tundra" onresize="onPageResizeHandler()">
+        <!-- Markup to create faceless Site Starter manager objects -->
+        <div dojoType="com.esri.solutions.jsviewer.ConfigManager"></div>
+        <div dojoType="com.esri.solutions.jsviewer.DataManager"></div>
+        <div dojoType="com.esri.solutions.jsviewer.MapManager"></div>
+        <div dojoType="com.esri.solutions.jsviewer.WidgetManager"></div>
+        
+        <div id="map" style="width: 1000px; height: 900px;">
+            <div dojoType="com.esri.solutions.jsviewer.Controller"></div>
+            <div dojoType="com.esri.solutions.jsviewer.WidgetContainer"></div>
+        </div>
+    </body>
+    
+    <apex:form >
+    <apex:actionFunction action="{!query}" name="QueryJS" oncomplete="dojo.publish('BGQueryReturnEvent', ['{!queryReturnVal}']);" reRender="">
+        <apex:param name="firstParam" assignTo="{!queryName}" value="" />
+    </apex:actionFunction>
+    
+    <apex:actionFunction action="{!find}" name="FindJS" oncomplete="dojo.publish('BGFindReturnEvent', ['{!findReturnVal}', '{!searchObjectName}', '{!searchIsRelated}']);" reRender="">
+        <apex:param name="firstParam" assignTo="{!searchText}" value="" />
+        <apex:param name="secondParam" assignTo="{!searchObjectName}" value="" />
+        <apex:param name="thirdParam" assignTo="{!searchIsRelated}" value="" />
+    </apex:actionFunction>
+    
+    <apex:actionFunction action="{!loadAndAttach}" name="LoadJS" oncomplete="dojo.publish('BGLoadReturnEvent', ['{!loadReturnVal}', '{!loadRelatedObjectName}', '{!loadPrimaryParcel}']);" reRender="">
+        <apex:param name="firstParam" assignTo="{!loadJsonObjs}" value="" />
+        <apex:param name="secondParam" assignTo="{!loadObjectName}" value="" />
+        <apex:param name="thirdParam" assignTo="{!loadRelatedObjectName}" value="" />
+        <apex:param name="forthParam" assignTo="{!loadObjectType}" value="" />
+        <apex:param name="fifthParam" assignTo="{!loadPrimaryParcel}" value="" />
+    </apex:actionFunction>
+    
+    <apex:actionFunction action="{!proxyRequest}" name="LargeRequestJS" oncomplete="dojo.publish('proxyResponseEvent', ['{!proxyResponseVal}']);" reRender="">
+        <apex:param name="firstParam" assignTo="{!requestUrl}" value="" />
+    </apex:actionFunction>
+    
+    <apex:actionFunction action="{!loadRelatedParcels}" name="LoadRelatedParcelsJS" oncomplete="dojo.publish('BGRelatedParcelsReturnEvent', ['{!relatedParcelsReturnVal}']);" reRender="">
+        <apex:param name="firstParam" assignTo="{!parentId}" value="" />
+    </apex:actionFunction>
+    
+    <apex:actionFunction action="{!loadParcelRelatedObjects}" name="LoadParcelRelatedObjectsJS" oncomplete="dojo.publish('BGParcelRelatedObjectsReturnEvent', ['{!parcelRelatedObjectsReturnVal}', '{!parcelRelatedObjectApiName}']);" reRender="">
+        <apex:param name="firstParam" assignTo="{!parcelNumber}" value="" />
+        <apex:param name="secondParam" assignTo="{!parcelRelatedObjectApiName}" value="" />
+    </apex:actionFunction>
+    
+    <apex:actionFunction action="{!attachToExistingObject}" name="AttachJS" oncomplete="dojo.publish('BGAttachReturnEvent', ['{!attachReturnVal}']);" reRender="">
+        <apex:param name="firstParam" assignTo="{!attacheeJson}" value="" />
+        <apex:param name="secondParam" assignTo="{!attacheeName}" value="" />
+        <apex:param name="thirdParam" assignTo="{!parentNumber}" value="" />
+        <apex:param name="forthParam" assignTo="{!parentName}" value="" />
+        <apex:param name="fifthParam" assignTo="{!attachObjectType}" value="" />
+    </apex:actionFunction>
+    
+    <apex:actionFunction action="{!searchProximity}" name="ProximitySearchJS" oncomplete="dojo.publish('BGFindReturnEvent', ['{!proximityReturnVal}', null, 'true']);" reRender="">
+        <apex:param name="firstParam" assignTo="{!objX}" value="" />
+        <apex:param name="secondParam" assignTo="{!objY}" value="" />
+        <apex:param name="thirdParam" assignTo="{!proxQueryName}" value="" />
+        <apex:param name="fifthParam" assignTo="{!proxDistance}" value="" />
+    </apex:actionFunction>
+    </apex:form>
+</apex:page>

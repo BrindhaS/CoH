@@ -1,0 +1,155 @@
+<apex:page controller="MUSW.BulkController">
+    <apex:messages />
+    <apex:form >
+        <apex:sectionHeader title="{!parentObjectLabel}" subtitle="{!trackno}">
+            <apex:commandLink action="{!cancel}"
+                value="{!parentObjectLabel}: {!trackno}" id="backToParent" immediate="true" />
+        </apex:sectionHeader>
+        <apex:pageblock title="New/Edit {!listObjectLabel}">
+            <apex:pageblockbuttons >
+                <apex:commandbutton action="{!save}" value="Save" />
+                <apex:commandbutton action="{!cancel}" value="Cancel" immediate="true" />
+            </apex:pageblockbuttons>
+            
+            <apex:pageBlockSection title="Auto-Fill Values" columns="1" id="autoFillSection" rendered="{!$User.UITheme != 'PortalDefault'}">
+                <apex:pageBlockTable value="{!fh}" var="item" rendered="{!displayFee}">
+                    
+                    <apex:repeat value="{!listFieldsetFields}" var="feefield">
+                        <apex:column >
+                            <apex:facet name="header">{!feefield.label}</apex:facet>
+                            <apex:inputField value="{!item[feefield]}" required="false"/>
+                        </apex:column>
+                    </apex:repeat>                    
+                    
+                    <apex:column headerValue="Record Type">
+                        <apex:inputField value="{!item.recordTypeId}" onchange="recordTypeChangedJS();"/>
+                    </apex:column>
+                </apex:pageBlockTable>
+                
+                <apex:pageBlockTable value="{!th}" var="item" rendered="{!displayTask}">                    
+                    
+                     <apex:repeat value="{!listFieldsetFields}" var="taskfield">
+                        <apex:column >
+                            <apex:facet name="header">{!taskfield.label}</apex:facet>
+                            <apex:inputField value="{!item[taskfield]}" required="false"/>
+                        </apex:column>
+                    </apex:repeat>
+                    
+                    <apex:column headerValue="Record Type">
+                        <apex:inputField value="{!item.recordTypeId}" onchange="recordTypeChangedJS();"/>
+                    </apex:column>
+                </apex:pageBlockTable>
+
+                <apex:pageBlockTable value="{!ch}" var="item" rendered="{!displayCondition}">                   
+                    
+                     <apex:repeat value="{!listFieldsetFields}" var="condfield">
+                        <apex:column >
+                            <apex:facet name="header">{!condfield.label}</apex:facet>
+                            <apex:inputField value="{!item[condfield]}" required="false"/>
+                        </apex:column>
+                    </apex:repeat>
+                    
+                    <apex:column headerValue="Record Type">
+                        <apex:inputField value="{!item.recordTypeId}" onchange="recordTypeChangedJS();"/>
+                    </apex:column>
+                </apex:pageBlockTable>
+                
+                <apex:pageBlockTable value="{!wh}" var="item" rendered="{!displayWorkItem}">
+                                    
+                    <apex:repeat value="{!listFieldsetFields}" var="wifield">
+                        <apex:column >
+                            <apex:facet name="header">{!wifield.label}</apex:facet>                            
+                            <apex:inputField value="{!item[wifield]}" required="false"/>                           
+                        </apex:column>
+                    </apex:repeat>
+                    
+                    <apex:column headerValue="Record Type">
+                        <apex:inputField value="{!item.recordTypeId}" onchange="recordTypeChangedJS();"/>
+                    </apex:column>
+                </apex:pageBlockTable>
+            </apex:pageBlockSection>
+            <apex:commandButton action="{!fillDown}" value="Fill Down"
+                title="Enter values above and click to fill each column below"
+                id="fillDownButton" rerender="feelist,tasklist,conditionlist,workitemlist" rendered="{!$User.UITheme != 'PortalDefault'}"/>
+            
+            <apex:variable value="{!IF(displayFee,'Unpaid','')}" var="feeTitle"/>
+            <apex:variable value="{!IF(displayTask,'My Open','')}" var="taskTitle"/>
+            <apex:variable value="{!IF(displayCondition,'My','')}" var="conditionTitle"/>
+            <apex:variable value="{!IF(displayWorkItem,'','')}" var="workitemTitle"/>
+            
+            <apex:pageBlockSection title="New/Edit {!feeTitle}{!taskTitle}{!conditionTitle}{!workitemTitle} {!listObjectLabel} ({!recordCount})"
+                columns="1" id="itemList">
+                <apex:pageBlockTable value="{!f}" var="item" id="feelist" rendered="{!displayFee}">
+                    
+                    <apex:repeat value="{!listFieldsetFields}" var="feefield2">
+                        <apex:column >
+                            <apex:facet name="header">{!feefield2.label}</apex:facet>
+                            <apex:inputField value="{!item[feefield2]}"/>
+                        </apex:column>
+                    </apex:repeat>
+                    
+                    <apex:column headerValue="Record Type">
+                        <apex:inputField value="{!item.recordTypeId}" onchange="recordTypeChangedJS();"/>
+                    </apex:column>
+
+                </apex:pageBlockTable>
+                
+                <apex:pageBlockTable value="{!t}" var="item" id="tasklist" rendered="{!displayTask}">                    
+                    
+                    <apex:repeat value="{!listFieldsetFields}" var="taskfield2">
+                        <apex:column >
+                            <apex:facet name="header">{!taskfield2.label}</apex:facet>
+                            <apex:inputField value="{!item[taskfield2]}"/>
+                        </apex:column>
+                    </apex:repeat>
+                    
+                    <apex:column headerValue="Record Type">
+                        <apex:inputField value="{!item.recordTypeId}" onchange="recordTypeChangedJS();"/>
+                    </apex:column>
+                    
+                </apex:pageBlockTable>
+
+                <apex:pageBlockTable value="{!c}" var="item" id="conditionlist" rendered="{!displayCondition}">                    
+                    
+                    <apex:repeat value="{!listFieldsetFields}" var="condfield2">
+                        <apex:column >
+                            <apex:facet name="header">{!condfield2.label}</apex:facet>
+                            <apex:inputField value="{!item[condfield2]}"/>
+                        </apex:column>
+                    </apex:repeat>
+                    
+                    <apex:column headerValue="Record Type">
+                        <apex:inputField value="{!item.recordTypeId}" onchange="recordTypeChangedJS();"/>
+                    </apex:column>
+                </apex:pageBlockTable>
+                
+                <apex:pageBlockTable value="{!w}" var="item" id="workitemlist" rendered="{!displayWorkItem}">
+                    
+                    <apex:repeat value="{!listFieldsetFields}" var="wifield2">
+                        <apex:column >
+                            <apex:facet name="header">{!wifield2.label}</apex:facet>
+                            <apex:inputField value="{!item[wifield2]}"/>
+                        </apex:column>
+                    </apex:repeat>
+                    
+                    <apex:column headerValue="Record Type">
+                        <apex:inputField value="{!item.recordTypeId}" onchange="recordTypeChangedJS();"/>
+                    </apex:column>
+                </apex:pageBlockTable>
+            </apex:pageBlockSection>
+            
+            <apex:commandButton action="{!addRow}" value="Add Rows"
+                title="Click for more defaulted rows to add" id="addRowButton"
+                rerender="feelist,tasklist,conditionlist,workitemlist" immediate="false" rendered="{!$User.UITheme != 'PortalDefault'}"/>
+            <apex:inputText value="{!addRowCount}" id="addRowCount" size="2"
+                maxlength="2"  rendered="{!$User.UITheme != 'PortalDefault'}" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            <apex:commandButton action="{!hideRow}"
+                value="Hide Row" title="Click to hide last row (does not delete)"
+                id="hideRowButton" rerender="feelist,tasklist,conditionlist,workitemlist" rendered="{!$User.UITheme != 'PortalDefault'}" immediate="false"/>
+        </apex:pageblock>
+                
+        <!--<apex:actionFunction name="recordTypeChangedJS" action="{!applyRecordType}" reRender="itemList,autoFillSection"/>-->
+        <apex:actionFunction name="recordTypeChangedJS" reRender="itemList,autoFillSection"/>
+
+    </apex:form>
+</apex:page>

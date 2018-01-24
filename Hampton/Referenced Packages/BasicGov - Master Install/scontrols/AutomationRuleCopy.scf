@@ -1,0 +1,244 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html>
+	<head>
+		<title>Run Automation Rules</title>
+		<link href="/dCSS/Theme2/default/common.css" type="text/css" media="handheld,print,projection,screen,tty,tv" rel="stylesheet">
+	    <script type="text/javascript" src="/js/functions.js"></script>
+	    <script src="/soap/ajax/8.0/connection.js"></script>
+	<script id="clientEventHandlersJS" language="javascript">	
+<!-- 
+var queryCount = 3; //used for async query callbacks
+var automationRule = new Array();
+var automationFilter = new Array();
+var automationResult = new Array();
+
+var debugControl = null;
+
+
+//Use this function as the entry point for your DHTML and JAVASCRIPT processing
+function setup()
+{ 
+	if ({!$User.Debug__c} == true) {
+		//turn on debug
+		debugControl= document.getElementById("divDebug");
+		debugControl.style.display = "block";
+		debug = true;
+		addMessage ("<strong>Debug Mode</strong>");
+	}
+
+	if ({!$User.Step_Through__c} == true) {
+		//throw uncaught exception so can step through in managed client environment
+		throw "e";
+	}
+
+	//***
+	//update display
+	document.getElementById('newRuleName').value = "{!JSENCODE(Automation_Rule__c.Name)}";
+}
+
+function cancelUpdate() { 
+	window.parent.parent.location.href ="../{!URLENCODE(Automation_Rule__c.Id)}"; 
+}
+
+//send changes to host
+function saveResult() 
+{	 
+
+	sqlRuleWhere = " where Id = '{!Automation_Rule__c.Id}'";
+	sqlFilterResultWhere= " where MUSW__Automation_Rule__c = '{!Automation_Rule__c.Id}' and MUSW__Active__c = true";
+
+	//rule
+	var qr = sforce.connection.query("SELECT "+getFields("MUSW__Automation_Rule__c","create")+" FROM MUSW__Automation_Rule__c" + sqlRuleWhere,
+	      	{onSuccess : processQuery,
+       		 onFailure : failureQuery, 
+       		 source : "rule"});
+
+	//results
+	var qr = sforce.connection.query("SELECT "+getFields("MUSW__Automation_Result__c","create")+" FROM MUSW__Automation_Result__c" + sqlFilterResultWhere + " order by MUSW__Order__c, Id",
+      	{onSuccess : processQuery,
+      	 onFailure : failureQuery, 
+      	 source : "result"});
+	
+	//filters
+	var qr = sforce.connection.query("SELECT "+getFields("MUSW__Automation_Filter__c","create")+" FROM MUSW__Automation_Filter__c" + sqlFilterResultWhere + " order by MUSW__Order__c, Id",
+		{onSuccess : processQuery,
+  		onFailure : failureQuery, 
+  		source : "filter"});
+
+}
+
+function processQuery(qr, mySource) {
+
+
+switch (mySource)
+  { 
+    case "rule": { 
+    	automationRule = automationRule.concat(qr.getArray("records"));
+    	break }
+    case "result": { 
+    	automationResult = automationResult.concat(qr.getArray("records"));
+    	break }
+    case "filter": { 
+		automationFilter = automationFilter.concat(qr.getArray("records"));
+    	break }
+ 	default: { ret = false; break }
+  }
+
+	if (qr.queryLocator != null) {
+		queryCount++;
+      	sforce.connection.queryMore(qr.queryLocator, {
+          onSuccess : processQuery, 
+          failureQuery : failureQuery,  
+          source : mySource});
+    }
+
+
+	queryCount--;
+	
+	if (queryCount == 0 ) {
+		process();
+	}
+}
+
+function failureQuery(qr, source) {
+	alert(qr.fault);
+}
+
+function process (){
+
+var ruleCreate = new Array();
+var numInserts = 0;
+
+var newRuleId;
+var retval = false;
+try
+{	
+	automationRule[0]["Name"] = document.getElementById('newRuleName').value;
+	delete automationRule[0].Id;
+	var error = sforce.connection.create([automationRule[0]]);
+	
+	//get new id
+	newRuleId = error[0].id;
+
+	for (var i=0;i<automationFilter.length;i++) {
+		automationFilter[i]["MUSW__Automation_Rule__c"] = newRuleId;
+		delete automationFilter[i].Id;
+		ruleCreate.push(automationFilter[i]);
+		numInserts++;
+	}
+	
+	for (var i=0;i<automationResult.length;i++) {
+		automationResult[i]["MUSW__Automation_Rule__c"] = newRuleId;
+		delete automationResult[i].Id;
+		ruleCreate.push(automationResult[i]);
+		numInserts++;
+	}
+	if (numInserts > 0) {
+		//JAW - REVIEW - need to parse the error array for success: false and what to do with error? alert? debug only?
+		var error = sforce.connection.create(ruleCreate);
+	}
+	retval = true;
+	window.parent.parent.location.href ="../" + newRuleId;
+}
+catch(err)
+{
+	addMessage("Rule Clone Error: " + err.message);
+}
+return retval;	
+}
+
+function getFields(sobject, action) {
+	var fields = sforce.connection.describeSObject(sobject).fields;
+	var fieldList = "";
+	
+	switch(action) 
+	{
+		case "update": { fieldList = "Id, ";
+						for (var i=0; i<fields.length; i++) {
+							if (fields[i].updateable == true || fields[i].updateable == "true") {
+								fieldList = fieldList + fields[i].name + ", ";
+							}
+						} break; }
+		case "create": 	{ for (var i=0; i<fields.length; i++) {
+							if (fields[i].updateable == true || fields[i].updateable == "true") {
+								fieldList = fieldList + fields[i].name + ", ";
+							}
+						} break; }
+		default: 	{ 	for (var i=0; i<fields.length; i++)
+		    			{
+							fieldList = fieldList + fields[i].name + ", ";
+						} break; }
+	}
+	
+	//chop off last comma
+	fieldList = fieldList.substring(0, fieldList.length-2);
+	return fieldList;
+}
+
+addMessage = function(msg, clazz, newline) {
+	if (debug)
+		if (clazz != null)
+			debugControl.innerHTML += "<p class='"+clazz+"'>"+msg+"</p>";
+		else
+		{
+			if (newline == null)
+				debugControl.innerHTML += msg + "<br/>";
+			else
+				debugControl.innerHTML += msg;
+		}
+};
+//-->
+</script>
+	</head>
+	<body onload="setup()" >
+		<form id = "myform" name = "myform">
+			<div class="lookup">
+				<div class="bPageTitle">
+					<div class="ptBody primaryPalette">
+						<div class="content">
+							<img src="/s.gif" alt="Lookup"  class="pageTitleIcon">
+							<h1>Copy Rule</h1>
+						</div>
+					</div>
+				</div>
+				<table cellspacing = 0 cellpadding = 0 border = 0>
+					<tr>
+						<td width = 5></td>
+						<td width = 100%></td>
+						<td width = 5></td>
+					</tr>
+					<tr>
+						<td>&nbsp;</td>
+						<td ID="status" style = "padding:2px 10px 2px 2px; text-align:center; font-size: 8pt; font-weight: bold; color:#333;">New Rule Name:</td>
+						<td>&nbsp;</td>
+					</tr>
+					<tr>
+						<td>&nbsp;</td>
+						<td style = "padding:2px 10px 2px 2px; text-align:center; font-size: 8pt; font-weight: bold; color:#333;" align = "center"><span id = "counterLabel" name = "counterLabel"></span></td>
+						<td>&nbsp;</td>
+					</tr>					
+					<tr>
+						<td>&nbsp;</td>
+						<td style = "padding:2px 10px 2px 2px; text-align:center; font-size: 8pt; font-weight: bold; color:#333;" align = "center">
+							<INPUT NAME="newRuleName" ID="newRuleName" maxlength="70" SIZE="20" type="text" style = "width:50%; height:20px"></INPUT>
+						</td>
+						<td>&nbsp;</td>
+					</tr>					
+					<tr>
+						<td>&nbsp;</td>
+						<td><br></td>
+						<td>&nbsp;</td>
+					</tr>
+					<tr>
+						<td>&nbsp;</td>
+						<td align = "center">
+							<input id = "submit" Name = "submit" class="btn" type=button value="Save" onClick="javascript:return saveResult();" disable = "true">
+							<input id = "cancel" Name = "cancel" class="btn" type=button value="Cancel" onClick="javascript: cancelUpdate()" disable = "true">
+						</td>
+					</tr>
+				</table>
+			</div>
+			<DIV id="divDebug"></DIV>
+		</form>	
+	</body>
+</html>

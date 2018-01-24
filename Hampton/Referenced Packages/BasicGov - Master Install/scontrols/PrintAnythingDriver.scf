@@ -1,0 +1,826 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html>
+	<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>Printable View</title>
+	    <script src="/soap/ajax/8.0/connection.js" type="text/javascript"></script>
+		{!INCLUDE($SControl.lgmCommon)}
+		<script id="clientEventHandlersJS" language="javascript">
+<!--
+
+var isDebug = false;
+var isComplete = false;
+var mergeData = new Array();
+var metaResultCount = 0;
+var metaData = {};
+var singularRecords = null;
+var currentQuery = 0;
+var templateSelected = null;
+var entityQueryCounts = {};
+var packageId;
+
+function setup() {
+
+	isDebug = {!$User.Debug__c};
+
+	if (isDebug) {
+		document.getElementById("divDebugHeader").style.display = "block";
+		document.getElementById("divDebug").style.display = "block";
+	}
+	
+	if ({!$User.Step_Through__c}) {
+		//throw uncaught exception so can step through in managed client environment
+		throw "e";
+	}
+
+	loadPackage();
+}
+
+function prtanyDebug(msg, clazz) {
+	if (isDebug) {
+		document.getElementById("divDebug").innerHTML += "<p class='"+clazz+"'>"+msg+"</p>";
+	}
+}
+
+function notify(message) {
+	document.getElementById("divProgress").style.display = "block";
+	document.getElementById("divProgress").innerHTML = "<p>"+message+"</p>";
+}
+
+function getFields(sobject, forUpdate) {
+	var fields = sforce.connection.describeSObject(sobject).fields;
+	var fieldList = "";
+	
+	if (!forUpdate) {
+		for (var i=0; i<fields.length; i++) {
+			if ((fields[i].name != "IsDeleted") && (fields[i].name != "IsArchived") && (fields[i].name != "IsPublic"))
+				fieldList = fieldList + fields[i].name + ", ";
+		}
+	} else {
+		fieldList = "Id, ";
+		for (var i=0; i<fields.length; i++) {
+			if ((fields[i].name != "IsDeleted") && (fields[i].name != "IsArchived") && (fields[i].name != "IsPublic"))
+				if (fields[i].updateable == true || fields[i].updateable == "true") {
+					fieldList = fieldList + fields[i].name + ", ";
+				}
+		}
+	}
+	
+	//chop off last comma
+	fieldList = fieldList.substring(0, fieldList.length-2);
+	return fieldList;
+}
+
+function loadParameters() {
+	prtanyDebug("loading package meta data", "debug");
+	var userInfo = sforce.connection.getUserInfo();
+
+	addMergeField("UserInfo.FullName",userInfo.userFullName);
+	addMergeField("UserInfo.Email",userInfo.userEmail);
+	addMergeField("UserInfo.OrganizationId",userInfo.organizationId);
+
+	var url = ""+window.location;
+	var params = unescape(url.substring(url.indexOf("?")+1));
+	params = lgm.string.replaceAll(params,"+", " ");
+	while (params.indexOf("=") != -1) {
+		var name = params.substring(0,params.indexOf("="));
+		var value;
+		var endPosition = params.indexOf("&");
+		if (endPosition == -1) {
+			value = params.substring(params.indexOf("=")+1);
+			params = "";
+		} else {
+			value = params.substring(params.indexOf("=")+1, endPosition);
+			params = params.substring(endPosition+1);
+		}
+		addMergeField("Parameter."+name,value);
+	}
+}
+
+function nvl(value, defaultvalue) {
+	if (value == null) {
+		return defaultvalue;
+	} else {
+		return value;
+	}
+}
+
+function extractResult(result) {
+	if (result.size >= 0) {
+		prtanyDebug("Result : query response. Count : " + result.size, "debug");
+		if (result.size > 0) {
+			return result.getArray("records");
+		} else {
+			return null;		
+		}
+	} else if (result.length) {
+		prtanyDebug("Result : array. Count : " + result.length, "debug");
+		return result;
+	} else {
+		return null;
+	}
+}
+
+function replaceMergeFields(result, beginFieldTag, endFieldTag) {
+
+// replace any merge fields
+	while (result.indexOf(beginFieldTag) != -1) {
+		var startPos = result.indexOf(beginFieldTag);
+		var endPos = result.indexOf(endFieldTag, startPos);
+		var fieldName = result.substring(startPos+1, endPos);
+		var isDate = (fieldName.indexOf("DATE:") == 0);
+
+		if (isDate) {
+			fieldName = fieldName.substring(5);
+		}
+
+		var isCurrency = (fieldName.indexOf("CURRENCY:") == 0);
+		if (isCurrency) {
+			fieldName = fieldName.substring(9);
+		}
+
+		var fieldValue = mergeData[fieldName];
+		
+		if (fieldValue != null) {
+			if (isDate) {
+				var jsDate = lgm.date.parseDate(fieldValue);
+				fieldValue = lgm.date.formatDate(jsDate, metaData["MUSW__PRTANY_TEMPLATE__c"][templateSelected].get("MUSW__Date_Format__c"));
+
+			} else if (isCurrency) {
+				fieldValue = formatCurrency(fieldValue);
+			} else (typeof(fieldValue) == "string") //if content has linebreaks (cariage returns), replace with <br> tag for html output
+				if (fieldValue.indexOf("\n") != -1 )
+					fieldValue = fieldValue.replace(/\n/g,"<br>");
+		}
+		result = result.substring(0,startPos) + nvl(fieldValue,"") + result.substring(endPos+1);
+	}
+	
+	return result;
+}
+
+function merge(source) {
+
+	var result = source;
+	if (result == null || result =="") {
+		return result;
+	}
+	
+	// process repeat tags
+	while (result.indexOf("<prtany:repeat") != -1) {
+
+		var startTagStartPos = result.indexOf("<prtany:repeat");
+		var startTagEndPos = result.indexOf(">", startTagStartPos);
+
+		var startQuotePos = result.indexOf("\"", startTagStartPos);
+		var endQuotePos = result.indexOf("\"", startQuotePos+1);
+
+		var repeatingRecord = result.substring(startQuotePos+1,endQuotePos);
+
+		var endTagStartPos = result.indexOf("</prtany:repeat", startTagStartPos);
+		if (endTagStartPos == -1) {
+			throw "No repeat end tag was found";
+		}
+		var endTagEndPos = result.indexOf(">", endTagStartPos);
+
+		var repeatString = result.substring(startTagEndPos+1,endTagStartPos-1);
+
+		var repeatCount = mergeData[repeatingRecord+".COUNT"];
+		var repeatResult = "";
+		for (i=0; i < repeatCount; i++) {
+			repeatResult += repeatString.replace(/\.n/g,"."+i);
+		}
+
+		result = result.substring(0,startTagStartPos) + repeatResult + result.substring(endTagEndPos+1)
+	}
+
+	result = replaceMergeFields(result,"{","}");
+	
+	// process reference related tags
+	while (result.indexOf("<prtany:refRelated") != -1) {
+
+		var startTagStartPos = result.indexOf("<prtany:refRelated");
+		var startTagEndPos = result.indexOf(">", startTagStartPos);
+
+		var startQuotePos = result.indexOf("relation=\"", startTagStartPos)+ 9;
+		var endQuotePos = result.indexOf("\"", startQuotePos+1);
+
+		var relatedField = result.substring(startQuotePos+1,endQuotePos);
+		
+		var startQuotePos = result.indexOf("value=\"", startTagStartPos)+ 6;
+		var endQuotePos = result.indexOf("\"", startQuotePos+1);
+
+		var searchValue = result.substring(startQuotePos+1,endQuotePos);
+
+		var endTagStartPos = result.indexOf("</prtany:refRelated", startTagStartPos);
+		if (endTagStartPos == -1) {
+			throw "No related end tag was found";
+		}
+		var endTagEndPos = result.indexOf(">", endTagStartPos);
+
+		//get fields in related table to merge (related Merge Fields = RMF)
+		var relatedMergeFields = result.substring(startTagEndPos+1,endTagStartPos); 
+
+		// check that property prefix of related merge fields matches the related field prefix
+		// ie. both are pulling from the same related table.
+		var relatedFieldPrefix = relatedField.substring(0,relatedField.indexOf("."));
+		var verifyRMF = relatedMergeFields;
+		while (verifyRMF.indexOf("[") != -1) {
+			var startPosVer = verifyRMF.indexOf("[");
+			var endPosVer = verifyRMF.indexOf("]", startPosVer);
+
+			var fieldNameVer = verifyRMF.substring(startPosVer+1, endPosVer);
+			var fieldNamePrefixVer = fieldNameVer.substring(0,fieldNameVer.indexOf("."));
+			if (fieldNamePrefixVer != relatedFieldPrefix) {
+				throw "Related merge fields table does not match the field relation table";
+			}
+			verifyRMF = verifyRMF.substring(endPosVer+1);
+		}
+		
+		//find record number in related table
+		var fieldPrefix = relatedField + "."; 
+		var recordNumber = 0;
+		var mergeField = fieldPrefix+recordNumber;
+		while ((mergeData[mergeField] != searchValue) && (mergeData[mergeField] != null))  {
+			prtanyDebug(relatedField+"retrieve single row - "+mergeField+":"+mergeData[mergeField],"debug");
+			recordNumber++;
+			mergeField = fieldPrefix+recordNumber;
+		}
+	
+		// we now have the recordNumber for the related table entry for the related mergeField
+		// replace related merge field end tags "]" with .recordNumber + "]" 
+		// eg. [User.Id] becomes [User.Id.1]
+		relatedMergeFields = relatedMergeFields.replace(/\]/g,"."+recordNumber+"]");
+		
+		// -----------------
+		// replace related field
+		
+		relatedMergeFields = replaceMergeFields(relatedMergeFields,"[","]");
+		
+		// -----------------
+
+		result = result.substring(0,startTagStartPos) + relatedMergeFields + result.substring(endTagEndPos+1)
+	}
+	
+	// process aggregate tags
+	//eg. <prtany:aggregate type="Sum" >CURRENCY:MUSW__Fee__c.MUSW__Amount__c<prtany:aggregate>
+	while (result.indexOf("<prtany:aggregate") != -1) {
+
+		var startTagStartPos = result.indexOf("<prtany:aggregate");
+		var startTagEndPos = result.indexOf(">", startTagStartPos);
+
+		var startQuotePos = result.indexOf("type=\"", startTagStartPos)+ 5;
+		var endQuotePos = result.indexOf("\"", startQuotePos+1);
+
+		var aggType = result.substring(startQuotePos+1,endQuotePos);
+		
+		var endTagStartPos = result.indexOf("</prtany:aggregate", startTagStartPos);
+		if (endTagStartPos == -1) {
+			throw "No aggregate end tag was found";
+		}
+		var endTagEndPos = result.indexOf(">", endTagStartPos);
+
+		//get field
+		var aggMergeField = result.substring(startTagEndPos+1,endTagStartPos); 
+		
+		if (aggMergeField.indexOf(":") == -1 )
+			var fieldPrefix = aggMergeField + "."; 
+		else
+			var fieldPrefix = aggMergeField.substring(aggMergeField.indexOf(":")+1) + "."; 
+		
+		//get number of items to aggregrate
+		var repeatingRecord = fieldPrefix.substring(0,fieldPrefix.indexOf("."));
+		var repeatingCount = mergeData[repeatingRecord+".COUNT"];
+		
+		var recordNumber = 0;
+		var mergeField = fieldPrefix+recordNumber;
+		var aggResult = 0;
+		
+		while (recordNumber < repeatingCount)  {
+			//ignore nulls
+			if (mergeData[mergeField] != null) {
+				aggResult = performAggregate(mergeData[mergeField],aggResult, aggType);
+				prtanyDebug(relatedField+"retrieve single row - "+mergeField+":"+mergeData[mergeField],"debug");
+			}
+			recordNumber++;
+			mergeField = fieldPrefix+recordNumber;
+		}
+		
+		//put calculated result into data array
+		mergeData[fieldPrefix+aggType] = aggResult;
+		
+		// -----------------
+		// replace field
+		aggMergeField = replaceMergeFields("["+aggMergeField+"."+aggType+"]","[","]");
+		
+		// -----------------
+
+		result = result.substring(0,startTagStartPos) + aggMergeField + result.substring(endTagEndPos+1)
+	}
+
+	// remove any conditional content
+	while (result.indexOf("<prtany:notEmpty") != -1) {
+
+		var startTagStartPos = result.indexOf("<prtany:notEmpty");
+		var startTagEndPos = result.indexOf(">", startTagStartPos);
+
+		var startQuotePos = result.indexOf("\"", startTagStartPos);
+		var endQuotePos = result.indexOf("\"", startQuotePos+1);
+
+		var conditionalField = result.substring(startQuotePos+1,endQuotePos);
+
+		var endTagStartPos = result.indexOf("</prtany:notEmpty", startTagStartPos);
+		if (endTagStartPos == -1) {
+			throw "No notEmpty end tag was found";
+		}
+		var endTagEndPos = result.indexOf(">", endTagStartPos);
+
+		var conditionalString = result.substring(startTagEndPos+1,endTagStartPos);
+
+		var conditionalValue = mergeData[conditionalField];
+		if (conditionalValue == null || conditionalValue == "") {
+			conditionalString = "";
+		}
+
+		result = result.substring(0,startTagStartPos) + conditionalString + result.substring(endTagEndPos+1)
+	}
+
+	return result;
+}
+
+function performAggregate(val1,val2,aggType) {
+
+val1 = val1-0;
+
+switch (aggType)
+  { 
+    case "Sum": { 
+    	ret = val1+lgm.numeric.round(val2,2);
+    	;break }
+    case "Max": { 
+        if (val1 > val2 ) 
+    		ret = val1;
+    	else
+    		ret = val2;
+    	;break }
+ 	default: { ret = val1; break }
+  }
+return ret;
+}
+function loadPackage() {
+
+	selectorTable = document.getElementById("selector");
+	while (selectorTable.hasChildNodes()) { selectorTable.removeChild(selectorTable.firstChild); }
+
+	metaResultCount = 0;
+
+	mergeData = new Array();
+
+	entityQueryCounts = {};
+
+	if (isDebug) {
+		var node = document.getElementById("divDebug");
+		while (node.hasChildNodes()) { node.removeChild(node.firstChild); }
+	}
+
+	loadParameters();
+
+	notify("Loading Package...");
+
+	metaData["MUSW__PRTANY_PACKAGE__c"] = new Array();
+	metaData["MUSW__PRTANY_TEMPLATE__c"] = new Array();
+	metaData["MUSW__PRTANY_QUERY__c"] = new Array();
+
+//JAW REVIEW - use package name instead of ID, so don't have to change links in each install
+
+	var qr = sforce.connection.query(merge("Select " + getFields("MUSW__PRTANY_PACKAGE__c", false)+" From MUSW__PRTANY_PACKAGE__c where Name = '"+ mergeData["Parameter.package"] +"'"));
+	
+	if (qr.size != 0 ) {
+		var records = extractResult(qr);
+		
+		metaData[records[0].type] = new Array(records.length);
+		for (var i = 0; i < records.length; i++) {
+			metaData[records[i].type][i] = records[i];
+			packageId = records[i].Id; //remember packageId for other queries
+		}
+	}
+	
+	sforce.connection.query("Select " + getFields("MUSW__PRTANY_TEMPLATE__c", false)+" From MUSW__PRTANY_TEMPLATE__c where MUSW__PRTANY_PACKAGE__c = '"+packageId+"'", {onSuccess:processPackage, onFailure:processFailure});
+	sforce.connection.query("Select " + getFields("MUSW__PRTANY_QUERY__c", false)+" From MUSW__PRTANY_QUERY__c where MUSW__PRTANY_PACKAGE__c = '"+packageId+"'", {onSuccess:processPackage, onFailure:processFailure});
+}
+
+function reloadTemplate() {
+	sforce.connection.query("Select "+getFields("MUSW__PRTANY_TEMPLATE__c", false)+" From MUSW__PRTANY_TEMPLATE__c where MUSW__PRTANY_PACKAGE__c = '"+packageId+"'", {onSuccess:reapplyTemplate, onFailure:processFailure});
+}
+
+function reapplyTemplate(qr) {
+	metaResultCount = 0;
+	processPackage(qr);
+	mergeTemplate(templateSelected);
+}
+
+function processPackage(qr) {
+	prtanyDebug("ProcessPackage", "debug");
+
+	metaResultCount++;
+	var records = extractResult(qr);
+	if (records.length > 0) {
+		metaData[records[0].type] = new Array(records.length);
+		for (var i = 0; i < records.length; i++) {
+			metaData[records[i].type][i] = records[i];
+		}
+	}
+		
+	if (metaResultCount == 2) {
+		runQueries();
+	}
+}
+
+function processFailure(error) {
+	throw(error);
+	prtanyDebug("Query Error:" + error.toString(), "debug");
+}
+
+function addMergeField(name, value) {
+	prtanyDebug("adding merge field - "+name+" = "+value,"merge");
+	mergeData[name] = value;
+}
+
+function addMergeData(record, entityQueryNumber, recordNumber) {
+
+	if (record != null) { //if have access to data
+		var props = sforce.connection.describeSObject(record.type).fields
+	
+		for (var i = 0; i < props.length; i++) {
+			if (record[props[i].name] != null) {
+				var name = record.type;
+				if (entityQueryNumber > 1) {
+					name += entityQueryNumber;
+				}
+				name += "."+props[i].name;
+	
+				if (recordNumber != null) {
+					name += "."+recordNumber;
+				}
+				var val = record[props[i].name];
+				addMergeField(name,val);
+			}
+		}
+	}
+}
+
+function compareBySequence(q1, q2) {
+	return q1.get("MUSW__Sequence__c") - q2.get("MUSW__Sequence__c");
+}
+
+function getQuery(queryMeta, filter) {
+	var result = "select ";
+	result += getFields(queryMeta.get("MUSW__Object_Name__c"), false);
+	result += " from ";
+	result += queryMeta.get("MUSW__Object_Name__c");
+	result += " ";
+	result += filter;
+	return merge(result);
+}
+
+function runQueries() {
+	prtanyDebug("running queries", "debug");
+
+	currentQuery = -1;
+	metaData["MUSW__PRTANY_QUERY__c"].sort(compareBySequence);
+	execNextQuery();
+}
+
+function execNextQuery() {
+	var queries = metaData["MUSW__PRTANY_QUERY__c"];
+
+	if (currentQuery < queries.length-1) {
+		currentQuery++;
+		var query = queries[currentQuery];
+		var object = query.get("MUSW__Object_Name__c");
+		var prefix = queries[currentQuery].get("MUSW__Sequence__c")+". ";
+		var filter;
+		
+		try {
+			filter = query.get("MUSW__Filter__c");
+
+			if (filter.indexOf("Retrieve") == 0) {
+				var idField = filter.substring(filter.indexOf(":")+1);
+				var idArray = new Array();
+				if (idField.lastIndexOf(".n") == idField.length-2) {
+					var fieldPrefix = idField.substring(0,idField.length-1);
+					var recordNumber = 0;
+					var mergeField = fieldPrefix+recordNumber;
+					while (mergeData[mergeField] != null) {
+					
+						// check if we already have this id in idArray
+						var found = false;
+						for (var i = 0; i < idArray.length; i++) {
+							if (idArray[i] == mergeData[mergeField]) {
+								found = true;
+							}
+						}		
+					
+						// push id if not found in idArray
+						if (!found ) {
+							idArray.push(mergeData[mergeField]);
+							prtanyDebug(prefix+"retrieve multi row - "+object+":"+mergeData[mergeField],"debug");
+						}	
+						recordNumber++;
+						mergeField = fieldPrefix+recordNumber;
+					}
+				} else {
+					var singleId = mergeData[idField];
+					if (singleId != null) {		
+						idArray.push(singleId);
+						prtanyDebug(prefix+"retrieve single row - "+object+":"+singleId,"debug");
+					}
+				}
+				if (idArray.length == 0) {
+					prtanyDebug("No ids found for retrieve","debug");
+					execNextQuery();
+				} else {
+					sforce.connection.retrieve(getFields(object, false), object, idArray, {onSuccess:processQuery, onFailure:processFailure, source : query});
+				}
+			} else {
+				prtanyDebug(prefix+":"+object+":"+filter+":"+getQuery(query, filter),"debug");
+				sforce.connection.query(getQuery(query, filter), {onSuccess:processQuery, onFailure:processFailure, source : query});
+			}
+
+		} catch (err) {
+			filter = '';
+			prtanyDebug(prefix+":"+object+":"+getQuery(query, filter),"debug");
+			sforce.connection.query(getQuery(query, filter), {onSuccess:processQuery, onFailure:processFailure, source : query});
+		}
+
+		notify("Running query : " + queries[currentQuery].get("Name"));
+	} else {
+		applyTemplate();
+	}
+}
+
+function processQuery(qr, query) {
+	prtanyDebug("processQuery","debug");
+	var records = extractResult(qr);
+	
+	var singleRecordFields = query.get("MUSW__Single_Row_Selection_Fields__c");
+	var isSingleRecordQuery = (singleRecordFields != null);
+
+	if (isSingleRecordQuery) {
+		if (records != null) {
+			if ((records.length > 1) && (records[0] != null)){
+				chooseSingular(records, singleRecordFields);
+			} else {
+				if ((records.length == 1) && (records[0] != null)) {
+					addMergeData(records[0], getEntityQueryNumber(records[0].type), null);
+				} else {
+					prtanyDebug("No records returned for single record query","debug");
+				}
+				execNextQuery();
+			}
+		} else {
+			execNextQuery();
+		}
+	} else {
+		if (records != null) {
+			if (records.length > 0) {
+				entity = query["MUSW__Object_Name__c"];
+				queryNumber = getEntityQueryNumber(entity);
+				countField = entity;
+				if (queryNumber > 1) {
+					countField += queryNumber;
+				}
+				countField += ".COUNT";
+				addMergeField(countField,records.length);
+				for (var i = 0; i < records.length; i++) {
+					addMergeData(records[i], queryNumber, i);
+				}
+			}
+			else {
+				prtanyDebug("No records returned for multi record query","debug");
+			}
+		} else {
+			prtanyDebug("No records returned for multi record query","debug");
+		}
+		execNextQuery();
+	}
+}
+
+function getEntityQueryNumber(entity) {
+	current = entityQueryCounts[entity];
+	if (current == null) {
+		current = 0;
+	} else {
+		current++;
+	}
+	entityQueryCounts[entity] = current;
+	return current+1;
+}
+
+function chooseSingular(records, fieldList) {
+
+	notify("Please choose a "+metaData["MUSW__PRTANY_QUERY__c"][currentQuery].get("Name"));
+	singularRecords = records;
+	fields = fieldList;
+
+	selectorTable = document.getElementById("selector");
+	while (selectorTable.hasChildNodes()) { selectorTable.removeChild(selectorTable.firstChild); }
+
+	fieldArray = new Array();
+	do {
+		if (fields.indexOf(",") == -1) {
+			fieldArray.push(fields);
+			fields = "";
+		} else {
+			fieldArray.push(fields.substring(0,fields.indexOf(",")));
+			fields = fields.substring(fields.indexOf(",")+1);
+		}
+	} while (fields.length > 0);
+
+	selectorTable.style.display = "block";
+	for (i=0; i < singularRecords.length; i++) {
+		newRow = selectorTable.insertRow(-1);
+		newCell = newRow.insertCell(-1);
+		newCell.innerHTML = "<input type='radio' onClick='processChoice("+i+");'>";
+		for (j=0; j < fieldArray.length; j++) {
+			newCell = newRow.insertCell(-1);
+			newCell.className="selector";
+			try {
+				if (singularRecords[i] != null) {
+					value = singularRecords[i].get(fieldArray[j]);
+					if (value != null) {
+						newCell.innerHTML = value;
+					}
+				}
+			} catch (badField) {
+				alert(badField+". Please remove any whitespace in your field list");
+			};
+		}
+	}
+}
+
+function processChoice(selected) {
+	selectorTable = document.getElementById("selector");
+	selectorTable.style.display = "none";
+	addMergeData(singularRecords[selected], getEntityQueryNumber(singularRecords[selected].type), null);
+	execNextQuery();
+}
+
+function applyTemplate() {
+	var templates = metaData["MUSW__PRTANY_TEMPLATE__c"];
+
+	if (templates.length == 0) {
+		notify("No templates available");
+	} else if (templates.length == 1) {
+		mergeTemplate(0);
+	} else {
+		notify("Please choose a template");
+
+		selectorTable = document.getElementById("selector");
+		while (selectorTable.hasChildNodes()) { selectorTable.removeChild(selectorTable.firstChild); }
+
+		selectorTable.style.display = "block";
+
+		for (i=0; i < templates.length; i++) {
+			newRow = selectorTable.insertRow(-1);
+			newCell = newRow.insertCell(-1);
+			newCell.innerHTML = "<input type='radio' onClick='mergeTemplate("+i+");'>";
+			newCell = newRow.insertCell(-1);
+			newCell.className="selector";
+			newCell.innerHTML = templates[i].get("Name");
+		}
+
+	}
+}
+
+function mergeTemplate(selectedIndex) {
+	prtanyDebug("Applying template : "+selectedIndex,"debug");
+
+	templateSelected = selectedIndex;
+
+	var templateRecord = metaData["MUSW__PRTANY_TEMPLATE__c"][selectedIndex];
+
+	selectorTable = document.getElementById("selector");
+	selectorTable.style.display = "none";
+
+	var divContent = document.getElementById("divContent");
+	divContent.style.display = "block";
+
+	addMergeField("Today",lgm.date.formatDate(new Date(),templateRecord.get("MUSW__Date_Format__c")));
+
+	var templateContents = templateRecord.get("MUSW__Content__c");
+	contentString = "";
+
+	//prtanyDebug(templateContents,"debug")
+	if ( typeof(templateContents) != "string" ) {  // see what type of object
+		for (var i=0; i < templateContents.childNodes.length; i++) {
+			contentString += templateContents.childNodes[i].textContent;
+		}
+	} else { // normal string if body is < 4096 bytes
+		contentString = templateContents;
+	}
+	//ie8 bug workaround
+	var myDiv = document.createElement("div");
+	myDiv.innerHTML = '<div id="child1">'+ merge(contentString)+'</div>';
+	divContent.appendChild( myDiv.firstChild );
+	
+	//divContent.innerHTML = merge(contentString);
+	prtanyDebug("InnerHTML set " + divContent.innerHTML,"debug");
+	
+	eval(templateRecord.get("MUSW__css__c"));
+	prtanyDebug("CSS set","debug");
+	isComplete = true;
+	
+	if (isComplete) {
+		document.getElementById("divProgress").style.display = "none";
+		//display browser print button
+		document.getElementById("header").innerHTML ="<input type='button' onClick='window.print()' " + "class='printbutton' value='Print This Page'/>";
+	}
+}
+
+function formatCurrency(num) {
+	num = num.toString().replace(/\$|\,/g,'');
+	if(isNaN(num))
+	num = "0";
+	sign = (num == (num = Math.abs(num)));
+	num = Math.floor(num*100+0.50000000001);
+	cents = num%100;
+	num = Math.floor(num/100).toString();
+	if(cents<10)
+	cents = "0" + cents;
+	for (var i = 0; i < Math.floor((num.length-(1+i))/3); i++)
+	num = num.substring(0,num.length-(4*i+3))+','+
+	num.substring(num.length-(4*i+3));
+	return (((sign)?'':'-') + '$' + num + '.' + cents);
+}
+
+
+// setStyleByClass: given an element type and a class selector,
+// style property and value, apply the style.
+// args:
+//  t - type of tag to check for (e.g., SPAN)
+//  c - class name
+//  p - CSS property
+//  v - value
+var ie = (document.all) ? true : false;
+
+function setStyleByClass(t,c,p,v){
+	var elements;
+	if(t == '*') {
+		// '*' not supported by IE/Win 5.5 and below
+		elements = (ie) ? document.all : document.getElementsByTagName('*');
+	} else {
+		elements = document.getElementsByTagName(t);
+	}
+	for(var i = 0; i < elements.length; i++){
+		var node = elements.item(i);
+		for(var j = 0; j < node.attributes.length; j++) {
+			if(node.attributes.item(j).nodeName == 'class') {
+				if(node.attributes.item(j).nodeValue == c) {
+					eval('node.style.' + p + " = '" +v + "'");
+				}
+			}
+		}
+	}
+}
+
+
+//-->
+		</script>
+
+	<style type="text/css">
+		p.debug { font: italic 900 12px arial }
+		p.merge { font: italic 900 12px arial ; color: #AA0000}
+		td.status { font: small-caps 900 12px arial ; background: #747E96; color: #FFFFFF }
+		td.selector { font: small-caps 900 12px arial ; color: #000000 }
+	</style>
+	<style type="text/css" media="print">
+		.printbutton {
+		  visibility: hidden;
+		  display: none;
+		}
+	</style>
+
+	</head>
+
+	<body onload="setup()">
+		<DIV id="header"></DIV>
+		
+		<table>
+			<tr><td class="status" id="divProgress"></td></tr>
+		</table>
+		<table id="selector" style="display: none"><tr><td></td></tr>
+		</table>
+
+		<div id="divContent" ></div>
+
+		<BR>
+		<DIV id="divDebugHeader" style="display: none">
+			<hr>
+			<b>Debug Mode</b>
+			<a href='javascript:loadPackage();'>Reload package</a>
+			<a href='javascript:reloadTemplate();'>Reload template</a>
+		</DIV>
+		<DIV id="divDebug" style="display: none"></DIV>
+	</body>
+
+</html>

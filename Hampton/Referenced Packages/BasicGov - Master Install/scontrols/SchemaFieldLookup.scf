@@ -1,0 +1,323 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+	<head>
+		<title>Table, Field and Picklist Lookups</title>
+		<link href="/sCSS/8.0/1171411121000/Theme2/default/ie7/common.css" media="handheld,print,projection,screen,tty,tv" rel="stylesheet" type="text/css" />
+		<script src="/js/functions.js" type="text/javascript"></script>
+	    <script src="/soap/ajax/8.0/connection.js"></script>	
+		<script id="clientEventHandlersJS" language="javascript">
+<!-- 
+var tableDefinition;
+
+function setup() {
+
+	isDebug = {!$User.Debug__c};
+
+	if ({!$User.Debug__c}) {
+		document.getElementById("divDebugHeader").style.display = "block";
+		document.getElementById("divDebug").style.display = "block";
+	}
+
+	if ({!$User.Step_Through__c}) {
+		//throw uncaught exception so can step through in managed client environment
+		throw "e";
+	} 
+	
+	//Load Picklist information
+	initPicklist();
+
+}
+
+
+	function initPicklist2(object, picklist, element) {
+	var obj = sforce.connection.describeSObject(object);			
+	var pickList = document.getElementById(element);
+	
+	for (var i=0;i<obj.fields.length;i++) {
+		if (obj.fields[i].name == picklist)
+		{
+			for (var ii=0;ii<obj.fields[i].picklistValues.length;ii++) {
+				pickList[pickList.length] = new Option(obj.fields[i].picklistValues[ii].label);
+			}
+		}
+	}
+}	
+	
+function initPicklist(object, picklist, element) {
+
+	var result = sforce.connection.describeGlobal();
+	var types = result.getArray("types");
+	
+	var tableOption = document.getElementById('table');
+		
+	for (var i=0; i<types.length; i++) {
+		tableOption[tableOption.length] = new Option(types[i]);
+	}
+	var tableName = document.getElementById('tableName');
+	tableName.value = types[0];
+	
+	
+	tableSelected(types[0]);
+}	
+
+function tableSelected(ptableName) {
+		
+	var tableName = document.getElementById('tableName');
+	tableName.value = ptableName;
+	
+	tableDefinition = sforce.connection.describeSObject(ptableName);
+	
+	var fieldOption = document.getElementById('field');
+	//clear picklist
+	fieldOption.options.length = 0;
+	
+	var fieldList = "";
+
+	for (var i=0; i<tableDefinition.fields.length; i++) {
+		fieldOption[fieldOption.length] = new Option(tableDefinition.fields[i].name);
+		fieldList = fieldList + tableDefinition.fields[i].name + ", ";
+	}
+	fieldList = fieldList.substr(0,fieldList.length-2);
+	
+	document.getElementById("addToMasterListDiv").style.display = "none";
+	
+	var fieldName = document.getElementById('fieldName');
+	fieldName.value = tableDefinition.fields[0].name;
+	
+	var pair = document.getElementById('pair');
+	pair.value = "<content>"+tableName.value+"."+fieldName.value+"</content>";
+	
+	var fieldNameList = document.getElementById('fieldNameList');
+	fieldNameList.value = fieldList;
+	
+	var query = document.getElementById('query');
+	query.value = "select " + fieldList + "\nfrom " + ptableName;
+}
+
+function fieldSelected(pfieldName) {
+
+	var fieldName = document.getElementById('fieldName');
+	fieldName.value = pfieldName;
+	
+	var valueOption = document.getElementById('value');
+	//clear picklist
+	valueOption.options.length = 0;
+	
+	var valueName = document.getElementById('valueName');
+	valueName.value = "";
+
+	for (var i=0; i<tableDefinition.fields.length; i++) {
+		if ((tableDefinition.fields[i].name == pfieldName) & (tableDefinition.fields[i].type == 'picklist')) {
+			for (var ii=0;ii<tableDefinition.fields[i].picklistValues.length;ii++) {
+				valueOption[valueOption.length] = new Option(tableDefinition.fields[i].picklistValues[ii].label);
+			}
+			
+			valueName.value = tableDefinition.fields[i].picklistValues[0].label;
+			
+			break;
+		}
+	}
+	
+	
+	var tableName = document.getElementById('tableName');
+	
+	//check if this table-field combination is in MUSW__Automation_Field__c
+	var result = sforce.connection.query("SELECT name, MUSW__table__c FROM MUSW__Automation_Field__c where MUSW__Table__c = '"+tableName.value+"' and name = '"+fieldName.value+"'");
+	
+	//are there fields defined to search the data model?
+	if (result.size == 0 ) {
+		document.getElementById("addToMasterListDiv").style.display = "block";
+	} else {
+		document.getElementById("addToMasterListDiv").style.display = "none";
+	}
+
+	
+	var pair = document.getElementById('pair');
+	pair.value = "<content>"+tableName.value+"."+fieldName.value+"</content>";
+	//if (valueName.value == "") {
+	//	pair.value = "<content>"+tableName.value+"."+fieldName.value+"</content>";
+	//} else {
+	//	pair.value = "<content>"+tableName.value+"."+fieldName.value+"~"+valueName.value+"</content>";
+	//}
+	
+	if (valueName.value != "") {
+		valueSelected(valueName.value);
+	}
+}
+
+function valueSelected(pValueName) {
+
+	var valueName = document.getElementById('valueName');
+	
+	valueName.value = pValueName;
+	
+	var tableName = document.getElementById('tableName');
+	var fieldName = document.getElementById('fieldName');
+	var pair = document.getElementById('pair');
+	//pair.value = "<content>"+tableName.value+"."+fieldName.value+"~"+valueName.value+"</content>";
+
+}
+
+function addToMasterList_click() {
+
+	var tableName = document.getElementById('table').options[document.getElementById('table').selectedIndex].text;
+	var fieldName = document.getElementById('field').options[document.getElementById('field').selectedIndex].text;
+	
+	var tablefield = new sforce.SObject("MUSW__Automation_Field__c");
+	tablefield["name"] = fieldName;
+	tablefield["MUSW__table__c"] = tableName;
+	var error = sforce.connection.create([tablefield]);
+	//are there fields defined to search the data model?
+	if (error.toString().indexOf("errors") == 0 ) {
+		document.getElementById("addToMasterListDiv").style.display = "block";
+	} else {
+		document.getElementById("addToMasterListDiv").style.display = "none";
+	}
+
+}
+
+function testQuery_click () {
+
+	var queryResult = document.getElementById('queryResult');
+	try {
+		var result = sforce.connection.query(document.getElementById("query").value);
+		
+		
+		queryResult.value = "Records returned: " + result.size;
+	} catch (e) {
+		queryResult.value = e.faultstring;
+	}
+	
+}
+//--> 
+	</script>
+	</head>
+	<body onLoad="setup();" >		
+		<table class="" width="100%" id="bodyTable" border="0" cellspacing="0" cellpadding="0">
+			<tr>
+				<td class="oRight" id="bodyCell">
+					<a name="skiplink"><img src="/s.gif" height='1' width='1' alt="Content Starts Here" class="skiplink" title="Content Starts Here"></a>
+					<!-- HEADER SECTIONS -->
+					<div >
+						<div class="ptBody secondaryPalette">
+							<div class="content">
+								<h1 style = "color:#FFF" >Data Model Assistant</h1></p>
+								
+							</div>
+						</div>
+					</div>
+					<!-- CONTROL SECTIONS -->
+					<div class="filterOverview">
+						<form action="/a00" id="filter_element" method="GET" name="filter_element" onsubmit="if (window.ffInAlert) { return false; }">
+							<div class="bFilterView">
+								<span class="bFilter">
+									<span class="fBody" align ="center">
+										<TABLE bgcolor="#EEEEEE"  class="detailList" style="padding-left: 1px;" cellspacing="1" WIDTH="100%" >
+											<TR>
+												<TD style = "padding:2px 10px 2px 2px; text-align:left; font-size: 8pt; font-weight: bold; color:#333;">Table</TD>
+											</TR>
+											<TR>
+												<TD>
+												<span>
+													<select  tabindex="1" id="table" name="table" onChange = "tableSelected(this.options[this.selectedIndex].text);"></select>
+												</span>
+												</TD>
+											</TR>
+											<TR>
+												<TD>
+													<input  tabindex="2" maxlength="50" type="text" id="tableName" size="30" name="tableName"/>
+												</TD>
+											</TR>
+											<TR>
+												<TD style = "padding:2px 10px 2px 2px; text-align:left; font-size: 8pt; font-weight: bold; color:#333;">Field</TD>
+											</TR>
+											
+											<TR>
+												<TD>
+												<span>
+													<select  tabindex="3" id="field" name="field" onChange = "fieldSelected(this.options[this.selectedIndex].text);"></select>
+												</span>
+												</TD>
+											</TR>
+											<TR>
+												<TD>
+													<input  tabindex="4" maxlength="50" type="text" id="fieldName" size="30" name="fieldName"/>
+												</TD>
+											</tr>
+												<TD>
+													<div id="addToMasterListDiv" style="display: none">
+														<input id = "addToMasterList" class="btn" type=button value="Include Table-Field in Filter Search" onClick="addToMasterList_click();" disable = "false">
+													</div>
+												</TD>
+											</TR>
+											<TR>
+												<TD>
+													
+													<input  tabindex="4" maxlength="2000" type="text" id="fieldNameList" size="30" name="fieldNameList"/>
+												</TD>
+											</TR>
+											<TR>
+												<TD style = "padding:2px 10px 2px 2px; text-align:left; font-size: 8pt; font-weight: bold; color:#333;">Picklist Value</TD>
+											</TR>
+											
+											<TR>
+												<TD>
+												<span>
+													<select  tabindex="5" id="value" name="value" onChange = "valueSelected(this.options[this.selectedIndex].text);"></select>
+												</span>
+												</TD>
+											</TR>
+											
+											<TR>
+												<TD>
+													<input  tabindex="6" maxlength="50" type="text" id="valueName" size="30" name="valueName"/>
+												</TD>
+											</TR>
+																		
+											<TR>
+												<TD>
+													<textarea tabindex="7" id="pair" rows=2 cols=40 name="pair" ></textarea>
+												</TD>
+											</TR>
+											<TR>
+												<TD style = "padding:2px 10px 2px 2px; text-align:left; font-size: 8pt; font-weight: bold; color:#333;">Query</TD>
+											</TR>
+											<TR>
+												<TD>
+													<textarea tabindex="8" id="query" rows=3 cols=40 ></textarea>
+												</TD>
+											</TR>
+											<TR>
+												<TD>
+													<input tabindex="9" id = "testQuery" class="btn" type=button value="Test Query Syntax" onClick="testQuery_click();" disable = "false">
+												</TD>
+											</TR>
+											<TR>
+												<TD>
+													<textarea tabindex="10" id="queryResult" rows=2 cols=40 ></textarea>
+												</TD>
+											</TR>
+											
+									
+										</TABLE>	
+										
+										
+									</span>
+									
+									<span class="fFooter">
+									</span>
+								</span>
+							</div>
+
+						</form>
+					</div>
+				</td>
+			</tr>
+		</table>
+		<DIV id="divDebugHeader" style="display: none">
+		<hr/>
+		<b>Debug Mode</b>
+		</DIV>
+		<DIV id="divDebug" style="display: none"></DIV> 
+	</body>
+</html>

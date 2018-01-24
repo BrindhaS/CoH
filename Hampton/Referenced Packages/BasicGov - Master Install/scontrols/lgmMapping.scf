@@ -1,0 +1,317 @@
+<script src="{!$User.Mapping_Service_API__c}{!$User.Mapping_Service_Key__c}"  type="text/javascript"></script>
+<script id="clientEventHandlersJS" language="javascript">	
+<!-- 
+ 
+/**************************************************************************************
+* 	Class		: LGM Mapping Library
+*	Created By	: Chris McLuckie
+*	Created On  : 01/24/2007
+*	Purpose		: 
+*	Dev Notes	: This class should be declared globally in order for mapping services
+				to properly access methods in callback methods
+**************************************************************************************/
+function lgmMapping(name, control, debug, type, key, x, y) {
+
+	//**********************************
+	// private properties
+	//**********************************
+	var that = this;  // Required for Javascript limitation of 'this' operator
+	var locations = new Array();
+	var startX, startY, endX, endY;
+		
+	//**********************************
+	// public properties
+	//**********************************
+	that.Control = control;
+	that.DebugControl = null;
+	that.Type = type;
+	that.Key = key;
+	that.MapSize = {xWidth:x, yHeight:y};
+	that.Map = null;
+	that.Debug = false;
+	that.Name = name;  //CGM - because I don't know what the dev named their variable I have this paramter, we need to change this once a method is found
+	that.DataContext = null;
+	that.LayerMapping = new Array();
+	
+	//**********************************
+	// private methods
+	//**********************************
+	function addDebugMessage(msg) {
+		if (that.Debug)
+			that.DebugControl.innerHTML += msg + "<br/>";
+	}
+	
+	function loadMappingConfig () {
+		var result = null;
+		var mappingService;
+		var mappingLayer;
+		var serviceID;
+		
+		// Load map service information
+		result = sforce.connection.query("SELECT " + getFields("MUSW__Mapping_Service__c", false) + " FROM MUSW__Mapping_Service__c WHERE MUSW__Service_Key__c = '{!$User.Mapping_Service_Key__c}'");	
+		mappingService = result.getArray("records");
+		
+		if (mappingService.length > 0) {
+			serviceID = mappingService[0]["Id"];
+			
+			result = sforce.connection.query("SELECT " + getFields("MUSW__Mapping_Layer__c", false) + " FROM MUSW__Mapping_Layer__c WHERE MUSW__Mapping_Service__c = '" + serviceID + "'");	
+			mappingLayers = result.getArray("records");
+			for(var i=0; i<mappingLayers.length; i++) {
+				that.LayerMapping[i] = {RelatedTable:mappingLayers[i]["MUSW__Related_Table__c"], RelatedField:processRelatedFields(mappingLayers[i]["MUSW__Related_Field__c"]), RelatedAttribute:mappingLayers[i]["MUSW__Related_Attribute__c"]}
+			}
+			
+			addDebugMessage("Added: " + mappingLayers.length + " layer definition(s)");
+			
+		} else {
+			throw("Mapping Service not properly configured.  Please ensure that the service and user is configured properly.");
+		}
+	}
+	
+	function getFields(sobject, forUpdate) {
+		var fields = sforce.connection.describeSObject(sobject).fields;
+		var fieldList = "";
+		
+		if (!forUpdate) {
+			for (var i=0; i<fields.length; i++) {
+				fieldList = fieldList + fields[i].name + ", ";
+			}
+		} else {
+			fieldList = "Id, ";
+			for (var i=0; i<fields.length; i++) {
+				if (fields[i].updateable == true || fields[i].updateable == "true") {
+					fieldList = fieldList + fields[i].name + ", ";
+				}
+			}
+		}
+		
+		//chop off last comma
+		fieldList = fieldList.substring(0, fieldList.length-2);
+		return fieldList;
+	}
+	
+	function processRelatedFields(fieldDefinition) {
+		var maps = fieldDefinition.split(",");
+		var retVal = new Array();
+		
+		if(maps.length>0) {
+			for (var i=0; i<maps.length; i++) {
+				var temp = maps[i].split("=");
+				
+				if (temp.length == 2) {
+					retVal[retVal.length] = {TableField:temp[1], MapField:temp[0]};
+				}
+			}
+		} else {
+			var temp = fieldDefinition.split("=");
+				
+			if (temp.length == 2) {
+				retVal[retVal.length] = {TableField:temp[1], MapField:temp[0]};
+			}
+		}
+		
+		return retVal;	
+	}
+	//**********************
+    //Map Quest functions
+    //**********************
+	function mqGeoCode (address, city, state, zip, country, name) {
+		var gc = new MQGeocode();
+		var loc = new MQLocation();
+
+		loc.setAddress(address);
+		loc.setCity(city);
+		loc.setStateProvince(state);
+		loc.setPostalCode(zip);
+		loc.setCountry(country);
+		loc.setName(name);
+
+		gc.setAmbiguities(1);
+		gc.doGeocode(loc, that.Name + ".GeoCodeCallback");
+	}
+
+	function mqGeoCodeCallback (callback) {
+		for (var i=0; i<callback.locations.getSize(); i++) {
+			addDebugMessage (callback.locations.getAt(i).getLatitude() + " " + callback.locations.getAt(i).getLongitude());
+
+			locations[locations.length] = {Lng:callback.locations.getAt(i).getLatitude(), Lat:callback.locations.getAt(i).getLongitude(), LookupDetails:callback.locations.getAt(i).getAddress() + " " + callback.locations.getAt(i).getCity() + ", " + callback.locations.getAt(i).getStateProvince + " " + callback.locations.getAt(i).getPostalCode()};
+			that.Map.locations.add(callback.locations.getAt(i));
+		}
+		
+		that.Map.getMap();
+	}
+	
+	function mqAddMarker(x, y, html) {
+		var userPopup = new MQPopup();
+		
+		// translate GIS Coord to the Mapquest format
+		
+		//Draw the popup
+		userPopup.show(x, y, html);	
+	}
+	
+	//**********************
+    //Google functions
+    //**********************
+	function gGeoCode (street, city, state, zip, country, name) {
+		var gc = new GClientGeocoder();
+		
+		var address = street + " " + city + " " + state;
+
+		// Get the LatLng From Google Maps 
+		var geocoder = new GClientGeocoder();
+		var point = geocoder.getLatLng(address, function(point) 
+		{
+			if (!point) {
+				alert(address + " not found");
+			} 
+			else 
+			{
+				that.Map.setCenter(point, 15);
+				that.AddMarker(point,street);
+			}
+		});		
+		
+	}
+
+	
+	
+	function gAddMarker(point,address) {
+		var marker = new GMarker(point);
+		that.Map.addOverlay(marker);
+		marker.openInfoWindowHtml(address);
+	}
+
+
+	//**********************************
+	// public methods
+	//**********************************
+
+	// Panning Functions
+	lgmMapping.prototype.PanNorth = null;
+	lgmMapping.prototype.PanEast = null;
+	lgmMapping.prototype.PanSouth = null;
+	lgmMapping.prototype.PanWest = null;
+	
+	// Zooming Functions
+	lgmMapping.prototype.ZoomIn = null;
+	lgmMapping.prototype.ZoomOut = null;
+	
+	// Geocoding Functions
+	lgmMapping.prototype.GeoCode = null;	// Params Address, City, State, PostZip Code
+	lgmMapping.prototype.GeoCodeCallback = null;
+	
+	// Marker Functions
+	lgmMapping.prototype.AddMarker = null;
+	
+	// Context Continue function - Once the data context has been loaded, continue with this function
+	lgmMapping.prototype.ContextContinue = function (context) {		
+		addDebugMessage ("Context Complete.");
+		that.DataContext = context;
+		
+		for(var i=0; i<that.LayerMapping.length; i++) {
+			if (context[that.LayerMapping[i].RelatedTable]) {
+				var lgmDataComponent = context[that.LayerMapping[i].RelatedTable][that.LayerMapping[i].RelatedField];
+	
+				if (context[that.LayerMapping[i].RelatedTable].length > 0) {
+					for(var ii=0; ii<context[that.LayerMapping[i].RelatedTable].length; ii++) {
+						if (that.LayerMapping[i].RelatedAttribute == "lgmGeocodeAddress") {
+							var address = "", city = "", state = "", zipCode = "", country = "", name = "";
+	
+							for(var iii=0; iii < that.LayerMapping[i].RelatedField.length; iii++) {
+								if (that.LayerMapping[i].RelatedField[iii].MapField == "Address") {
+									address = context[that.LayerMapping[i].RelatedTable][ii][that.LayerMapping[i].RelatedField[iii].TableField];
+								} else if (that.LayerMapping[i].RelatedField[iii].MapField == "City") {
+									city = context[that.LayerMapping[i].RelatedTable][ii][that.LayerMapping[i].RelatedField[iii].TableField];
+								} else if (that.LayerMapping[i].RelatedField[iii].MapField == "State") {
+									state = context[that.LayerMapping[i].RelatedTable][ii][that.LayerMapping[i].RelatedField[iii].TableField];
+								} else if (that.LayerMapping[i].RelatedField[iii].MapField == "ZipCode") {
+									zipCode = context[that.LayerMapping[i].RelatedTable][ii][that.LayerMapping[i].RelatedField[iii].TableField];
+								} else if (that.LayerMapping[i].RelatedField[iii].MapField == "Country") {
+									country = context[that.LayerMapping[i].RelatedTable][ii][that.LayerMapping[i].RelatedField[iii].TableField];
+								} else if (that.LayerMapping[i].RelatedField[iii].MapField == "Name") {
+									name = context[that.LayerMapping[i].RelatedTable][ii][that.LayerMapping[i].RelatedField[iii].TableField];
+								}
+							}
+	
+							that.GeoCode(address, city, state, zipCode, country, name);
+						} else {
+						
+						}					
+					}
+				}
+			}
+		}		
+	};
+		
+	//**********************************
+	// constructor code
+	//**********************************
+
+	// Enable Debugging
+	if (debug != null) {
+		that.Debug = true;
+		that.DebugControl = debug;
+		addDebugMessage ("<strong>Debugging Turned On</strong>");
+	} else {
+		that.Debug = false;
+	}
+
+	// Load map service information
+	loadMappingConfig();
+		
+	if (type == "Community Map Builder 1.0.1") {
+		if(navigator.userAgent.toLowerCase().indexOf("msie")>-1)
+			checkIESecurity(); 
+			
+		mapbuilder = new lgmLibraryManager();
+		mapbuilder.continueFunc = mapbuilder_setup;	
+				
+	} else if (type == "Map Quest") {
+		//Load the mapping control
+		that.Map = new MQMap(this.Control);
+		that.Map.getMap();
+		
+		//Resize the map
+		that.Map.setMapSize(new MQSize(this.MapSize.xWidth, this.MapSize.yHeight));
+
+		//Assign Prototyped functions
+		lgmMapping.prototype.GeoCode = function (address, city, state, zip, country, name) { return mqGeoCode(address, city, state, zip, country, name) };
+		lgmMapping.prototype.GeoCodeCallback = function (callback) { return mqGeoCodeCallback(callback) };
+		lgmMapping.prototype.AddMarker = function (x, y, callback) { return mqAddMarker(x, y, callback) };
+
+		//Show Debug Messages	
+		addDebugMessage ("x:" + this.MapSize.xWidth + " y:" + this.MapSize.yHeight);
+
+	} else if (type == "Yahoo!") {
+	
+	} else if (type == "Google") {
+	
+	if (GBrowserIsCompatible())  {
+	
+		that.Control.style.height="100%";
+		
+		//Load the mapping control
+		that.Map = new GMap2(this.Control);
+		that.Map.addControl(new GSmallMapControl());
+		that.Map.addControl(new GMapTypeControl());
+
+		//Assign Prototyped functions
+		lgmMapping.prototype.GeoCode = function (address, city, state, zip, country, name) { return gGeoCode(address, city, state, zip, country, name) };
+		//lgmMapping.prototype.GeoCodeCallback = function (point) { return gGeoCodeCallback(point) };
+		lgmMapping.prototype.AddMarker = function (point,address) { return gAddMarker(point,address) };
+
+		
+		
+		
+	}
+	} else if (type == "ArcWeb") {
+		
+	} else if (type == "Skyline") {
+
+	} else {	
+	}
+	
+};
+
+//-->
+</script>

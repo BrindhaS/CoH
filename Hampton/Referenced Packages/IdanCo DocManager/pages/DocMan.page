@@ -1,0 +1,8 @@
+<apex:page >
+
+<apex:sectionHeader title="IdanCo DocManager" subtitle="Manage your documents"/>
+<apex:pageBlock >
+<c:DocMan /> 
+</apex:pageBlock>
+
+</apex:page>

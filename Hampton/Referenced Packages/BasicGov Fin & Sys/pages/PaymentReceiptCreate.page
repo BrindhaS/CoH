@@ -1,0 +1,56 @@
+<apex:page standardController="BGBK__Payment__c" extensions="BGBK.PaymentReceiptController">
+    <script>
+window.onload = function()
+{ 
+    var val = getInvoiceLookup();
+    if (val != '') {
+        alert("Invoice Deposits are not allowed. \nPlease click Invoice Fees 'Pay Fees' button to pay them directly.");
+        
+        //apex cancel
+        cancelJS();
+    }
+    
+    
+}
+    </script>
+      <apex:form >
+    <apex:inputHidden id="invoiceLookup" value="{!p.BGBK__Invoice__c}" />
+    <script type="text/javascript">
+    function getInvoiceLookup(){
+        var val = document.getElementById('{!$Component.invoiceLookup}').value;
+        return val;
+    }
+    </script>
+    <apex:actionFunction action="{!cancel}" name="cancelJS" rerender=""/>
+        <apex:sectionHeader title="Payment Edit" subtitle="New Payment">
+            <!--<apex:commandLink action="{!cancel}"
+                value="{!parentLabel}: {!trackno}" id="backToParent" />-->
+        </apex:sectionHeader>
+
+        <apex:pageBlock title="Payment" id="block" mode="edit">
+            <apex:pageMessages />
+
+            <apex:pageBlockSection title="Payment" showHeader="false"> 
+                <!-- TODO: order top-down-->
+                <apex:inputfield value="{!p.BGBK__Type__c}" required="true" />
+                <apex:inputfield value="{!p.BGBK__Purpose__c}" required="false" />
+                <apex:inputfield value="{!p.BGBK__Amount__c}" required="false" />
+            </apex:pageBlockSection>
+            
+            <apex:pageBlockSection title="Receipt Information">
+                <!-- order left-right-->
+                <apex:inputfield value="{!r.MUSW__Payment_Method__c}" required="false" />
+                <apex:inputfield value="{!r.MUSW__Check_Number__c}" required="false" />
+                <apex:inputfield value="{!r.MUSW__Receipt_Paid_By__c}" required="false" />
+            </apex:pageBlockSection>    
+            <apex:pageBlockSection title="Receipt Comments" showHeader="false" Columns="1">
+                <apex:inputfield value="{!r.MUSW__Comments__c}" required="false" style="width:95%"/>
+            </apex:pageBlockSection>     
+            <apex:pageblockbuttons >
+                <apex:commandbutton action="{!save}" value="Save" />
+                <apex:commandbutton action="{!cancel}" value="Cancel" />
+            </apex:pageblockbuttons>
+
+        </apex:pageBlock>
+    </apex:form>
+</apex:page>

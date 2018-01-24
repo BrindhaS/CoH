@@ -1,0 +1,257 @@
+<apex:page controller="BGBK.FeePaymentController" id="p">
+    <apex:includeScript value="/soap/ajax/27.0/connection.js"/>
+    <apex:includeScript value="/soap/ajax/27.0/apex.js"/>
+    <apex:form id="f">
+        <apex:sectionHeader title="{!parentObjectLabel}" subtitle="{!trackno}" id="h">
+            <apex:commandLink action="{!cancel}" value="{!parentObjectLabel}: {!trackno}"/>
+            <apex:pageMessages id="msg"/>
+        </apex:sectionHeader>
+        <apex:pageblock title="Edit/Delete {!IF($CurrentPage.parameters.mode = 'Fee','Fees','Payments')}" id="pb">
+            <apex:pageblockbuttons >
+                <apex:commandbutton value="Save" onclick="processAndSave();" status="searchStatus" reRender="msg"/>
+                <apex:commandbutton action="{!cancel}" value="Cancel" immediate="true"/>
+                <apex:actionStatus startText="Saving..." id="searchStatus"/>
+            </apex:pageblockbuttons>
+            
+            <!--------------- Payment ORIENTED VIEW ---------------->
+            <apex:repeat value="{!wpayment}" var="pwrap" rendered="{!$CurrentPage.parameters.mode = 'Payment' || $CurrentPage.parameters.mode = 'Receipt'}" id="paymentRepeat">
+                <apex:pageBlockSection title="{!pwrap.payment.Name}" columns="1" id="paymentOuter">
+                    <apex:pageBlockSection columns="{!$ObjectType.BGBK__Payment__c.FieldSets.BGBK__Payment_Basic.size+3 + IF(pwrap.feePayments.size = 0,1,0)}" id="paymentDetail">
+                        <apex:outputPanel rendered="{!pwrap.feePayments.size = 0}">
+                            <apex:commandButton action="{!removePayment}" value="Delete Payment" reRender="f" immediate="false">
+                                <apex:param name="deleteps" assignTo="{!tIndex}" value="{!pwrap.index}"/>
+                            </apex:commandButton>
+                        </apex:outputPanel>
+                        <apex:repeat value="{!$ObjectType.BGBK__Payment__c.FieldSets.BGBK__Payment_Basic}" var="field" id="fsRepeat">
+                            <apex:inputField value="{!pwrap.payment[field]}" onchange="
+                                var newPmtAmt;
+                                var oldPmtAmt = '{!pwrap.payment.amount__c}';
+                                for (var i=0; i<this.parentNode.parentNode.childNodes.length; i++) {
+                                    if (this.parentNode.parentNode.childNodes[i].childNodes[0].innerHTML == 'Amount') {
+                                        newPmtAmt = this.parentNode.parentNode.childNodes[i+1].childNodes[0].value;
+                                        break;
+                                    }
+                                }
+                                if (newPmtAmt == '') newPmtAmt = '0';
+                                newPmtAmt = newPmtAmt.replace(',','');
+                                
+                                var newRefAmt;
+                                var oldRefAmt = '{!pwrap.payment.refunded_amount__c}';
+                                if (oldRefAmt == '') oldRefAmt = '0';
+                                for (var i=0; i<this.parentNode.parentNode.childNodes.length; i++) {
+                                    if (this.parentNode.parentNode.childNodes[i].childNodes[0].innerHTML.indexOf('Refunded Amount') != -1) {
+                                        newRefAmt = this.parentNode.parentNode.childNodes[i+1].childNodes[0].value;
+                                        break;
+                                    }
+                                }
+                                if (newRefAmt == '') newRefAmt = '0';
+                                newRefAmt = newRefAmt.replace(',','');
+
+                                var deltaRef = parseFloat(oldRefAmt) - parseFloat(newRefAmt);
+                                var deltaAmt = parseFloat(newPmtAmt) - parseFloat(oldPmtAmt);
+                                var deltaOld =  parseFloat({!pwrap.delta});
+                                var delta = deltaRef + deltaAmt;
+                                document.getElementById('p:f:pb:paymentRepeat:'+{!pwrap.index}+':paymentOuter:paymentDetail:deltaSection:delta').innerHTML = (delta + deltaOld).toFixed(2);
+                                document.getElementById('p:f:pb:paymentRepeat:'+{!pwrap.index}+':paymentOuter:paymentDetail:deltaSection:delta2').value = (delta + deltaOld).toFixed(2);
+                            "/>
+                            
+                            <apex:selectList value="{!pwrap.refundee}" label="Refundee" size="1" style="width:150px" rendered="{!field='BGBK__Refunded_Amount__c'}" id="refundeeList">
+                                <apex:selectOptions value="{!pwrap.refundees}"/>
+                            </apex:selectList>
+                            
+                            <apex:outputPanel rendered="{!field='BGBK__Refunded_Amount__c'}">
+                            <apex:inputField value="{!pwrap.tempRefundeeLookup.MUSW__Owner__c}" id="refundee2" style="width:0;color:transparent;background-color:transparent;border:none" onchange="addRefundeeJS({!pwrap.index}, this.value+':'+document.getElementById('p:f:pb:paymentRepeat:{!pwrap.index}:paymentOuter:paymentDetail:fsRepeat:3:refundee2_lkid').value);"/>
+                            </apex:outputPanel>
+                        </apex:repeat>
+                        
+                        <apex:pageblockSectionItem id="deltaSection">
+                            <apex:outputLabel value="Change" for="delta"/>
+                            <apex:outputPanel >
+                            <apex:outputText value="{!pwrap.delta}" style="color:red" id="delta"/>
+                            <apex:inputText value="{!pwrap.delta}" style="color:red;visibility:hidden;width:0" id="delta2"/>
+                            </apex:outputPanel>
+                        </apex:pageblockSectionItem>
+                    </apex:pageBlockSection>
+                    
+                    <!--<apex:pageBlockSection title="Fees" columns="1" id="feePaymentOuter">-->
+                        <apex:pageBlockTable value="{!pwrap.feePayments}" var="fpwrap" id="feePaymentSublist" columns="{!$ObjectType.MUSW__Fee_Payment__c.FieldSets.BGBK__Fee_Payment_Basic.size+3}" width="100%" rendered="{!pwrap.feePayments.size > 0}">
+                            <apex:column >
+                                <apex:facet name="header"></apex:facet>
+                                <apex:commandLink action="{!pwrap.removeFeePayment}" value="Del" reRender="f" immediate="false">
+                                    <apex:param name="deletepayment" assignTo="{!pwrap.tIndex}" value="{!fpwrap.index}"/>
+                                </apex:commandLink>
+                            </apex:column>
+                            
+                            <apex:repeat value="{!$ObjectType.MUSW__Fee_Payment__c.FieldSets.BGBK__Fee_Payment_Basic}" var="f">
+                                <apex:column >
+                                    <apex:facet name="header">{!$ObjectType.MUSW__Fee_Payment__c.Fields[f].label}</apex:facet>
+                                    <apex:inputField value="{!fpwrap.feePayment[f]}" onchange="
+                                    if('{!$ObjectType.MUSW__Fee_Payment__c.Fields[f].label}' == 'Payment Amount') {
+                                        var newFeePmtAmt = (this.value != '') ? this.value.toString() : '0';
+                                        newFeePmtAmt = newFeePmtAmt.replace(',','');
+                                        var oldFeePmtAmt = ('{!fpwrap.feePayment[f]}' != '') ? '{!fpwrap.feePayment[f]}' : '0';
+                                        oldFeePmtAmt = oldFeePmtAmt.replace(',','');
+                                        var delta =  parseFloat(newFeePmtAmt) -  parseFloat(oldFeePmtAmt);
+                                        var deltaOld = {!fpwrap.delta};
+                                        document.getElementById('p:f:pb:paymentRepeat:'+{!pwrap.index}+':paymentOuter:feePaymentSublist:'+{!fpwrap.index}+':delta').innerHTML = (deltaOld + delta).toFixed(2);
+                                        document.getElementById('p:f:pb:paymentRepeat:'+{!pwrap.index}+':paymentOuter:feePaymentSublist:'+{!fpwrap.index}+':delta2').value = (deltaOld + delta).toFixed(2);
+                                    }"  rendered="{!fpwrap.FeePayment.BGBK__Payment__c = pwrap.payment.id}"/>
+                                </apex:column>
+                            </apex:repeat>
+                            
+                            <apex:column headerValue="Fee">
+                                <apex:outputField value="{!fpwrap.feePayment.MUSW__Fee__c}"/>
+                            </apex:column>
+                            <!--
+                            <apex:repeat value="{!$ObjectType.MUSW__Fee__c.FieldSets.BGBK__Fee_Basic}" var="f">
+                                <apex:column >
+                                    <apex:facet name="header">{!IF($ObjectType.MUSW__Fee__c.Fields[f].label = 'Amount','Fee Amount', $ObjectType.MUSW__Fee__c.Fields[f].label)}</apex:facet>
+                                    <apex:outputField value="{!fpwrap.fee[f]}"/>
+                                </apex:column>
+                            </apex:repeat>
+                            -->
+                            <apex:column headerValue="Change" id="deltaSection">
+                                <apex:outputPanel rendered="{!fpwrap.FeePayment.BGBK__Payment__c = pwrap.payment.id}">
+                                <apex:outputText value="{!fpwrap.delta}" style="color:red" id="delta"/>
+                                <apex:inputText value="{!fpwrap.delta}" style="color:red;visibility:hidden" id="delta2"/>
+                                </apex:outputPanel>
+                            </apex:column>
+                        </apex:pageBlockTable>
+                    <!--</apex:pageBlockSection>-->
+                </apex:pageBlockSection>
+            </apex:repeat>
+            
+            <apex:actionFunction name="addRefundeeJS" action="{!addRefundee}" reRender="f" immediate="false">
+                <apex:param name="param1" assignTo="{!tIndex}" value=""/>
+                <apex:param name="param2" assignTo="{!customRefundee}" value=""/>
+            </apex:actionFunction>
+            
+            <!------------- FEE ORIENTED VIEW ------------->
+            <apex:repeat value="{!wfee}" var="fwrap" rendered="{!$CurrentPage.parameters.mode = 'Fee'}" id="feeRepeat">
+                <apex:pageBlockSection title="{!fwrap.fee.MUSW__Type__c}" columns="1" id="feeOuter">
+                    <apex:pageBlockSection columns="{!$ObjectType.MUSW__Fee__c.FieldSets.BGBK__Fee_Basic.size+2}" id="feeDetail">
+                        <apex:outputPanel rendered="{!fwrap.feePayments.size = 0}">
+                            <apex:commandButton action="{!removeFee}" value="Delete Fee" reRender="f" immediate="false">
+                                <apex:param name="deletefs" assignTo="{!fIndex}" value="{!fwrap.index}"/>
+                            </apex:commandButton>
+                        </apex:outputPanel>
+                        <apex:repeat value="{!$ObjectType.MUSW__Fee__c.FieldSets.BGBK__Fee_Basic}" var="field">
+                             <apex:inputField value="{!fwrap.fee[field]}" onchange="
+                                     if('{!$ObjectType.MUSW__Fee__c.Fields[field].name}' == 'MUSW__Amount__c') {
+                                         var newFeeAmt = (this.value != '') ? this.value.toString() : '0';
+                                         newFeeAmt = newFeeAmt.replace(',','');
+                                         var oldFeeAmt = ('{!fwrap.fee[field]}' != '') ? '{!fwrap.fee[field]}' : '0';
+                                         oldFeeAmt = oldFeeAmt.replace(',','');
+                                         var delta = parseFloat(newFeeAmt) - parseFloat(oldFeeAmt);
+                                         var deltaOld = parseFloat({!fwrap.delta});
+                                         document.getElementById('p:f:pb:feeRepeat:'+{!fwrap.index}+':feeOuter:feeDetail:deltaSection:delta').innerHTML = (deltaOld + delta).toFixed(2);
+                                         document.getElementById('p:f:pb:feeRepeat:'+{!fwrap.index}+':feeOuter:feeDetail:deltaSection:delta2').value = (deltaOld + delta).toFixed(2);
+                                     }"/>
+                        </apex:repeat>
+                        
+                        <apex:pageblockSectionItem id="deltaSection">
+                            <apex:outputLabel value="Change" for="delta"/>
+                            <apex:outputPanel >
+                            <apex:outputText value="{!fwrap.delta}" style="color:red" id="delta"/>
+                            <apex:inputText value="{!fwrap.delta}" style="color:red;visibility:hidden" id="delta2"/>
+                            </apex:outputPanel>
+                        </apex:pageblockSectionItem>
+                    </apex:pageBlockSection>
+                    
+                    <!--<apex:pageBlockSection title="Applied Payments" columns="1" id="feePaymentOuter" rendered="{!fwrap.feePayments.size > 0}">-->
+                        <apex:pageBlockTable value="{!fwrap.feePayments}" var="fpwrap" id="feePaymentSublist" columns="{!$ObjectType.MUSW__Fee_Payment__c.FieldSets.BGBK__Fee_Payment_Basic.size+3}" width="100%" rendered="{!fwrap.feePayments.size != 0}">
+                            <apex:column >
+                                <apex:facet name="header"></apex:facet>
+                                <apex:commandLink action="{!fwrap.removeFeePayment}" value="Del" reRender="f" immediate="false">
+                                    <apex:param name="deletepayment" assignTo="{!fwrap.tIndex}" value="{!fpwrap.index}"/>
+                                </apex:commandLink>
+                            </apex:column>
+                            
+                            <apex:repeat value="{!$ObjectType.MUSW__Fee_Payment__c.FieldSets.BGBK__Fee_Payment_Basic}" var="f">
+                                <apex:column >
+                                    <apex:facet name="header">{!$ObjectType.MUSW__Fee_Payment__c.Fields[f].label}</apex:facet>
+                                    <apex:inputField value="{!fpwrap.feePayment[f]}" onchange="
+                                    if('{!$ObjectType.MUSW__Fee_Payment__c.Fields[f].label}' == 'Payment Amount') {
+                                        var newFeePmtAmt = (this.value != '') ? this.value.toString() : '0';
+                                        newFeePmtAmt = newFeePmtAmt.replace(',','');
+                                        var oldFeePmtAmt = ('{!fpwrap.feePayment[f]}' != '') ? '{!fpwrap.feePayment[f]}' : '0';
+                                        oldFeePmtAmt = oldFeePmtAmt.replace(',','');
+                                        var delta =  parseFloat(newFeePmtAmt) -  parseFloat(oldFeePmtAmt);
+                                        var deltaOld = {!fpwrap.delta};
+                                        document.getElementById('p:f:pb:feeRepeat:'+{!fwrap.index}+':feeOuter:feePaymentSublist:'+{!fpwrap.index}+':delta').innerHTML = (deltaOld + delta).toFixed(2);
+                                        document.getElementById('p:f:pb:feeRepeat:'+{!fwrap.index}+':feeOuter:feePaymentSublist:'+{!fpwrap.index}+':delta2').value = (deltaOld + delta).toFixed(2);
+                                    }"/>
+                                </apex:column>
+                            </apex:repeat>
+                            
+                            <apex:column headerValue="Payment">
+                                <apex:outputField value="{!fpwrap.feePayment.BGBK__Payment__c}"/>
+                            </apex:column>
+                            <apex:column headerValue="Change" id="deltaSection">
+                                <apex:outputPanel >
+                                <apex:outputText value="{!fpwrap.delta}" style="color:red" id="delta"/>
+                                <apex:inputText value="{!fpwrap.delta}" style="color:red;visibility:hidden" id="delta2"/>
+                                </apex:outputPanel>
+                            </apex:column>
+                        </apex:pageBlockTable>
+                    <!--</apex:pageBlockSection>-->
+                </apex:pageBlockSection>
+            </apex:repeat>
+        </apex:pageblock>
+        
+        <apex:actionFunction name="filterPaymentsJS" action="{!loadPayments}" reRender="payments"/>
+        
+        <!-- passes error message from javascript webservice callout to controller to show on the page -->
+        <apex:actionFunction name="addErrorJS" action="{!addErrorMessage}" reRender="msg">
+            <apex:param name="errmsg" assignTo="{!errorMessage}" value=""/>
+        </apex:actionFunction>
+        
+        <!-- okToSave is switched on only when Save button is pressed -->
+        <apex:actionFunction name="getGatewayTransactionsJS" action="{!getGatewayTransactions}" reRender="refundProcessScript">
+            <apex:param name="oksave" assignTo="{!okToSave}" value="true"/>
+        </apex:actionFunction>
+        <apex:actionFunction name="saveJS" action="{!save}" reRender="f">
+            <apex:param name="oksave" assignTo="{!okToSave}" value="false"/>
+        </apex:actionFunction>
+        
+        <script>
+        sforce.connection.sessionId = "{!$Api.Session_ID}";
+        function processAndSave() {
+            getGatewayTransactionsJS();
+        }
+        </script>
+        
+        <!-- Render this area after gatewayTransactions is populated by the actionFunction. Like a callback. -->
+        <apex:outputPanel id="refundProcessScript">
+            <apex:outputPanel rendered="{!okToSave}">
+                <script>
+                var trans = "{!gatewayTransactions}";
+                if (trans != "{}") {
+                    trans = trans.replace("{", "").replace("}", "");
+                    var transArr = trans.split(", ");
+                    
+                    for (var i=0; i<transArr.length; i++) {
+                        var aid = transArr[i].split("=")[0].split(":")[0];
+                        var tid = transArr[i].split("=")[0].split(":")[1];
+                        var amt = parseFloat(transArr[i].split("=")[1]);
+                        
+                        var allSuccess = true;
+                        try {
+                            var resp = sforce.apex.execute("PaymentGateway", "refund", {accountId:aid, transactionId:tid, amount:amt});
+                        } catch (err) {
+                            addErrorJS(err.faultstring);
+                            allSuccess = false;
+                            break;
+                        }
+                    }
+                    
+                    if (allSuccess == true) saveJS();
+                }
+                else {
+                    saveJS();
+                }
+                </script>
+            </apex:outputPanel>
+        </apex:outputPanel>
+    </apex:form>
+</apex:page>

@@ -1,0 +1,160 @@
+<apex:page controller="MUSW.TaskAlertController">
+    <style>
+    .Error { color: red; font-weight: bold;}
+    </style>
+
+    <apex:form >
+        <apex:sectionHeader title="{!parentObjectLabel}" subtitle="{!trackno}">
+            <apex:commandLink action="{!cancel}"
+                value="{!parentObjectLabel}: {!trackno} " id="backToParent" />
+        </apex:sectionHeader>
+        
+        <apex:pageblock title="Add/Close Alerts">
+            <apex:pageblockbuttons >
+                <apex:commandbutton action="{!save}" value="Save" />
+                <apex:commandbutton action="{!cancel}" value="Cancel" />
+                <apex:messages styleClass="Error"/>
+            </apex:pageblockbuttons>
+
+            <apex:pageblock rendered="{!displayTask}">
+                <apex:pageBlockSection title="New/Edit My Open {!listObjectLabel} ({!recordCount}) "
+                    columns="1">
+
+                    <apex:pageBlockTable value="{!t}" var="item" id="tasklist" >
+                        <apex:column headerValue="Level">
+                            {!test}<apex:image title="Click to toggle alert level" onclick="toggleJS('{!item.index}')" id="alertgreen" value="/img/samples/light_green.gif" rendered="{!AND(item.task.MUSW__AlertCode__c == 0,NOT(ISBLANK(item.task.MUSW__AlertCode__c)))}" /> 
+                            <apex:image title="Click to toggle alert level" onclick="toggleJS('{!item.index}')" id="alertyellow" value="/img/samples/light_yellow.gif" rendered="{!AND(item.task.MUSW__AlertCode__c == 1,NOT(ISBLANK(item.task.MUSW__AlertCode__c)))}" /> 
+                            <apex:image title="Click to toggle alert level" onclick="toggleJS('{!item.index}')" value="/img/samples/light_red.gif" rendered="{!AND(item.task.MUSW__AlertCode__c == 2,NOT(ISBLANK(item.task.MUSW__AlertCode__c)))}" /> 
+                            <apex:image title="Click to toggle alert level" onclick="toggleJS('{!item.index}')" url="{!$Resource.MUSW__light_off}" rendered="{!ISBLANK(item.task.MUSW__AlertCode__c)}" /> 
+                        </apex:column>
+                        
+                        
+                        <apex:column headerValue="Subject" >
+                            <apex:inputfield value="{!item.task.Subject}" />
+                        </apex:column>
+                        
+                        <apex:column headerValue="Comments" >
+                            <apex:inputfield value="{!item.task.description}" />
+                        </apex:column>
+                        <apex:column headerValue="Notify" id="n">
+                            <apex:inputCheckbox value="{!item.notify}" required="false" title="Notify only active users related to this {!parentObjectLabel}"/>
+                        </apex:column>
+                        <apex:column headerValue="Broadcast" id="b" rendered="{!m_parentObject != 'Account'}">
+                            <apex:inputCheckbox value="{!item.broadcast}" required="false" title="Notify all active users related to this {!parentObjectLabel} and Parcel"/>
+                        </apex:column>
+                        <apex:column headerValue="Parcel Alert" id="p" rendered="{!m_parentObject != 'Account'}">
+                            <apex:inputCheckbox value="{!item.task.MUSW__Shared_Link__c}" required="false" disabled="{!ISNULL(m_parcelId)}" title="Share Alert with Parcel"/>
+                        </apex:column>
+                        <apex:column headerValue="Status">
+                            <apex:inputfield value="{!item.task.status}" required="false"/>
+                        </apex:column>
+                        <apex:column headerValue="Due/Close Date">
+                            <apex:inputfield value="{!item.task.activitydate}" />
+                        </apex:column>
+                    </apex:pageBlockTable>
+
+                </apex:pageBlockSection>
+                <apex:commandButton action="{!addRow}" value="Add Rows"
+                    title="Click for more defaulted rows to add" id="addRowButton"
+                    rerender="tasklist" />
+                <apex:inputText value="{!addRowCount}" id="addRowCount" size="2"
+                    maxlength="2" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+               <apex:commandButton action="{!hideRow}" value="Hide Row"
+                    title="Click to hide last row (does not delete)" id="hideRowButton"
+                    rerender="tasklist" />
+            </apex:pageblock>
+            <apex:pageblock rendered="{!displayTask}">
+                <apex:pageBlockSection title="Other's Open {!listObjectLabel} ({!recordCounto}) "
+                    columns="1">
+
+                    <apex:pageBlockTable value="{!to}" var="item" id="tasklist2">
+                        <apex:column headerValue="Level">
+                            <apex:image id="alertImage" value="{!CASE(item.MUSW__AlertCode__c,99,"/img/samples/light_green.gif",0,"/img/samples/light_green.gif",1,"/img/samples/light_yellow.gif",2,"/img/samples/light_red.gif","/s.gif")}" />
+                        </apex:column>                        
+                        <apex:column headerValue="Subject" >
+                            <apex:outputfield value="{!item.Subject}" />
+                        </apex:column>                        
+                        <apex:column headerValue="Comments" >
+                            <apex:outputfield value="{!item.description}" />
+                        </apex:column>
+                        <apex:column headerValue="Status">
+                            <apex:outputfield value="{!item.status}"  />
+                        </apex:column>
+                        <apex:column headerValue="Due/Close Date">
+                            <apex:outputfield value="{!item.activitydate}" />
+                        </apex:column>
+                        <apex:column headerValue="Assigned To">
+                            <apex:outputfield value="{!item.ownerid}" />
+                        </apex:column>
+
+                    </apex:pageBlockTable>
+                </apex:pageBlockSection>
+                
+                <apex:pageBlockSection title="Closed {!listObjectLabel} ({!recordCountc}) "
+                    columns="1">
+
+                    <apex:pageBlockTable value="{!tc}" var="item" id="tasklist3">
+                        <apex:column headerValue="Level">
+                            <apex:image id="alertImage" value="{!CASE(item.MUSW__AlertCode__c,99,"/img/samples/light_green.gif",0,"/img/samples/light_green.gif",1,"/img/samples/light_yellow.gif",2,"/img/samples/light_red.gif","/s.gif")}" />
+                        </apex:column>
+                        
+                        <apex:column headerValue="Subject" >
+                            <apex:outputfield value="{!item.Subject}" />
+                        </apex:column>
+                        <apex:column headerValue="Comments">
+                            <apex:outputfield value="{!item.description}" />
+                        </apex:column>
+                        <apex:column headerValue="Status">
+                            <apex:outputfield value="{!item.status}"/>
+                        </apex:column>
+                        <apex:column headerValue="Due/Close Date">
+                            <apex:outputfield value="{!item.activitydate}" />
+                        </apex:column>
+                        <apex:column headerValue="Assigned To">
+                            <apex:outputfield value="{!item.ownerid}" />
+                        </apex:column>
+                    </apex:pageBlockTable>
+
+                </apex:pageBlockSection>
+               
+            </apex:pageblock>
+            <apex:pageblock rendered="{!displayTaskShared}">
+                <apex:pageBlockSection title="Shared Open {!listObjectLabel} ({!recordCounts}) "
+                    columns="1">
+
+                    <apex:pageBlockTable value="{!ts}" var="item" id="tasklist4">
+                        <apex:column headerValue="Level">
+                            <apex:image id="alertImage" value="{!CASE(item.MUSW__AlertCode__c,99,"/img/samples/light_green.gif",0,"/img/samples/light_green.gif",1,"/img/samples/light_yellow.gif",2,"/img/samples/light_red.gif","/s.gif")}" />
+                        </apex:column>
+                        
+                        
+                        <apex:column headerValue="Subject" >
+                            <apex:outputfield value="{!item.Subject}" />
+                        </apex:column>
+                        <apex:column headerValue="Comments" >
+                            <apex:outputfield value="{!item.description}" />
+                        </apex:column>
+                        <apex:column headerValue="Status">
+                            <apex:outputfield value="{!item.status}"  />
+                        </apex:column>
+                        <apex:column headerValue="Due/Close Date">
+                            <apex:outputfield value="{!item.activitydate}" />
+                        </apex:column>
+                        <apex:column headerValue="Assigned To">
+                            <apex:outputfield value="{!item.ownerid}" />
+                        </apex:column>
+                        <apex:column headerValue="Related To">
+                            <apex:outputfield value="{!item.whatid}" />
+                        </apex:column>
+
+                    </apex:pageBlockTable>
+
+                </apex:pageBlockSection>
+            </apex:pageblock>
+             <apex:actionFunction action="{!toggle}" name="toggleJS" rerender="tasklist">
+                 <apex:param name="selectedRow" assignTo="{!selectedRow}" value="" />
+            </apex:actionFunction>
+
+        </apex:pageblock>
+    </apex:form>
+</apex:page>

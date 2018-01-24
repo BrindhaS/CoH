@@ -1,0 +1,104 @@
+<apex:page controller="MUSW.MilestoneController" action="{!setup}">
+    <apex:messages id="msgs"/>
+    <apex:form id="f">
+        <apex:sectionHeader title="{!parentObjectLabel}" subtitle="{!trackno}">
+            <apex:commandLink action="{!cancel}"
+                value="{!parentObjectLabel}: {!trackno}" immediate="true"/>
+        </apex:sectionHeader>
+        <apex:pageblock title="New/Edit {!listObjectLabel}" id="pb">
+            <apex:pageblockbuttons >
+                <apex:commandbutton action="{!save}" value="Save" />
+                <apex:commandbutton action="{!cancel}" value="Cancel" immediate="true"/>
+            </apex:pageblockbuttons>
+            
+            <!--------------- TASK ORIENTED VIEW ---------------->
+            <apex:outputPanel rendered="{!$CurrentPage.parameters.mode = 'Task'}">
+            <apex:outputLabel value="Filter By " for="filter"/>
+            <apex:selectList value="{!filterTypeSelected}" size="1" onchange="filterTasksJS();" id="filter">
+                <apex:selectOptions value="{!filterTypes}"/>
+            </apex:selectList><BR/><BR/>
+            </apex:outputPanel>
+            
+            <apex:pageBlockTable value="{!tf}" var="twrap" id="tasks" width="100%" rendered="{!$CurrentPage.parameters.mode = 'Task'}">
+                <apex:column >
+                    <apex:commandLink action="{!removeTask}" value="Del" reRender="tasks" immediate="true">
+                        <apex:param name="deletetask" assignTo="{!tIndex}" value="{!twrap.index}"/>
+                    </apex:commandLink>
+                </apex:column>
+                
+                <apex:column >
+                    <apex:image value="{!twrap.statusImageUrl}" rendered="{!TRIM(twrap.statusImageUrl) != ''}"/>
+                </apex:column>
+
+                <apex:column >
+                    <apex:facet name="header">Milestone</apex:facet>
+                    <apex:selectList value="{!twrap.task.whatid}" multiselect="false" size="1">
+                        <apex:selectOptions value="{!selectMilestones}"/>
+                    </apex:selectList>
+                </apex:column>
+                
+                <apex:repeat value="{!$ObjectType.Task.FieldSets.MUSW__Milestone_Task_Overview}" var="f">
+                    <apex:column >
+                        <apex:facet name="header">{!$ObjectType.Task.Fields[f].label}</apex:facet>
+                        <!--<apex:outputField value="{!twrap.task[f]}" rendered="{!twrap.task.id != null}">
+                            <apex:inlineEditSupport />
+                        </apex:outputField>-->
+                        <apex:inputField value="{!twrap.task[f]}" required="{!$ObjectType.Task.Fields[f].label = 'Due Date Only'}"/>
+                    </apex:column>
+                </apex:repeat>
+            </apex:pageBlockTable>
+            
+            <!------------- MILESTONE ORIENTED VIEW ------------->
+            <apex:repeat value="{!mt}" var="mwrap" rendered="{!$CurrentPage.parameters.mode = 'Milestone'}">
+                <apex:pageBlockSection title="{!mwrap.milestone.Name}" columns="1">
+                    <apex:pageBlockSection columns="{!$ObjectType.MUSW__Milestone__c.FieldSets.MUSW__Milestone_Overview.size+1}">
+                        <apex:image value="{!mwrap.statusImageUrl}" rendered="{!TRIM(mwrap.statusImageUrl) != ''}"/>
+                        <apex:repeat value="{!$ObjectType.MUSW__Milestone__c.FieldSets.MUSW__Milestone_Overview}" var="f">
+                             <apex:outputField value="{!mwrap.milestone[f]}" rendered="{!mwrap.milestone.id != null}"><apex:inlineEditSupport /></apex:outputField>
+                             <apex:inputField value="{!mwrap.milestone[f]}" rendered="{!mwrap.milestone.id == null}"/>
+                        </apex:repeat>
+                    </apex:pageBlockSection>
+                    
+                    <apex:pageBlockTable value="{!mwrap.tasks}" var="twrap" id="tasksSublist" width="100%">
+                        <apex:column >
+                            <apex:commandLink action="{!mwrap.removeTask}" value="Del" reRender="tasksSublist" immediate="true">
+                                <apex:param name="deletetask" assignTo="{!mwrap.tIndex}" value="{!twrap.index}"/>
+                            </apex:commandLink>
+                        </apex:column>
+                        
+                        <apex:column >
+                            <apex:image value="{!twrap.statusImageUrl}" rendered="{!TRIM(twrap.statusImageUrl) != ''}"/>
+                        </apex:column>
+                        
+                        <apex:repeat value="{!$ObjectType.Task.FieldSets.MUSW__Milestone_Task_Overview}" var="f">
+                            <apex:column >
+                                <apex:facet name="header">{!$ObjectType.Task.Fields[f].label}</apex:facet>                                
+                                <apex:inputField value="{!twrap.task[f]}" required="{!$ObjectType.Task.Fields[f].label = 'Due Date Only'}"/>
+                            </apex:column>
+                        </apex:repeat>
+                        
+                        <apex:column >
+                            <apex:facet name="header">Predecessor Task</apex:facet>
+                            <apex:selectList value="{!twrap.predecessorTask}" multiselect="false" size="1">
+                                <apex:selectOptions value="{!mwrap.selectTasks}"/>
+                            </apex:selectList>
+                        </apex:column>
+                    </apex:pageBlockTable>
+                    
+                    <apex:outputPanel >
+                    <apex:commandButton action="{!mwrap.addTask}" value="Add Task" reRender="tasksSublist" immediate="true"/>
+                    <apex:commandButton action="{!removeMilestone}" value="Delete Milestone" reRender="pb" immediate="true">
+                        <apex:param name="deletems" assignTo="{!mIndex}" value="{!mwrap.index}"/>
+                    </apex:commandButton>
+                    </apex:outputPanel>
+                </apex:pageBlockSection>
+            </apex:repeat>
+            
+            <hr/>
+            <apex:commandButton action="{!addMilestone}" value="Add Milestone" reRender="pb" immediate="true" rendered="{!$CurrentPage.parameters.mode = 'Milestone'}"/>
+            <apex:commandButton action="{!addTask}" value="Add Task" reRender="pb" immediate="true" rendered="{!$CurrentPage.parameters.mode = 'Task'}"/>
+        </apex:pageblock>
+        
+        <apex:actionFunction name="filterTasksJS" reRender="tasks"/>
+    </apex:form>
+</apex:page>

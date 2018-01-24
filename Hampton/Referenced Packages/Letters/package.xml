@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Package xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Letters</fullName>
+    <apiAccessLevel>Unrestricted</apiAccessLevel>
+    <description>Generate batch/singles of PDF and Word docs</description>
+    <namespacePrefix>BGBL</namespacePrefix>
+    <types>
+        <members>LetterJobList</members>
+        <name>ApexPage</name>
+    </types>
+    <types>
+        <members>Letters</members>
+        <name>CustomApplication</name>
+    </types>
+    <types>
+        <members>Applied_Query__c.Attachment_To_Object__c</members>
+        <members>Applied_Query__c.Batch_Letter__c</members>
+        <members>Applied_Query__c.Child_Iterate_Query__c</members>
+        <members>Applied_Query__c.Execution_Order__c</members>
+        <members>Applied_Query__c.Object_Name_Alias__c</members>
+        <members>Applied_Query__c.Object_Name_Plural__c</members>
+        <members>Applied_Query__c.Parent_Query__c</members>
+        <members>Applied_Query__c.Query__c</members>
+        <members>Applied_Query__c.Select_Fields__c</members>
+        <members>Batch_Letter_Job__c.Batch_Letter_Name__c</members>
+        <members>Batch_Letter_Job__c.Batch_Letter__c</members>
+        <members>Batch_Letter_Job__c.Child_Iterate_Ids__c</members>
+        <members>Batch_Letter_Job__c.End_Time__c</members>
+        <members>Batch_Letter_Job__c.HasChildIds__c</members>
+        <members>Batch_Letter_Job__c.Output_Type__c</members>
+        <members>Batch_Letter_Job__c.Override_Parameters__c</members>
+        <members>Batch_Letter_Job__c.Print_File_Location__c</members>
+        <members>Batch_Letter_Job__c.Print_File_Name__c</members>
+        <members>Batch_Letter_Job__c.Print_File__c</members>
+        <members>Batch_Letter_Job__c.Recipients__c</members>
+        <members>Batch_Letter_Job__c.Single_Letter_Job__c</members>
+        <members>Batch_Letter_Job__c.Start_Time__c</members>
+        <members>Batch_Letter_Job__c.Status__c</members>
+        <members>Batch_Letter_Job__c.TemplateId__c</members>
+        <members>Batch_Letter_Job__c.debug__c</members>
+        <members>Batch_Letter__c.File_Name_Prefix__c</members>
+        <members>Batch_Letter__c.Merge_Template__c</members>
+        <members>Batch_Letter__c.Output_Type_Short__c</members>
+        <members>Batch_Letter__c.Output_Type__c</members>
+        <members>Batch_Letter__c.Trigger_Only__c</members>
+        <members>Query__c.LIMIT_Filter__c</members>
+        <members>Query__c.ORDER_BY_Direction_Short__c</members>
+        <members>Query__c.ORDER_BY_Direction__c</members>
+        <members>Query__c.ORDER_BY_Filter__c</members>
+        <members>Query__c.Object_Fields__c</members>
+        <members>Query__c.Object_Name__c</members>
+        <members>Query__c.Tracking_Number__c</members>
+        <members>Query__c.WHERE_Filter__c</members>
+        <name>CustomField</name>
+    </types>
+    <types>
+        <members>Applied_Query__c</members>
+        <members>Batch_Letter_Job__c</members>
+        <members>Batch_Letter__c</members>
+        <members>Merge_Template__c</members>
+        <members>Query__c</members>
+        <name>CustomObject</name>
+    </types>
+    <types>
+        <members>Batch_Letter__c</members>
+        <members>Merge_Template__c</members>
+        <members>Query__c</members>
+        <name>CustomTab</name>
+    </types>
+    <types>
+        <members>MUSW__LGMSystemDocuments/Letters_System_Logo.gif</members>
+        <name>Document</name>
+    </types>
+    <types>
+        <members>Batch_Letter_Notifications</members>
+        <members>Batch_Letter_Notifications/Batch_Letter_Notification_General</members>
+        <name>EmailTemplate</name>
+    </types>
+    <types>
+        <members>Applied_Query__c-Applied Query Layout</members>
+        <members>Batch_Letter_Job__c-Batch Letter Job Layout</members>
+        <members>Batch_Letter__c-Batch Letter Layout</members>
+        <members>Merge_Template__c-Merge Template Layout</members>
+        <members>Query__c-Query Layout</members>
+        <name>Layout</name>
+    </types>
+    <types>
+        <members>My_Municipality</members>
+        <name>Letterhead</name>
+    </types>
+    <types>
+        <members>Batch_Letter__c.All</members>
+        <members>Merge_Template__c.All</members>
+        <members>Query__c.All</members>
+        <name>ListView</name>
+    </types>
+    <types>
+        <members>GenerateLetter</members>
+        <name>Scontrol</name>
+    </types>
+    <types>
+        <members>Applied_Query__c.Child_Iterate_Query_must_be_1</members>
+        <members>Applied_Query__c.Child_Iterate_Query_must_not_have_parent</members>
+        <members>Applied_Query__c.Parent_Query_without_relationship_name</members>
+        <members>Query__c.Fields_Required</members>
+        <members>Query__c.Relationship_Queries_are_not_Supported</members>
+        <name>ValidationRule</name>
+    </types>
+    <types>
+        <members>Batch_Letter_Job__c.Clone_x5</members>
+        <members>Batch_Letter_Job__c.Refresh_Status</members>
+        <members>Batch_Letter__c.Run_Job</members>
+        <members>Query__c.Test_Query</members>
+        <name>WebLink</name>
+    </types>
+    <types>
+        <members>Batch_Letter_Job__c.Completed_Batch_Letter_Job_Notification</members>
+        <name>WorkflowAlert</name>
+    </types>
+    <types>
+        <members>Applied_Query__c.Child_Iterate_Query_set_False</members>
+        <members>Applied_Query__c.Letter_Query_Set_Child_Iterate_Query</members>
+        <members>Batch_Letter_Job__c.Letter_Job_Set_HasChildIds_False</members>
+        <members>Batch_Letter_Job__c.Letter_Job_Set_HasChildIds_True</members>
+        <members>Batch_Letter_Job__c.Set_End_Time</members>
+        <members>Batch_Letter_Job__c.Set_Output_Type</members>
+        <name>WorkflowFieldUpdate</name>
+    </types>
+    <types>
+        <members>Batch_Letter_Job__c.Letter_Job_Send_Single</members>
+        <members>Batch_Letter_Job__c.Letter_Job_Send_Single_EBS</members>
+        <members>Batch_Letter_Job__c.Send_Batch_Letter_Job</members>
+        <members>Batch_Letter_Job__c.Send_Batch_Letter_Job_EBS</members>
+        <name>WorkflowOutboundMessage</name>
+    </types>
+    <types>
+        <members>Applied_Query__c.Lettery Query Select Fields -Blank</members>
+        <members>Applied_Query__c.Lettery Query Select Fields not blank</members>
+        <members>Batch_Letter_Job__c.Completed Batch Letter Job - Send Notification</members>
+        <members>Batch_Letter_Job__c.Completed Batch Letter Job - Set End Date</members>
+        <members>Batch_Letter_Job__c.Letter Job - Child Ids is Required</members>
+        <members>Batch_Letter_Job__c.Letter Job - Child Ids not Required</members>
+        <members>Batch_Letter_Job__c.Letter Job - Single %28New%29</members>
+        <members>Batch_Letter_Job__c.New Batch Letter Job</members>
+        <name>WorkflowRule</name>
+    </types>
+    <version>36.0</version>
+</Package>

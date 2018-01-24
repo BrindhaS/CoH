@@ -1,0 +1,436 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html>
+<head>
+<title>Generating Document</title>
+<!--<link href="/sCSS/26.0/sprites/1351189248000/Theme3/default/ie8/elements.css" media="handheld,print,projection,screen,tty,tv" rel="stylesheet" type="text/css"/>-->
+<link href="/sCSS/26.0/sprites/1351189248000/Theme3/default/ie8/common.css" media="handheld,print,projection,screen,tty,tv" rel="stylesheet" type="text/css"/>
+<!--<link href="/sCSS/26.0/sprites/1350325584000/Theme3/ie8/dStandard.css" media="handheld,print,projection,screen,tty,tv" rel="stylesheet" type="text/css"/>-->
+<link href="/sCSS/26.0/sprites/1351189248000/Theme3/default/ie8/extended.css" media="handheld,print,projection,screen,tty,tv" rel="stylesheet" type="text/css"/>   
+    <script src="/soap/ajax/17.0/connection.js"></script>
+    <script language="javascript" type="text/javascript">
+
+window.moveBy(200,100);
+
+var result = null;
+var recs = [];
+var job = null;
+var BLrec = null;
+var parentName = "";
+
+if ({!$User.MUSW__Step_Through__c}) 
+{ 
+	//throw uncaught exception so can step through in managed client environment 
+	throw "e"; 
+}
+
+function init()
+{
+	document.getElementById("copy").style.display = "none";
+	
+	lgm.href.getParameters();
+	job = new sforce.SObject("BGBL__Batch_Letter_Job__c");
+
+	//if autorun a specific letter, else prompt
+	if ((lgm.href.param["BLId"] != null) || (lgm.href.param["BLName"] != null)) //autorun for a specific letter
+	{
+		document.getElementById("autorun").style.visibility = "visible";
+		document.getElementById("prompt").style.visibility = "hidden";
+		if (lgm.href.param["BLId"] != null) 
+		{
+			result = sforce.connection.query("select Id, Name, BGBL__File_Name_Prefix__c, BGBL__Merge_Template__c, BGBL__Output_Type_Short__c from BGBL__Batch_Letter__c where id = '" + lgm.href.param["BLId"] + "'");
+		} else if (lgm.href.param["BLName"] != null) 
+		{
+			result = sforce.connection.query("select Id, Name, BGBL__File_Name_Prefix__c, BGBL__Merge_Template__c, BGBL__Output_Type_Short__c from BGBL__Batch_Letter__c where Name = '" + lgm.href.param["BLName"] + "'");
+		} 
+
+		BLrec = result.getArray("records");
+
+		createBLJ();
+
+	} else //prompt
+	{ 
+		//document.getElementById("prompt").style.display = "inline";
+		document.getElementById("prompt").style.visibility = "visible";
+		document.getElementById("autorun").style.visibility = "hidden";
+		
+		//find object api name based on eid token 
+		parentName = getObjectNameFromId(lgm.href.param["eid"]);
+
+		//get letters configured to run for this parent 
+		result = sforce.connection.query("select BGBL__Select_Fields__c, BGBL__Child_Iterate_Query__c, BGBL__Attachment_To_Object__c, BGBL__Batch_Letter__r.Id, BGBL__Batch_Letter__r.Name, BGBL__Batch_Letter__r.BGBL__Output_Type_Short__c, BGBL__Query__r.BGBL__Object_Name__c, BGBL__Query__r.BGBL__Object_Fields__c, BGBL__Query__r.BGBL__LIMIT_Filter__c, BGBL__Query__r.BGBL__ORDER_BY_Direction_Short__c, BGBL__Query__r.BGBL__ORDER_BY_Filter__c, BGBL__Query__r.BGBL__WHERE_Filter__c from BGBL__Applied_Query__c where ((BGBL__Attachment_To_Object__c = true and BGBL__Query__r.BGBL__Object_Name__c = '" + parentName + "') or BGBL__Child_Iterate_Query__c = true ) and BGBL__Batch_Letter__r.BGBL__Trigger_Only__c != true order by BGBL__Attachment_To_Object__c DESC, BGBL__Batch_Letter__r.Name");
+		var pickList = document.getElementById('letter');
+
+		if (result.size == 1) recs[0] = result.records;
+		else recs = result.records;
+		
+		pickList[0] = new Option("");
+		for (var i=0;i<recs.length;i++) {
+			// populate dropdown with letters that are supposed to be attached to the object
+			if (recs[i]["BGBL__Attachment_To_Object__c"] == "true") {
+				pickList[i+1] = new Option(recs[i]["BGBL__Batch_Letter__r"]["Name"]);
+				pickList[i+1].label = recs[i]["BGBL__Batch_Letter__r"]["Name"];
+				pickList[i+1].value = recs[i]["BGBL__Batch_Letter__r"]["Id"];
+			}
+			else break; // notice order by BGBL__Attachment_To_Object__c
+		}
+	}
+}
+
+function createBLJ()
+{
+	//set overrides and create job
+	job.BGBL__Batch_Letter__c = BLrec[0]["Id"];
+	document.getElementById("BatchLetterId").value = BLrec[0]["Id"];
+	job.BGBL__Status__c = "Single Letter Job Started";
+	job.BGBL__Single_Letter_Job__c = true;
+	job.BGBL__Output_Type__c = lgm.href.param["OutputType"];
+	if (job.BGBL__Output_Type__c == null) { //use default if not specified
+		job.BGBL__Output_Type__c = BLrec[0]["BGBL__Output_Type_Short__c"]; //doc is default if not specified
+	}
+	document.getElementById("OutputType").value =job.BGBL__Output_Type__c;
+	if (lgm.href.param["Override"] != null) {
+		job.BGBL__Override_Parameters__c = lgm.href.param["Override"].replace("eid", lgm.href.param["eid"]);
+	} else //single letter is default for this screen at this time
+	{
+		job.BGBL__Override_Parameters__c = "WHERE Id= 'eid'".replace("eid", lgm.href.param["eid"]);
+	}
+	document.getElementById("OverrideParams").value = job.BGBL__Override_Parameters__c;
+	//set children
+	var children = "";
+	if (document.getElementById("childRecords")) 
+	{
+		var options = document.getElementById("childRecords").options;
+		if (options) 
+		{
+			for (var i=0; i<options.length; i++) 
+			{
+				if (options[i].selected)
+					children += "," + options[i].value;
+			}
+			children = children.replace(",", "");
+			
+			//job.BGBL__Child_Iterate_Ids__c = children;
+			document.getElementById("IterateChildIds").value = children;
+		}
+	}
+
+	var result = sforce.connection.create([job]);
+
+	//indicate letter name
+	document.getElementById('letterLabel').innerHTML = BLrec[0]["Name"];; 
+
+	//set form fields for submittal
+	document.getElementById("JobId").value = result[0].id;
+	document.getElementById("recid").value = lgm.href.param["eid"];
+	document.getElementById("TemplateId").value = BLrec[0]["BGBL__Merge_Template__c"];
+	document.getElementById("BatchLetterName").value = BLrec[0]["BGBL__File_Name_Prefix__c"];
+
+	var frm = document.getElementById("frmBL");
+	frm.submit();
+}
+
+function getObjectNameFromId(id) 
+{
+	//get info on the tables that link to BG letters
+	var dgRetrieve=["MUSW__Permit__c","MUSW__Master_Project__c","MUSW__Complaint__c","MUSW__Planning_Application__c","MUSW__License1__c","MUSW__Permit2__c","MUSW__Project2__c","MUSW__Complaint2__c","MUSW__Application2__c","MUSW__License2__c","MUSW__Inspection__c","MUSW__Parcel__c","BGBK__Return__c"]; 
+
+	//get all objects this user has access to
+	var result = sforce.connection.describeGlobal();
+	var sobjects = result.getArray("sobjects");
+	var permObjs = '';
+	for (var i=0; i<sobjects.length; i++) {
+		if(sobjects[i].name.indexOf('__c') >= 0)
+			permObjs=permObjs+sobjects[i].name+',';
+	}
+	//remove objects don't have perms to (need view and deployed at least)
+	for (var i=0; i<dgRetrieve.length; i++) 
+	{
+		if (permObjs.indexOf(dgRetrieve[i]+',') < 0) {
+			dgRetrieve.remove(i);
+			i--;
+		}
+	}
+	//alert(dgRetrieve);
+
+	var allCustTables = sforce.connection.describeSObjects(dgRetrieve);
+
+	for (var i=0; i<allCustTables.length; i++) 
+	{
+		if (allCustTables[i].keyPrefix == id.substring(0,3))
+			objectName = allCustTables[i].name;
+	}
+	return objectName;
+}
+
+/************************************************************************************
+**	Screen Events
+************************************************************************************/
+function submit_onclick() 
+{
+	document.getElementById("save").disable = true;
+	var pickList = document.getElementById('letter');
+	
+	result = sforce.connection.query("select Id, Name, BGBL__File_Name_Prefix__c, BGBL__Merge_Template__c, BGBL__Output_Type_Short__c from BGBL__Batch_Letter__c where id = '" + pickList[pickList.selectedIndex].value + "'");
+	
+	BLrec = result.getArray("records");
+	
+	document.getElementById("autorun").style.visibility = "visible";
+	createBLJ();
+}
+
+function letter_onchange(recs, letterId) 
+{
+	
+	var pickList2 = document.getElementById('childRecords');
+	
+	//defaults
+	pickList2.innerHTML = "";
+	document.getElementById("copy").style.display = "none";
+	pickList2.size = 1;
+	
+	// contruct query
+	var childrenQuery, childFields, childLookupName;
+	for (var i=0;i<recs.length;i++) 
+	{
+		if (recs[i]["BGBL__Child_Iterate_Query__c"] == "true" && recs[i]["BGBL__Batch_Letter__r"]["Id"] == letterId) 
+		{
+			//get lookup field
+			var childDesc = sforce.connection.describeSObject(recs[i]["BGBL__Query__r"]["BGBL__Object_Name__c"]);
+			
+			for (var j=0; j<childDesc.fields.length; j++) 
+			{
+				if (childDesc.fields[j].type == "reference" && childDesc.fields[j].referenceTo == parentName)
+				{
+					childLookupName = childDesc.fields[j].relationshipName.replace("__r","__c");
+					break;
+				}
+				
+			}
+			
+			if (childLookupName == null) throw "unknown child iterate parent";
+			
+			childrenQuery = "select " + recs[i]["BGBL__Query__r"]["BGBL__Object_Fields__c"] + " from " + recs[i]["BGBL__Query__r"]["BGBL__Object_Name__c"] + " where " + childLookupName + " = '" + lgm.href.param["eid"] + "'";
+			if (recs[i]["BGBL__Query__r"]["BGBL__WHERE_Filter__c"] != null) {
+				childrenQuery += " and (" + recs[i]["BGBL__Query__r"]["BGBL__WHERE_Filter__c"] + ")";
+			}
+			if (recs[i]["BGBL__Query__r"]["BGBL__ORDER_BY_Filter__c"] != null) {
+				childrenQuery += " order by " + recs[i]["BGBL__Query__r"]["BGBL__ORDER_BY_Filter__c"];
+				
+				if (recs[i]["BGBL__Query__r"]["BGBL__ORDER_BY_Direction_Short__c"] != "0" && recs[i]["BGBL__Query__r"]["BGBL__ORDER_BY_Direction_Short__c"] != null) {
+					childrenQuery += " " + recs[i]["BGBL__Query__r"]["BGBL__ORDER_BY_Direction_Short__c"];
+				}
+			}
+			if (recs[i]["BGBL__Query__r"]["BGBL__LIMIT_Filter__c"] != null) {
+				childrenQuery += " limit " + recs[i]["BGBL__Query__r"]["BGBL__LIMIT_Filter__c"];
+			}
+			
+			childFields = recs[i]["BGBL__Select_Fields__c"];
+		}
+	}
+	
+	// get children and populate list
+	if (childrenQuery != null && childFields != null) 
+	{
+		var result2 = sforce.connection.query(childrenQuery);
+		
+		var recs2 = [];
+		if (result2.size == 1) recs2[0] = result2.records;
+		else recs2 = result2.records;
+		
+		var flds = childFields.replace(/\s/g, "").split(",");
+		var label;
+		
+		//pickList2[i] = new Option("<All>", null);
+		
+		var maxLength = 0;
+		
+		for (var i=0;i<recs2.length;i++) 
+		{
+			
+			label = "";
+			for (var j=0;j<flds.length;j++) 
+			{
+				if (flds[j].indexOf(".") > -1) 
+				{
+					label += ", " + recs2[i][flds[j].split(".")[0]][flds[j].split(".")[1]];
+				}
+				else 
+				{
+					label += ", " + recs2[i][flds[j]];
+				}
+			}
+			label = label.replace(", ", "");
+			
+			pickList2[i] = new Option(label, recs2[i]["Id"]);
+			
+			if (maxLength < label.length)
+				maxLength = label.length;
+		}
+		
+		pickList2[0].selected = true;
+		
+		pickList2.size = Math.min(recs2.length,5);
+
+		var widthPerc = Math.min(parseInt((0.50 * maxLength)/ 25),.75); //50% covers 25 characters. set new width to max characters (max perc at 75% (leave room for label)
+		//alert (maxLength+ 'width '+widthPerc);
+		pickList2.width=(100*widthPerc)+"%";
+		document.getElementById("copy").style.display = "block";
+		
+	}
+}
+
+// Array Remove - By John Resig (MIT Licensed)
+Array.prototype.remove = function(from, to) {
+  var rest = this.slice((to || from) + 1 || this.length);
+  this.length = from < 0 ? this.length + from : from;
+  return this.push.apply(this, rest);
+};
+
+/**FROM lgmCOMMON**/
+lgm = function() {
+};
+
+lgm.href = function() {
+};
+
+lgm.href.param = new Array();
+
+// grab list of parameters after "?" in this scontrol URL
+// requires global variable - lgm.href.param 
+lgm.href.getParameters = function() 
+{
+	var startTagStartPos= window.location.href.indexOf("?")+1;
+	var startTagEndPos = window.location.href.length;
+	var paramList = window.location.href.substring(startTagStartPos, startTagEndPos);
+
+	//replace "+" signs
+	paramList = lgm.string.replaceAll(paramList,"+", " ");
+	paramList = paramList; 
+	paramList = paramList + "&";
+	
+	//build hash table of parameters
+	while (paramList.indexOf("&") != -1) 
+	{
+		startTagStartPos = paramList.indexOf("=");
+		startTagEndPos = paramList.indexOf("&");
+
+		
+		var paramKey = paramList.substring(0,startTagStartPos);
+		var paramValue = paramList.substring(startTagStartPos + 1,startTagEndPos);
+		
+		lgm.href.param[paramKey] = unescape(paramValue); //if fields passed in as params have comma's or & in them, these need to be reverted back to normal
+		paramList = paramList.substring(paramList.indexOf("&") + 1, paramList.length);
+
+	}
+	
+	return true;
+}
+
+lgm.string = function() {
+};
+
+lgm.string.replaceAll = function (replaceString, replaceFindValue, replaceValue) {
+	var intIndexOfMatch = replaceString.indexOf(replaceFindValue);
+	while (intIndexOfMatch != -1)
+	{
+		// Relace out the current instance.
+		replaceString = replaceString.replace(replaceFindValue, replaceValue);
+	
+		// Get the index of any next matching substring.
+		intIndexOfMatch = replaceString.indexOf(replaceFindValue);
+	}
+
+	return replaceString;
+}
+	
+    </script>
+</head>
+<body onload="init()">
+<!--
+    <form id="frmBL" name="frmBL" action="http://72.44.57.207/RunBatchMergeJob/SingleLetter.aspx" method="post" enctype="multipart/form-data">
+
+    <form id="frmBL" name="frmBL" action="http://75.101.138.73/RunBatchMergeJob/SingleLetter.aspx" method="post" enctype="multipart/form-data">
+
+    <form id="frmBL" name="frmBL" action="https://processor.basicgov.com:8443/RunBatchMergeJob/SingleLetter.aspx" method="post" enctype="multipart/form-data">
+    <form id="frmBL" name="frmBL" action="http://localhost:3129/SingleLetter.aspx" method="post" enctype="multipart/form-data">
+    <form id="frmBL" name="frmBL" action="https://citizen.basicgov.com:8443/RunBatchMergeJob/SingleLetterChildIterative.aspx" method="post" enctype="multipart/form-data">
+-->
+    <form id="frmBL" name="frmBL" action="https://lettersingle.mybasicgov.com/RunBatchMergeJob/SingleLetter.aspx" method="post" enctype="multipart/form-data">
+        <input id="OrgId" name="OrgId" type="hidden" value="{!$Organization.Id}" />
+
+        <input id="SessionId" name="SessionId" type="hidden" value="{!API.Session_ID}" />
+        <input id="ApiServerUrl" name="ApiServerUrl" type="hidden" value="{!$Api.Partner_Server_URL_170}" />
+        <input id="BatchLetterName" name="ParentBatchLetterName" type="hidden" value="License Renewal" />
+<!--
+        <input id="BatchLetterId" name="ParentBatchLetterId" type="hidden" value="a06A0000000668x" />
+-->
+        <input id="BatchLetterId" name="ParentBatchLetterId" type="hidden" value="a06A0000000683K" />
+        <input id="JobId" name="JobId" type="hidden" value="" />
+
+        <input id="TemplateId" name="TemplateId" type="hidden" value="a07A0000000BvgT" />
+
+ <!--       <input id="TemplateId" name="TemplateId" type="hidden" value="a07A0000000C0Rm" />-->
+        <input id="OutputType" name="OutputType" type="hidden" value="pdf" />
+		<input id="OverrideParams" name="OverrideParams" type="hidden" value="WHERE Id='{!Account.Id}'" />
+		<input id="recid" name="recid" type="hidden" value="{!Account.Id}" />
+		<input id="IterateChildIds" name="IterateChildIds" type="hidden" value="" />
+		
+
+		<div id="prompt" visibility= "hidden" >
+			<table id ="tprompt" width="100%" style= "padding:10px 2px 10px 2px; text-align:center; font-size: 10pt; font-weight: bold; color:#333;">
+				<tr>
+				  <td><span align=center class="mainTitle">Letter</span></td>
+				</tr>
+				<tr>   
+					<td>
+						<span>Template:&nbsp;</span><select id = "letter"  required="required" onchange="javascript:letter_onchange(recs, this.value);"  name = "letter" style = "width:50%;align:center"></select>
+				  	</td>
+				</tr>
+				
+				<tr>
+					<td>
+						<div id="copy" style="display:none">
+							<span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Copy:&nbsp;</span><select id = "childRecords"  required="required" multiple="multiple" size="1" name = "childRecords" style = "width:50%;align:center" ></select>
+						</div>
+					</td>
+				</tr>
+				
+				<tr>   
+					<td>
+						<input id = "save" align="center" Name = "save" class="btn" style="margin:5px 2px 2px 20px;" type=button value="Request" onClick="javascript:submit_onclick();" disable = "false">
+				  	</td>
+				</tr>
+			</table>
+		</div>
+		<div id="autorun" visibility="hidden">
+			<table id ="tautorun" width="100%" style= "padding:0px 0px 0px 0px; text-align:center; font-size: 10pt; font-weight: bold; color:#333;">
+				<tr>
+				  <td align=center >
+					<span >Processing </span><span id = "letterLabel" name = "letterLabel"></span><span>&nbsp;letter, please wait...</span>
+				  </td>
+				</tr>
+				<tr>
+				  <td>&nbsp;</td>
+				</tr>
+				<tr>
+				  <td align=center>
+					<img id="waitingdots" src="/img/waiting_dots.gif" alt="Please wait..." width="196" height="20" title="Please wait..." />
+				  </td>
+				</tr>
+			
+				<tr>
+				  <td align=center >
+					<span >...when completed, you will be redirected to this new letter</span>
+				  </td>
+				</tr>
+			</table>
+		</div>
+           <DIV id="divDebugHeader" style="display:none"> 
+<hr/> 
+<b>Debug Mode</b> 
+</DIV> 
+<DIV id="divDebug" style="display: none"></DIV>     
+    </form>
+
+</body>
+</html>

@@ -1,0 +1,728 @@
+lgm = function() {
+};
+
+
+
+//convert nulls to a default value
+lgm.nvl = function(value, defaultvalue) {
+	if (value == null) {
+		return defaultvalue;
+	} else {
+		return value;
+	}
+};
+
+/**************************************************************************************
+* 	Class		: LGM Date Library
+*	Created By	: Chris McLuckie
+*	Created On  : 01/15/2007
+*	Purpose		:
+**************************************************************************************/
+lgm.date = function() {
+};
+
+lgm.date.MONTH_NAMES = new Array('January','February','March','April','May','June','July','August','September','October','November','December','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec');
+lgm.date.DAY_NAMES = new Array('Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sun','Mon','Tue','Wed','Thu','Fri','Sat');
+
+lgm.date.parseDate = function(val) {
+	if (typeof(val) == "date") 
+		return val;
+		
+	var preferEuro=(arguments.length==2)?arguments[1]:false;
+	var generalFormats = new Array('y-M-d','MMM d, y','MMM d,y','y-MMM-d','d-MMM-y','MMM d');
+	var monthFirst = new Array('M/d/y','M-d-y','M.d.y','MMM-d','M/d','M-d');
+	var dateFirst = new Array('d/M/y','d-M-y','d.M.y','d-MMM','d/M','d-M');
+
+	var checkList=new Array(generalFormats,preferEuro?dateFirst:monthFirst,preferEuro?monthFirst:dateFirst);
+	var d=null;
+	
+	for (var i=0; i<checkList.length; i++) {
+		var l=checkList[i];
+		for (var j=0; j<l.length; j++) {
+			d=lgm.date.getDateFromFormat(val,l[j]);
+			if (d!=0) { 
+				return new Date(d); 
+			}
+		}
+	}
+	return null;
+}
+
+//parse a string that has the ISO date/time format and return a javascript date
+lgm.date.parseISODateTime = function (string) {
+    var regexp = "([0-9]{4})(-([0-9]{2})(-([0-9]{2})" +
+        "(T([0-9]{2}):([0-9]{2})(:([0-9]{2})(\.([0-9]+))?)?" +
+        "(Z|(([-+])([0-9]{2}):([0-9]{2})))?)?)?)?";
+    var d = string.match(new RegExp(regexp));
+
+    var offset = 0;
+    var date = new Date(d[1], 0, 1);
+
+    if (d[3]) { date.setMonth(d[3] - 1); }
+    if (d[5]) { date.setDate(d[5]); }
+    if (d[7]) { date.setHours(d[7]); }
+    if (d[8]) { date.setMinutes(d[8]); }
+    if (d[10]) { date.setSeconds(d[10]); }
+    if (d[12]) { date.setMilliseconds(Number("0." + d[12]) * 1000); }
+    if (d[14]) {
+        offset = (Number(d[16]) * 60) + Number(d[17]);
+        offset *= ((d[15] == '-') ? 1 : -1);
+    }
+
+    offset -= date.getTimezoneOffset();
+    time = (Number(date) + (offset * 60 * 1000));
+    var d = new Date();
+    d.setTime(Number(time));
+    return d;
+}
+
+lgm.date.parseDateFormat = function (val, lang) {
+	lang = lang + "";
+	//Lang comes from API Name: LocaleSidKey Type: picklist
+	var preferEuro = true;
+	if ( /US/.test(lang) ) 
+		preferEuro = false; 
+	
+	generalFormats = new Array('y-M-d','MMM d, y','MMM d,y','y-MMM-d','d-MMM-y','MMM d');
+	monthFirst = new Array('M/d/y','M-d-y','M.d.y','MMM-d','M/d','M-d');
+	dateFirst = new Array('d/MM/y','d-M-y','d.M.y','d-MMM','d/M','d-M');
+	
+	var checkList = new Array(generalFormats, preferEuro?dateFirst:monthFirst, preferEuro?monthFirst:dateFirst);
+	var d = null;
+	for (var i=0; i<checkList.length; i++) {
+		var l=checkList[i];
+		for (var j=0; j<l.length; j++) {
+			d = lgm.date.getDateFromFormat(val,l[j]);
+			if (d!=0) { 
+				return l[j];
+			}
+		}
+	}
+
+	return "M/d/y"; // a default
+}
+
+//return a date from a string that is formatted by the given format specification
+lgm.date.getDateFromFormat = function (val,format) {
+	val=val+"";
+	format=format+"";
+	var i_val=0;
+	var i_format=0;
+	var c="";
+	var token="";
+	var token2="";
+	var x,y;
+	var now=new Date();
+	var year=now.getYear();
+	var month=now.getMonth()+1;
+	var date=1;
+	var hh=now.getHours();
+	var mm=now.getMinutes();
+	var ss=now.getSeconds();
+	var ampm="";
+	while (i_format < format.length) {
+		c=format.charAt(i_format);
+		token="";
+		while ((format.charAt(i_format)==c) && (i_format < format.length)) {
+		 token += format.charAt(i_format++);
+		}
+		if (token=="yyyy" || token=="yy" || token=="y") {
+			if (token=="yyyy") { 
+				x=4;y=4; 
+			}
+			if (token=="yy") {
+				x=2;y=2; 
+			}
+			if (token=="y") { 
+				x=2;y=4; 
+			}
+			year=lgm.numeric.getInt(val,i_val,x,y);
+			if (year==null) { 
+				return 0; 
+			}
+			i_val += year.length;
+			if (year.length==2) {
+				if (year > 70) { 
+					year=1900+(year-0); 
+				} else { 
+					year=2000+(year-0); 
+				}
+			}
+		}else if (token=="MMM"||token=="NNN"){
+			month=0;
+			for (var i=0; i<lgm.date.MONTH_NAMES.length; i++) {
+				var month_name=lgm.date.MONTH_NAMES[i];
+				if (val.substring(i_val,i_val+month_name.length).toLowerCase()==month_name.toLowerCase()) {
+					if (token=="MMM"||(token=="NNN"&&i>11)) {
+						month=i+1;
+						if (month>12) { 
+						 month -= 12; 
+						}
+						i_val += month_name.length;break;
+					}
+				}
+			}
+			if ((month < 1)||(month>12)){
+				return 0;
+			}
+		}else if (token=="EE"||token=="E") {
+			for (var i=0; i<DAY_NAMES.length; i++) {
+			var day_name=DAY_NAMES[i];
+			if (val.substring(i_val,i_val+day_name.length).toLowerCase()==day_name.toLowerCase()) {
+			i_val += day_name.length;
+			break;
+			}
+			}
+		}else if (token=="MM"||token=="M") {
+			month=lgm.numeric.getInt(val,i_val,token.length,2);
+			if(month==null||(month<1)||(month>12)){
+			return 0;
+			}
+			i_val+=month.length;
+		}else if (token=="dd"||token=="d") {
+			date=lgm.numeric.getInt(val,i_val,token.length,2);
+			if(date==null||(date<1)||(date>31)){
+			return 0;
+			}
+			i_val+=date.length;
+		}else if (token=="hh"||token=="h") {
+			hh=lgm.numeric.getInt(val,i_val,token.length,2);
+			if(hh==null||(hh<1)||(hh>12)){
+			return 0;
+			}
+			i_val+=hh.length;
+		}else if (token=="HH"||token=="H") {
+			hh=lgm.numeric.getInt(val,i_val,token.length,2);
+			if(hh==null||(hh<0)||(hh>23)){
+			return 0;
+			}
+			i_val+=hh.length;
+		}else if (token=="KK"||token=="K") {
+			hh=lgm.numeric.getInt(val,i_val,token.length,2);
+			if(hh==null||(hh<0)||(hh>11)){
+			return 0;
+			}
+			i_val+=hh.length;
+		}else if (token=="kk"||token=="k") {
+			hh=lgm.numeric.getInt(val,i_val,token.length,2);
+			if(hh==null||(hh<1)||(hh>24)){
+			return 0;
+			}
+			i_val+=hh.length;hh--;
+		}else if (token=="mm"||token=="m") {
+			mm=lgm.numeric.getInt(val,i_val,token.length,2);
+			if(mm==null||(mm<0)||(mm>59)){
+			return 0;
+			}
+			i_val+=mm.length;
+		}else if (token=="ss"||token=="s") {
+			ss=lgm.numeric.getInt(val,i_val,token.length,2);
+			if(ss==null||(ss<0)||(ss>59)){
+			return 0;
+			}
+			i_val+=ss.length;
+		}else if (token=="a") {
+			if (val.substring(i_val,i_val+2).toLowerCase()=="am") {ampm="AM";
+			}else if (val.substring(i_val,i_val+2).toLowerCase()=="pm") {ampm="PM";
+			}else {
+			return 0;
+			}
+			i_val+=2;
+		}else {
+			if (val.substring(i_val,i_val+token.length)!=token) {
+			return 0;
+			}else {
+			i_val+=token.length;
+			}
+		}
+	}
+	if (month==2) {
+		if ( ( (year%4==0)&&(year%100 != 0) ) || (year%400==0) ) { 
+			if (date > 29){ 
+				return 0; 
+			}
+		}else { 
+			if (date > 28) { 
+				return 0; 
+			} 
+		}
+	}
+	
+	if ((month==4)||(month==6)||(month==9)||(month==11)) {
+		if (date > 30) { 
+			return 0; 
+		}
+	}
+	if (hh<12 && ampm=="PM") { 
+		hh=hh-0+12; 
+	}else if (hh>11 && ampm=="AM") { 
+		hh-=12; 
+	}
+	var newdate=new Date(year,month-1,date,hh,mm,ss);
+	return newdate.getTime();
+}
+
+//return a string in the given format when given a date
+lgm.date.formatDate = function (date, format) {
+	format=format+"";
+	var result="";
+	var i_format=0;
+	var c="";
+	var token="";
+	var y=date.getYear()+"";
+	var M=date.getMonth()+1;
+	var d=date.getDate();
+	var E=date.getDay();
+	var H=date.getHours();
+	var m=date.getMinutes();
+	var s=date.getSeconds();
+	var yyyy,yy,MMM,MM,dd,hh,h,mm,ss,ampm,HH,H,KK,K,kk,k;
+	var value=new Object();
+	if (y.length < 4) {
+		y = ""+(y-0+1900);
+	} 
+	value["y"] = ""+y;
+	value["yyyy"] = y;
+	value["yy"] = y.substring(2,4);
+	value["M"] = M;
+	value["MM"] = lgm.numeric.lZ(M);
+	value["MMM"] = lgm.date.MONTH_NAMES[M-1];
+	value["NNN"] = lgm.date.MONTH_NAMES[M+11];
+	value["d"] = d;
+	value["dd"] = lgm.numeric.lZ(d);
+	value["E"] = lgm.date.DAY_NAMES[E+7];
+	value["EE"] = lgm.date.DAY_NAMES[E];
+	value["H"] = H;
+	value["HH"] = lgm.numeric.lZ(H);
+	if (H==0){
+		value["h"]=12;
+	} else if (H>12){
+		value["h"] = H-12;
+	} else {
+		value["h"] = H;
+	}
+	value["hh"]=lgm.numeric.lZ(value["h"]);
+	if (H>11){
+		value["K"]=H-12;
+	} else {
+		value["K"]=H;
+	}
+	value["k"]=H+1;
+	value["KK"]=lgm.numeric.lZ(value["K"]);
+	value["kk"]=lgm.numeric.lZ(value["k"]);
+	if (H > 11) { 
+		value["a"]="PM"; 
+	} else { 
+		value["a"]="AM"; 
+	}
+	value["m"] = m;
+	value["mm"] = lgm.numeric.lZ(m);
+	value["s"]=s;
+	value["ss"]=lgm.numeric.lZ(s);
+	while (i_format < format.length) {
+		c=format.charAt(i_format);
+		token="";
+		while ((format.charAt(i_format)==c) && (i_format < format.length)) {
+			token += format.charAt(i_format++);
+		}
+		if (value[token] != null) { 
+			result=result + value[token]; 
+		} else { 
+			result=result + token; 
+		}
+	}
+	return result;
+}
+
+lgm.date.isoDateTime = function(dateString) {
+	var today = new Date(dateString);
+	var year  = today.getYear();
+	
+	if (year < 2000)    // Y2K Fix, Isaac Powell
+		year = year + 1900; // http://onyx.idbsu.edu/~ipowell
+
+	var month = today.getMonth() + 1;
+	var day  = today.getDate();
+	var hour = today.getHours();
+	var hourUTC = today.getUTCHours();
+	var diff = hour - hourUTC;
+	var hourdifference = Math.abs(diff);
+	var minute = today.getMinutes();
+	var minuteUTC = today.getUTCMinutes();
+	var minutedifference;
+	var second = today.getSeconds();
+	var timezone;
+	
+	if (minute != minuteUTC && minuteUTC < 30 && diff < 0) { hourdifference--; }
+	if (minute != minuteUTC && minuteUTC > 30 && diff > 0) { hourdifference--; }
+	if (minute != minuteUTC) {
+		minutedifference = ":30";
+	}
+	else {
+		minutedifference = ":00";
+	}
+	
+	if (hourdifference < 10) { 
+		timezone = "0" + hourdifference + minutedifference;
+	}
+	else {
+		timezone = "" + hourdifference + minutedifference;
+	}
+	if (diff < 0) {
+		timezone = "-" + timezone;
+	}
+	else {
+		timezone = "+" + timezone;
+	}
+	
+	if (month <= 9) month = "0" + month;
+	if (day <= 9) day = "0" + day;
+	if (hour <= 9) hour = "0" + hour;
+	if (minute <= 9) minute = "0" + minute;
+	if (second <= 9) second = "0" + second;
+	time = year + "-" + month + "-" + day + "T" + hour + ":" + minute + ":" + second + timezone;
+	return time;
+}
+
+lgm.date.addDays = function(myDate,days) {
+    return new Date(myDate.getTime() + days*24*60*60*1000);
+}
+
+lgm.date.addWeeks = function(myDate,weeks) {
+    return new Date(myDate.getTime() + weeks*7*24*60*60*1000);
+}
+
+
+lgm.date.weekend = [0,6]; 
+
+//return the number of days to adjust forward if current day falls on the weekend
+lgm.date.weekendAdjust = function(vday) {
+
+var ret = 0;
+for (i=0; i<lgm.date.weekend.length; i++) { 
+      if (vday == lgm.date.weekend[i]) 
+         if (i == 0) {//sunday
+         	ret = 1; 
+         }
+         else {//saturday
+         	ret = 2; 
+         }
+   } 
+   return ret;
+}
+
+/**************************************************************************************
+* 	Class		: LGM Numeric Library
+*	Created By	: Chris McLuckie
+*	Created On  : 01/15/2007
+*	Purpose		:
+**************************************************************************************/
+lgm.numeric = function() {
+};
+
+lgm.numeric.lZ = function (x) {return(x<0||x>9?"":"0")+x}
+
+lgm.numeric.getInt = function (str,i,minlength,maxlength) {str=str+""; for (var x=maxlength; x>=minlength; x--) {var token=str.substring(i,i+x);if (token.length < minlength) { return null; }if (lgm.numeric.isInteger(token)) { return token; }}return null;};
+
+lgm.numeric.isInteger = function (val) {var digits="1234567890";for (var i=0; i < val.length; i++) {if (digits.indexOf(val.charAt(i))==-1) { return false; }}return true;};
+
+lgm.numeric.isNumeric = function (x) 
+{
+	// I use this function like this: if (isNumeric(myVar)) { } regular expression that validates a value is numeric 
+	var RegExp = /^(-)?(\d*)(\.?)(\d*)$/; // Note: this WILL allow a number that ends in a decimal: -452. 
+
+	// compare the argument to the RegEx the 'match' function returns 0 if the value didn't match 
+	var result = x.match(RegExp);
+	return result;
+}
+
+lgm.numeric.formatCurrency = function(num) {
+	num = num.toString().replace(/\$|\,/g,'');
+	if(isNaN(num)) {
+	num = "0";}
+	sign = (num == (num = Math.abs(num)));
+	num = Math.floor(num*100+0.50000000001);
+	cents = num%100;
+	num = Math.floor(num/100).toString();
+	if(cents<10) {
+	cents = "0" + cents;}
+	for (var i = 0; i < Math.floor((num.length-(1+i))/3); i++)
+	num = num.substring(0,num.length-(4*i+3))+','+ num.substring(num.length-(4*i+3));
+	return (((sign)?'':'-') + '$' + num + '.' + cents);
+}
+
+lgm.numeric.round = function(x,i) {
+	if (i == null) 
+		i = 0;
+	var result = Math.round(x*Math.pow(10,i))/Math.pow(10,i);
+ 	return result;
+}
+
+lgm.numeric.ceil = function(x,i) {
+	if (i == null) 
+		i = 0;
+	var result = Math.ceil(x*Math.pow(10,i))/Math.pow(10,i);
+ 	return result;
+}
+
+lgm.numeric.floor = function(x,i) {
+	if (i == null) 
+		i = 0;
+	var result = Math.floor(x*Math.pow(10,i))/Math.pow(10,i);
+ 	return result;
+}
+
+/**************************************************************************************
+* 	Class		: LGM String Library
+*	Created By	: James Wikkerink
+*	Created On  : 02/05/2007
+*	Purpose		:
+**************************************************************************************/
+lgm.string = function() {
+};
+
+lgm.string.replaceAll = function (replaceString, replaceFindValue, replaceValue) {
+	var intIndexOfMatch = replaceString.indexOf(replaceFindValue);
+	while (intIndexOfMatch != -1)
+	{
+		// Relace out the current instance.
+		replaceString = replaceString.replace(replaceFindValue, replaceValue);
+	
+		// Get the index of any next matching substring.
+		intIndexOfMatch = replaceString.indexOf(replaceFindValue);
+	}
+
+	return replaceString;
+}
+
+String.prototype.trim = function() {
+	return this.replace(/^\s+|\s+$/g,"");
+}
+String.prototype.ltrim = function() {
+	return this.replace(/^\s+/,"");
+}
+String.prototype.rtrim = function() {
+	return this.replace(/\s+$/,"");
+}
+
+/**************************************************************************************
+* 	Class		: LGM HREF Library
+*	Created By	: James Wikkerink
+*	Created On  : 02/09/2007
+*	Purpose		:
+**************************************************************************************/
+lgm.href = function() {
+};
+
+lgm.href.param = new Array();
+
+// grab list of parameters after "?" in this scontrol URL
+// requires global variable - lgm.href.param 
+lgm.href.getParameters = function() {
+	var startTagStartPos= window.location.href.indexOf("?")+1;
+	var startTagEndPos = window.location.href.length;
+	var paramList = encodeURI(window.location.href.substring(startTagStartPos, startTagEndPos));
+
+	//replace "+" signs
+	paramList = lgm.string.replaceAll(paramList,"+", " ");
+	paramList = paramList; 
+	paramList = paramList + "&";
+	
+	//build hash table of parameters
+	while (paramList.indexOf("&") != -1) {
+		startTagStartPos = paramList.indexOf("=");
+		startTagEndPos = paramList.indexOf("&");
+
+		
+		var paramKey = paramList.substring(0,startTagStartPos);
+		var paramValue = paramList.substring(startTagStartPos + 1,startTagEndPos);
+		
+		lgm.href.param[paramKey] = unescape(paramValue); //if fields passed in as params have comma's or & in them, these need to be reverted back to normal
+		paramList = paramList.substring(paramList.indexOf("&") + 1, paramList.length);
+
+	}
+	
+	return true;
+}
+
+/**************************************************************************************
+* 	Class		: LGM Debug Library
+*	Created By	: James Wikkerink
+*	Created On  : 02/15/2007
+*	Purpose		:
+**************************************************************************************/
+lgm.debug = function(control) {
+
+	// Enable Debugging
+	if (control != null) {
+		lgm.debug.flag = true;
+		lgm.debug.control = control;
+		lgm.debug.control.style.display = "block";
+		lgm.debug.addMessage ("<strong>Debug Mode</strong>");
+	} else {
+		lgm.debug.flag = false;
+	}
+	
+};
+
+lgm.debug.control = null;
+lgm.debug.flag = false;
+
+lgm.debug.addMessage = function(msg, clazz, newline) {
+	if (lgm.debug.flag)
+		if (clazz != null)
+			lgm.debug.control.innerHTML += "<p class='"+clazz+"'>"+msg+"</p>";
+		else
+		{
+			if (newline == null)
+				lgm.debug.control.innerHTML += msg + "<br/>";
+			else
+				lgm.debug.control.innerHTML += msg;
+		}
+};
+
+/**************************************************************************************
+* 	Class		: LGM Error Library
+*	Created By	: James Wikkerink
+*	Created On  : 03/01/2007
+*	Purpose		:
+**************************************************************************************/
+lgm.error = function(message) {
+//ensure that whatever object is used, that it needs a toString() method prototype defined
+	//var lgmError = new Object();
+	//lgmError.name = "LGM";
+	//lgmError.message = message;
+//update log?
+//return a object that has toString() defined
+return message;
+	
+};
+
+
+/**************************************************************************************
+* 	Class		: LGM Encoding Library
+*	Created By	: James Wikkerink
+*	Created On  : 02/15/2007
+*	Purpose		:
+**************************************************************************************/
+//use string array instead of many string concatentations
+lgmBase64 = function() {
+	//**********************************
+	// private properties
+	//**********************************
+	var that = this;  // Required for Javascript limitation of 'this' operator
+	var keyStr = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+
+
+	//**********************************
+	// private methods
+	//**********************************
+	function bencode(input) {
+		var output = "";
+		var chr1, chr2, chr3 = "";
+		var enc1, enc2, enc3, enc4 = "";
+		var i = 0;
+		
+		var stringBuffer = [];
+		do {	
+			chr1 = input.charCodeAt(i++);
+			chr2 = input.charCodeAt(i++);
+			chr3 = input.charCodeAt(i++);
+			enc1 = chr1 >> 2;
+			enc2 = ((chr1 & 3) << 4) | (chr2 >> 4);
+			enc3 = ((chr2 & 15) << 2) | (chr3 >> 6);
+			enc4 = chr3 & 63;
+			if (isNaN(chr2)) {
+				enc3 = enc4 = 64;
+			} else if (isNaN(chr3)) {
+				enc4 = 64;
+			}
+			stringBuffer.push(keyStr.charAt(enc1));
+			stringBuffer.push(keyStr.charAt(enc2));
+			stringBuffer.push(keyStr.charAt(enc3));
+			stringBuffer.push(keyStr.charAt(enc4));
+			chr1 = chr2 = chr3 = "";
+			enc1 = enc2 = enc3 = enc4 = "";
+		} while (i < input.length);
+		output = stringBuffer.join("");
+		return output;
+	}
+	
+	function bdecode(input, callback){
+		var output = "";
+		var chr1, chr2, chr3 = "";
+		var enc1, enc2, enc3, enc4 = "";
+		var i = 0;
+		var base64test = /[^A-Za-z0-9\+\/\=]/g;
+		if (base64test.exec(input)) {
+			alert("There were invalid base64 characters in the input text.\n" +"Valid base64 characters are A-Z, a-z, 0-9, '+', '/', and '='\n" +"Expect errors in decoding.");
+		}
+		input = input.replace(/[^A-Za-z0-9\+\/\=]/g, "");
+		
+		var stringBuffer = [];
+		
+		do {
+			enc1 = keyStr.indexOf(input.charAt(i++));
+			enc2 = keyStr.indexOf(input.charAt(i++));
+			enc3 = keyStr.indexOf(input.charAt(i++));
+			enc4 = keyStr.indexOf(input.charAt(i++));
+			chr1 = (enc1 << 2) | (enc2 >> 4);
+			chr2 = ((enc2 & 15) << 4) | (enc3 >> 2);
+			chr3 = ((enc3 & 3) << 6) | enc4;
+			
+			stringBuffer.push(String.fromCharCode(chr1));
+			if (enc3 != 64) {
+				stringBuffer.push(String.fromCharCode(chr2));
+	
+			}
+			if (enc4 != 64) {
+				stringBuffer.push(String.fromCharCode(chr3));
+			}
+			chr1 = chr2 = chr3 = "";
+			enc1 = enc2 = enc3 = enc4 = "";
+		} while (i < input.length);
+		
+		output = stringBuffer.join("");
+		if (callback != undefined) {
+			setTimeout(callback(output), 200);
+		} else {
+			return output;
+		}
+	}
+	
+	//**********************************
+	// public methods
+	//**********************************
+	lgmBase64.prototype.encode = function (input) {
+		return bencode(input);
+	};
+
+	lgmBase64.prototype.decode = function (input, callback) {
+		if (callback != undefined) {
+			setTimeout(bdecode(input, callback), 200);
+		} else {
+			return bdecode(input);
+		}
+	};	
+};	
+
+/**************************************************************************************
+* 	Class		: LGM Connection Library
+*	Created By	: James Wikkerink
+*	Created On  : 04/12/2012
+*	Purpose		: handles query more when all results are not initially returned
+**************************************************************************************/
+lgm.connection = function() {
+};
+
+lgm.connection.query = function(soql)
+{
+	var result = sforce.connection.query(soql);
+	var records = result.getArray("records");
+	
+	while (!result.getBoolean("done")) {
+		result = sforce.connection.queryMore(result.queryLocator);
+		records = records.concat(result.getArray("records"));
+	}
+	return records;
+};

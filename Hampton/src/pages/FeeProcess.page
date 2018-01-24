@@ -1,0 +1,695 @@
+<apex:page standardController="MUSW__Fee__c" extensions="FeeProcessController" recordSetVar="c" tabStyle="MUSW__Fee__c" action="{!initOrder}" id="p">
+<apex:includeScript value="/support/console/26.0/integration.js"/>
+
+<div id="preloader2" style="visibility:hidden;"></div>
+
+<apex:form id="f">
+    <apex:sectionHeader title="Cart" subtitle="{!cart.Name} {!con.Name}" id="h">
+        <apex:pageMessages id="msg"></apex:pageMessages>
+        <div id='errorMsg'></div>
+    </apex:sectionHeader>
+       
+    <apex:pageBlock title="Process Payment" id="pb" rendered="{!con!=null}">
+        <apex:pageblockbuttons >
+                <apex:commandbutton action="{!cancel}" value="Back" immediate="true"/>
+                <apex:commandbutton action="{!cancel}" value="Pay Other Payments" immediate="true"/>                 
+            </apex:pageblockbuttons>
+        <apex:pageBlockSection columns="2" id="totals">
+            <apex:outputText label="Total Owed" value="${!totalOwed}" id="totalOwed"/>
+            <apex:outputText label="Balance" value="${!totalBalance}" id="totalBalance" style="font-size:150%;font-weight:bold"/>
+            <apex:selectList id="accounts" value="{!accountSelected}" multiselect="false" size="1" label="Account" onchange="refreshAccountJS();">
+                <apex:selectOptions value="{!accounts}"/>
+            </apex:selectList>
+            <apex:inputField value="{!con.email}" id="email"/>
+            <apex:inputField value="{!cart.Contact__c}" id="contact"/>
+        </apex:pageBlockSection>    
+        
+        <apex:variable var="hasCC" value="false"/>
+        <apex:tabPanel switchType="client" value="{!activeTab}" id="tab" headerSpacing="5" activeTabClass="activeTab" inactiveTabClass="inactiveTab" disabledTabClass="disabledTab" rendered="{!fees.size >= 0}">
+            <apex:tab label="Fees" name="fees" disabled="{!processSuccessful}">       
+                <apex:pageBlocktable value="{!fees}" var="fee" style="width:100%">?
+                    <apex:column >
+                        <apex:commandLink value="Remove"  reRender="tab,totalOwed" action="{!removeFee}">
+                             <apex:param name="feeId" assignTo="{!feeSelected}" value="{!fee.Id}" />
+                        </apex:commandLink>
+                    </apex:column>
+                    
+                    <apex:repeat value="{!$ObjectType.MUSW__Fee__c.FieldSets.BGBK__Fee_Basic}" var="ff">                
+                        <apex:column headerValue="{!ff.label}">
+                            <apex:outputField value="{!fee[ff]}" />
+                        </apex:column>
+                    </apex:repeat>
+                    
+                </apex:pageBlocktable>
+                <br/>
+                <apex:commandButton value="Checkout" action="{!checkout}" reRender="tab,totals,msg" rendered="{!fees.size > 0 && canCreate}"/>
+            </apex:tab>
+            
+            <apex:variable var="index" value="{!0}"/>
+            <apex:variable var="creditIndex" value="{!0}"/>
+            <apex:tab label="Checkout" id="checkout" name="checkout" disabled="{!(activeTab != 'checkout' && activeTab != 'review') || processSuccessful }">
+                <apex:repeat value="{!rs}" var="r" id="re">
+                    <apex:pageBlockSection columns="2" id="pm">
+                        <apex:inputField value="{!r.MUSW__Payment_Method__c}" onchange="refreshCheckoutJS();" id="payment" required="true"/>
+                    </apex:pageBlockSection>
+                    
+                    <apex:outputPanel id="creditPanel" rendered="{!r.MUSW__Payment_Method__c = 'Credit Card'}">
+                    <h3>Payment Information</h3>
+                    <apex:pageBlockSection id="creditPbs" columns="2">
+                        <apex:inputText label="Card Number" id="creditCard" onchange="saveCreditInfo({!creditIndex})"/>
+                        <apex:inputText value="{!a.name}"  label="Card Holder Name" id="cardHolderName" onchange="saveCreditInfo({!creditIndex})"/>
+                        <apex:inputText label="Card Expiry MM/YY" id="cardExpired" onchange="saveCreditInfo({!creditIndex})"/>
+                        <apex:inputText label="Card Security Code" id="cardSecurityCode" onchange="saveCreditInfo({!creditIndex})"/>
+                    </apex:pageBlockSection>
+                    
+                    <h3>Billing Information</h3>
+                    <apex:pageBlockSection id="creditBbs" columns="2" >
+                        <apex:inputField value="{!a.billingStreet}" id="street" />
+                        <apex:inputField value="{!a.billingCity}" id="city" />
+                        <apex:inputField value="{!a.billingState}" id="state" />
+                        <apex:inputField value="{!a.billingCountry}" id="country" />
+                        <apex:inputField value="{!a.billingPostalCode}" id="postCode" />
+                    </apex:pageBlockSection>
+                   
+                    <apex:pageBlockSection id="creditAbs" columns="2">
+                        <apex:inputField label="Amount" id="amountTotal" value="{!r.MUSW__Amount_Tendered__c}" onchange="updateBalanceJS();"/>
+                    </apex:pageBlockSection>
+                    <apex:variable var="hasCC" value="true"/>
+                    </apex:outputPanel>
+                    
+                    <apex:outputPanel rendered="{!!isblank(r.MUSW__Payment_Method__c) && CONTAINS('Check', r.MUSW__Payment_Method__c)}">
+                    <apex:pageBlockSection columns="1" id="checkCheckOut">
+                        <apex:inputField value="{!r.MUSW__Check_Number__c}"/>
+                        <apex:inputField value="{!r.MUSW__Amount_Tendered__c}" onchange="updateBalanceJS();"/>
+                    </apex:pageBlockSection>
+                    </apex:outputPanel>
+                   
+                    <apex:outputPanel rendered="{!!isblank(r.MUSW__Payment_Method__c) && CONTAINS('Cash', r.MUSW__Payment_Method__c)}">
+                    <apex:pageBlockSection columns="1" id="cashCheckOut">
+                        <apex:inputField value="{!r.MUSW__Amount_Tendered__c}" onchange="updateBalanceJS();"/>
+                    </apex:pageBlockSection>
+                    </apex:outputPanel>
+                    
+                    <apex:outputPanel id="swipeBtn" styleClass="btn" onclick="doSwipecard({!index});" rendered="{!!isblank(r.MUSW__Payment_Method__c) && r.MUSW__Payment_Method__c = 'Credit Card' && $User.UITheme != 'PortalDefault'}">Swipe Card</apex:outputPanel>
+                    <apex:outputPanel style="visibility:hidden" id="cancelSwipeBtn" styleClass="btn" onclick="cancelRequest =true;request.abort();toggleCheckoutFields({!index},false);" rendered="{!!isblank(r.MUSW__Payment_Method__c) && r.MUSW__Payment_Method__c = 'Credit Card' && $User.UITheme != 'PortalDefault'}">Cancel</apex:outputPanel>
+                                        
+                    <hr/>
+                    
+                    <script>
+                    //if firefox then check ping and DSA to decide for creditcard display or not
+                    if (navigator.userAgent.indexOf('Firefox')!=-1)
+                    {
+                        if (!pingSuccess || "{!hasCC}"=='true') removeCreditOption({!index});
+                    }
+                    else //if not firefox then just remove credit card
+                    {
+                        removeCreditOption({!index});
+                    }
+                    // assign the card info to checkout page only when there are backing from review page to checkout page
+                    if (cardNumber !== undefined &&cardName !== undefined && cardExpiredDate !== undefined)
+                    {
+                        document.getElementById("p:f:pb:re:{!creditIndex}:creditPbs:creditCard").value = cardNumber;
+                        document.getElementById("p:f:pb:re:{!creditIndex}:creditPbs:cardHolderName").value = cardName;
+                        document.getElementById("p:f:pb:re:{!creditIndex}:creditPbs:cardExpired").value = cardExpiredDate;
+                    }
+                    if(cardSecurityCode !== undefined)
+                    {
+                        document.getElementById("p:f:pb:re:{!creditIndex}:creditPbs:cardSecurityCode").value = cardSecurityCode;
+                    }
+                    </script>
+                    
+                    <apex:variable var="creditIndex" value="{!index}" rendered="{!r.MUSW__Payment_Method__c = 'Credit Card'}"/>                   
+                    <apex:variable var="index" value="{!index+1}"/>
+                </apex:repeat>
+                
+                <!--<apex:outputPanel id="reviewOrderBtn" styleClass="btn" onclick="checkCreditInfo({!creditIndex});" rendered="{!hasCC = 'true'}">Review Order</apex:outputPanel>-->
+                <apex:commandButton value="Review Order" id="reviewOrderBtn" onclick="checkCreditInfo({!creditIndex}); return false;" rendered="{!hasCC = 'true'}"/>
+                <apex:commandButton value="Process Payment" action="{!process}" reRender="tab,msg" rendered="{!hasCC = 'false'}" oncomplete="sendEmailJS();"/>
+                <apex:commandButton value="Add New Payment Method"  action="{!addReceipt}" reRender="tab"/>
+            </apex:tab>            
+         
+            <apex:tab label="Credit Card Review" name="review" id="review" disabled="{!activeTab != 'review' || processSuccessful}" rendered="{!hasCC = 'true'}">                     
+                <apex:pageBlockSection columns="2" id="creditReviewPbs">
+                    <h3>Payment Information</h3>
+                    <apex:outputText />
+                    <apex:outputText label="Credit Card Number" id="credit_card" />
+                    <apex:outputText label="Card Holder Name" id="card_holder_name" />
+                    <apex:outputText label="Expiry Date" id="expired_date" />
+                    <apex:outputText label="Security Code" id="security_code" />
+                    
+                    <h3>Billing Information</h3>
+                    <apex:outputText />
+                    <apex:outputText label="Street" id="cStreet" />
+                    <apex:outputText label="City" id="cCity" />
+                    <apex:outputText label="State/Province" id="cState" />
+                    <apex:outputText label="Country" id="cCountry" />
+                    <apex:outputText label="Zip/Postal Code" id="cZipCode" />
+                   
+                    <apex:outputText label="Amount" id="amount" />                    
+                    <apex:outputPanel styleClass="btn" onclick="callMonexa();" id="processbtn" >Process</apex:outputPanel>
+                    <iframe id="formFrame" name="formFrame" style="display:none;" onload="onSOPLoad('{!$User.Email}');"></iframe>
+                    <!--extra form here for form submit working in Chrome-->
+                    <form></form>                   
+                    <form id="silent_order_post_form" name="silent_order_post_form" target="formFrame" action="https://api.monexa.com/v05_32/XML/silent_order_post.cgi" method="POST" >
+                        <input type="hidden" id="credit_card_number" name="credit_card_number" size="40" value="" readonly="true"/>
+                        <input type="hidden" id="name_on_credit_card" name="name_on_credit_card" size="40" value="" readonly="true" />
+                        <input type="hidden" id="credit_card_expiry_date" name="credit_card_expiry_date" size="40" value="" readonly="true"/>
+                        <input type="hidden" id="card_security_code" name="card_security_code" size="40" value="" readonly="true"/>
+                        <input type="hidden" id="billing_address" name="billing_address" size="40" value="" readonly="true"/>
+                        <input type="hidden" id="billing_city" name="billing_city" size="40" value="" readonly="true"/>
+                        <input type="hidden" id="billing_state_or_province" name="billing_state_or_province" size="40" value="" readonly="true"/>
+                        <input type="hidden" id="billing_country" name="billing_country" size="40" value="" readonly="true"/>
+                        <input type="hidden" id="billing_zip_or_postal_code" name="billing_zip_or_postal_code" size="40" value="" readonly="true"/> 
+                        <input type="hidden" id="contact_email" name="contact_email" size="40" value="" />
+                        <!--LPL: release to production-->
+                        <!--<input type="hidden" name="session_key_failure_redirect_url" value="https://c.cs14.visual.force.com/apex/FeeProcess/search?q=sessionkeyfailure"/>-->
+                        <!--<input type="hidden" name="session_key_failure_redirect_url" value="https://c.cs7.visual.force.com/apex/FeeProcess/search?q=sessionkeyfailure"/>-->
+                        <input type="hidden" name="session_key_failure_redirect_url" value="https://c.na9.visual.force.com/apex/FeeProcess/search?q=sessionkeyfailure"/>
+                        <input type="hidden" value="{!monexaSessionKey}" id="session_key" name="session_key" />
+                    </form>
+                    <script>
+                        document.getElementById("p:f:pb:creditReviewPbs:credit_card").innerHTML = cardNumber; 
+                        document.getElementById("credit_card_number").value = cardNumber;
+                        document.getElementById("p:f:pb:creditReviewPbs:card_holder_name").innerHTML = cardName;
+                        
+                        //*** temporary substring for bill infomation. Does not work for AVS 
+                        var cName = cardName;
+                        if(cName.length >40) cName = cName.substring(0,40);
+                        document.getElementById("name_on_credit_card").value = cName;
+                        document.getElementById("p:f:pb:creditReviewPbs:expired_date").innerHTML = cardExpiredDate;
+                        document.getElementById("credit_card_expiry_date").value = cardExpiredDate;
+                        document.getElementById("p:f:pb:creditReviewPbs:security_code").innerHTML = cardSecurityCode;
+                        document.getElementById("card_security_code").value = cardSecurityCode;
+                        document.getElementById("p:f:pb:creditReviewPbs:amount").innerHTML = document.getElementById("p:f:pb:re:{!creditIndex}:creditAbs:amountTotal").value;
+                        
+                        var str = document.getElementById("p:f:pb:re:{!creditIndex}:creditBbs:street").value;
+                        if(str.length > 30) str = str.substring(0,30);
+                        document.getElementById("p:f:pb:creditReviewPbs:cStreet").innerHTML = document.getElementById("p:f:pb:re:{!creditIndex}:creditBbs:street").value;
+                        document.getElementById("billing_address").value = str;
+                        
+                        var city = document.getElementById("p:f:pb:re:{!creditIndex}:creditBbs:city").value;
+                        if(city.length > 58) city = city.substring(0,58);
+                        document.getElementById("p:f:pb:creditReviewPbs:cCity").innerHTML = document.getElementById("p:f:pb:re:{!creditIndex}:creditBbs:city").value;
+                        document.getElementById("billing_city").value = city;
+                        
+                        var country = document.getElementById("p:f:pb:re:{!creditIndex}:creditBbs:country").value;
+                        if(country.length > 2) country = country.substring(0,2);
+                        document.getElementById("p:f:pb:creditReviewPbs:cCountry").innerHTML = document.getElementById("p:f:pb:re:{!creditIndex}:creditBbs:country").value;
+                        document.getElementById("billing_country").value = country;
+                        
+                        var state = document.getElementById("p:f:pb:re:{!creditIndex}:creditBbs:state").value;
+                        if(state.length > 58) state = state.substring(0,58);
+                        document.getElementById("p:f:pb:creditReviewPbs:cState").innerHTML = document.getElementById("p:f:pb:re:{!creditIndex}:creditBbs:state").value;
+                        document.getElementById("billing_state_or_province").value = state;
+                        
+                        var zipcode = document.getElementById("p:f:pb:re:{!creditIndex}:creditBbs:postCode").value;
+                        if(zipcode.length > 10) zipcode = zipcode.substring(0,10);
+                        
+                        document.getElementById("p:f:pb:creditReviewPbs:cZipCode").innerHTML = document.getElementById("p:f:pb:re:{!creditIndex}:creditBbs:postCode").value;                       
+                        document.getElementById("billing_zip_or_postal_code").value = zipcode;
+                                             
+                        document.getElementById("contact_email").value = document.getElementById("p:f:pb:totals:email").value;                           
+                    </script>
+                </apex:pageBlockSection>
+            </apex:tab>
+            
+            <apex:tab label="Confirm" name="confirm" disabled="{!activeTab != 'confirm'}">
+                <c:FeeProcessConfirm receipts="{!rs}" processResultCode="{!processResultCode}" fees="{!fees}" cart="{!cart}" emailAddress="{!con.email}" id="confirmComp" Rendered="{!activeTab = 'confirm'}"/>
+                <apex:commandButton value="Print Receipt" reRender="tab,msg" onClick="window.open('/apex/FeeProcessPrint?cartId={!cart.Id}&email={!con.email}');" rendered="{!processSuccessful}"/>                
+                <apex:commandButton value="Try Again" action="{!checkout}" reRender="tab,msg" rendered="{!fees.size > 0 && !processSuccessful}" />
+            </apex:tab>
+        </apex:tabPanel>
+    </apex:pageblock>
+    
+    <apex:actionFunction name="updateBalanceJS" reRender="totals"/>
+    <apex:actionFunction name="refreshCheckoutJS" reRender="tab"/>
+    <apex:actionFunction name="refreshAccountJS" action="{!accountChanged}" reRender="tab"/>    
+    <!--<apex:actionFunction name="goToReviewJS" action="{!review}" reRender="pb,tab,msg"/>-->
+    <apex:actionFunction name="goToReviewJS" action="{!review}" reRender="tab,msg" oncomplete="document.getElementById('preloader2').style.visibility='hidden';"/>   
+    <apex:actionFunction name="goToConfirmJS" action="{!process}" reRender="tab,msg" oncomplete="document.getElementById('preloader2').style.visibility='hidden'; sendEmailJS(); if({!processSuccessful}==false) {document.getElementById('p:f:pb:creditReviewPbs:processbtn').disabled = false; document.getElementById('p:f:pb:creditReviewPbs:processbtn').styleClass = 'btn'; } ">
+        <apex:param name="result" assignTo="{!processResult}" value="" />
+        <apex:param name="transactionId" assignTo="{!transactionId}" value=""/>
+        <apex:param name="cardMasked" assignTo="{!cardMasked}" value=""/>
+        <apex:param name="processResultCode" assignTo="{!processResultCode}" value=""/>
+    </apex:actionFunction>
+    <apex:actionFunction name="sendEmailJS" action="{!sendPdf}" reRender=""/>
+    <apex:actionFunction name="refreshMsgJS" reRender="errorMsg"/>
+    
+    <style>
+    .activeTab { background-color: #99CCCC; color:white; background-image:none }
+    .inactiveTab { background-color: #CCCCFF; color:black; background-image:none }
+    .disabledTab { background-color: #E8E8E8; color:grey; background-image:none }
+    .tabColor { background-color: #669999 } 
+    .data2Col {padding:0px 0px 0px 0px}
+    #preloader2 {
+      top: 50%;
+      left: 50%;
+      margin-top: image-height/2;
+      margin-left: image-width/2;
+      width:33px; height:30px; margin:0; padding:0;     
+      background:#fff 
+        url('/img/loading32.gif')
+        no-repeat center center;
+        position:absolute;
+        z-index:999;
+    }
+    </style>
+    
+    
+    <script>
+    var client;
+    var pingSuccess = false;
+    var badSwipe = false;
+    var profile = "{!$Profile.Name}";
+    // LPL: donot release to production profile for DSA
+    //profile ="DSA";
+    if (profile.indexOf('DSA') == 0)
+    {
+        window.onload = new function() { ping(); };
+    }
+    
+    function makeHttpRequest()
+    {
+        var req;
+        try { req = new XMLHttpRequest(); }
+        catch (e) {
+            try { req = new ActiveXObject("Msxml2.XMLHTTP"); }
+            catch (e) {
+                try { req = new ActiveXObject("Microsoft.XMLHTTP"); }
+                catch (e) {
+                    alert("An error has occurred: " + e);
+                    return false;
+        }}}
+        return req;
+    }
+    
+    function ping()
+    {
+        client = makeHttpRequest();
+        if (client)
+        {
+             pingSuccess = true;
+             client.open("POST", "http://localhost:8400");
+             client.onreadystatechange = pingHandler;
+             try
+             {
+                 client.send();
+             }
+             catch(err)
+             {
+                 alert(err.message);
+             }
+         }
+    }
+    
+    function pingHandler(evtXHR)
+    {
+        if(client.readyState == 3) // 3 means got good response, BUT in case of ping it means: credit card was swiped without pressing Swipe button
+        {
+            badSwipe = true;
+        }
+        if(client.readyState == 4 && !badSwipe) // dont fail if it was a bad swipe (card swipe without Swipe button pressed)
+        {
+            pingSuccess = false;
+            removeCreditOption(0);
+        }
+    }
+    
+    function removeCreditOption(index)
+    {
+        var e = document.getElementById("p:f:pb:re:"+index+":pm:payment");
+        if (e != null)
+        {
+            for (var i=0;i<e.options.length;i++)
+            {
+                if (e.options[i].value == 'Credit Card')
+                {
+                    if (navigator.userAgent.indexOf('Firefox')!=-1)
+                    {
+                         e.options[i].disabled = true;
+                    }
+                    else
+                    {
+                        e.removeChild(e[i]);
+                        i--;
+                    }
+                    break;
+                }
+            }
+        }
+    }
+    </script>
+    
+    <script>
+    var cancelRequest = false;
+    var request;
+    var activate = false;
+    var timeoutCount = 0;
+    var indexCount;
+    var cardNumber;
+    var cardName;
+    var cardExpiredDate;
+    var cardSecurityCode
+    function doSwipecard(i)
+    {
+        cancelRequest = false;
+        indexCount = i;
+        if (activate == false)
+        {
+            //disable the credit card info input
+            toggleCheckoutFields(indexCount,true);
+            var url = "http://localhost:8400";
+          
+            request = makeHttpRequest();
+            if (request)
+            {
+                request.open('GET', url, true);
+                request.onreadystatechange = handler;
+                request.send();
+                //request.send("ACTIVE=TRUE&TIMEOUT=120");
+            }
+            else
+            {
+                alert("HTTP Request failed.");
+            }
+        }
+    }
+    
+    function handler(evtXHR)
+    {
+        if (request.readyState == 4)
+        {
+            if (request.status == 200)
+            {
+                clearTimeout(timeoutCount);
+                
+                //enable the credit card info for input type                
+                toggleCheckoutFields(indexCount,false);
+                
+                var response = request.responseText;
+                var resContent = response.split(";");
+                document.getElementById("p:f:pb:re:"+indexCount+":creditPbs:creditCard").value = resContent[1];
+                document.getElementById("p:f:pb:re:"+indexCount+":creditPbs:cardHolderName").value = resContent[0];
+                document.getElementById("p:f:pb:re:"+indexCount+":creditPbs:cardExpired").value = resContent[2];
+                cardNumber = resContent[1];
+                cardName = resContent[0];
+                cardExpiredDate = resContent[2];
+            }
+            else if (request.status == 0)//when cancel the swipe card the request status go to 0 is equaling request.abort
+            {
+                //enable the credit card info for input type
+                toggleCheckoutFields(indexCount,false);
+                clearTimeout(timeoutCount);
+                //when click cancel button to set cancelRequest to true,when click swipe card button to set the cancelRequest to false
+                if (cancelRequest == false) //this is from the cardswipe device
+                {
+                    alert("Either this machine does not have a Credit Card swipe device, or the BasicGov Card Swiper application is not running.");
+                }
+            }
+            else
+            {
+                //enable the credit card info for input type                
+                toggleCheckoutFields(indexCount,false);
+                clearTimeout(timeoutCount);
+                alert("Unknown Error: " + request.status);
+            }
+        }
+    }
+    
+    function toggleCheckoutFields(iCount,isDisabled)
+    {
+        //toggle the credit card info for input type                
+        document.getElementById("p:f:pb:re:"+iCount+":creditPbs:creditCard").disabled = isDisabled;
+        document.getElementById("p:f:pb:re:"+iCount+":creditPbs:cardHolderName").disabled = isDisabled;
+        document.getElementById("p:f:pb:re:"+iCount+":creditPbs:cardExpired").disabled = isDisabled;
+        document.getElementById("p:f:pb:re:"+iCount+":creditPbs:cardSecurityCode").disabled = isDisabled;
+        document.getElementById("p:f:pb:re:"+iCount+":creditBbs:street").disabled = isDisabled;
+        document.getElementById("p:f:pb:re:"+iCount+":creditBbs:city").disabled = isDisabled;
+        document.getElementById("p:f:pb:re:"+iCount+":creditBbs:state").disabled = isDisabled;
+        document.getElementById("p:f:pb:re:"+iCount+":creditBbs:country").disabled = isDisabled;
+        document.getElementById("p:f:pb:re:"+iCount+":creditBbs:postCode").disabled = isDisabled;
+        document.getElementById("p:f:pb:re:"+iCount+":creditAbs:amountTotal").disabled = isDisabled;
+        document.getElementById("p:f:pb:totals:email").disabled = isDisabled;
+        document.getElementById("p:f:pb:totals:contact").disabled = isDisabled;
+        //document.getElementById("p:f:pb:re:"+iCount+":btns:swipeBtn").disabled = isDisabled;
+        document.getElementById("p:f:pb:re:"+iCount+":swipeBtn").disabled = isDisabled;
+        
+        if (isDisabled)
+            document.getElementById("p:f:pb:re:"+iCount+":cancelSwipeBtn").style.visibility= 'visible';
+        else
+            document.getElementById("p:f:pb:re:"+iCount+":cancelSwipeBtn").style.visibility= 'hidden';
+        
+        if (isDisabled)
+        {
+            document.getElementById("p:f:pb:re:"+iCount+":swipeBtn").className = "btnDisabled";
+            document.getElementById("p:f:pb:re:"+iCount+":swipeBtn").style.color= "#00FF00";
+        }
+        else
+        {
+            document.getElementById("p:f:pb:re:"+iCount+":swipeBtn").styleClass = "btn";  
+            document.getElementById("p:f:pb:re:"+iCount+":swipeBtn").style.color= "#333333"; 
+        }
+        activate = isDisabled;
+    }
+    
+    function onSOPLoad(email)
+    {
+        try
+        {
+            //alert(document.getElementById('formFrame').contentWindow.location.href);
+            var responseUrl = document.getElementById('formFrame').contentWindow.location.href;
+            if( responseUrl.indexOf('FeeProcess') >= 0 ) 
+            {
+                var paramList = hrefSerialize(responseUrl);
+                responseHandler(paramList);
+            }
+        }
+        catch (err) //form frame may be loaded multiple times
+        {
+            //eat or publish error if productrelease            
+            if ('productrelease@basicgov.com' == email)
+            {
+                var msg = document.getElementById('errorMsg');                
+                msg.innerHTML = msg.innerHTML + '<span>'+err+'</span>';               
+                refreshMsgJS();
+            }
+        }
+    }
+    
+    function hrefSerialize(uri)
+    {
+        var startTagStartPos= uri.indexOf("?")+1;
+        var startTagEndPos = uri.length;
+        var paramList = encodeURI(uri.substring(startTagStartPos, startTagEndPos));
+        params = new Array();
+        
+        paramList = paramList + "&";
+        
+        // build hash table of parameters
+        while (paramList.indexOf("&") != -1) 
+        {
+            startTagStartPos = paramList.indexOf("=");
+            startTagEndPos = paramList.indexOf("&");
+            
+            var paramKey = paramList.substring(0,startTagStartPos);
+            var paramValue = paramList.substring(startTagStartPos + 1,startTagEndPos);
+            
+            params[paramKey] = unescape(paramValue); //if fields passed in as params have commas or & in them, these need to be reverted back to normal
+            paramList = paramList.substring(paramList.indexOf("&") + 1, paramList.length);
+        }
+        return params;
+    }
+    
+    function callMonexa()
+    {
+        document.getElementById('preloader2').style.visibility= 'visible';
+        document.getElementById('silent_order_post_form').submit();
+        setTimeout(function(){if(document.getElementById('formFrame').contentWindow.location.href.indexOf('FeeProcess') < 0){alert("Hello there is no reponse back from monexa");document.getElementById('p:f:pb:creditReviewPbs:processbtn').disabled=false;document.getElementById('p:f:pb:creditReviewPbs:processbtn').className = "btn";document.getElementById('preloader2').style.visibility='hidden';document.execCommand('Stop');}},30000);
+        document.getElementById('p:f:pb:creditReviewPbs:processbtn').disabled = true;
+        document.getElementById('p:f:pb:creditReviewPbs:processbtn').className = "btnDisabled";
+        
+    }
+    
+    function responseHandler(urlParameters)
+    {
+       var transactionId = urlParameters['monexa_transaction_id'];
+       var result= urlParameters['result'];
+       var processResultCode = urlParameters['process_transaction_api_result_code'];
+       var cardMask = "****"+document.getElementById("p:f:pb:creditReviewPbs:credit_card").innerHTML.substr(document.getElementById("p:f:pb:creditReviewPbs:credit_card").innerHTML.length-4,4);
+       goToConfirmJS(result,transactionId,cardMask ,processResultCode);
+    }
+    
+    // separate firefox and other browsers to use different key event for backspace key 
+    if (navigator.userAgent.indexOf('Firefox')!=-1)
+    {
+        document.onkeypress = function (evt)
+        {
+            if (evt)
+            {
+                var keyCode = evt.keyCode
+                var d = evt.srcElement || evt.target;
+                if (keyCode == 8)
+                {
+                    if ((d.tagName.toUpperCase() === 'INPUT' && (d.type.toUpperCase() === 'TEXT' || d.type.toUpperCase() === 'PASSWORD')) || d.tagName.toUpperCase() === 'TEXTAREA')
+                    {
+                    }
+                    else
+                    {
+                        return confirm('Are you sure you want to leave this page, you may lose data that has not been saved.');
+                    }
+                }
+            }
+        }
+    }     
+    else
+    {        
+        document.onkeydown = function (evt)
+        {
+            var keycode = event.keyCode;
+            var d = event.srcElement;
+            if (keycode == 8)
+            {
+                if ((d.tagName.toUpperCase() === 'INPUT' && (d.type.toUpperCase() === 'TEXT' || d.type.toUpperCase() === 'PASSWORD')) || d.tagName.toUpperCase() === 'TEXTAREA')
+                {
+                }
+                else
+                {
+                    return confirm('Are you sure you want to leave this page, you may lose data that has not been saved.');
+                }
+            }           
+        }
+    }
+
+    function checkCreditInfo(index)
+    {
+        var check_is_valid = true;
+        var e = document.getElementById("p:f:pb:re:"+index+":creditPbs:creditType");
+       
+        if (document.getElementById("p:f:pb:re:"+index+":creditPbs:creditCard").value.length == 0)
+        {
+            alert("Please fill in the Card Number.");            
+            check_is_valid = false;
+            return false;
+        }
+        else
+        {
+            if (isNaN(document.getElementById("p:f:pb:re:"+index+":creditPbs:creditCard").value))
+            {
+                alert("The Card Number is number only.");
+                check_is_valid = false;
+                return false;
+            }
+            else
+            {
+                if (document.getElementById("p:f:pb:re:"+index+":creditPbs:creditCard").value.length < 15 || document.getElementById("p:f:pb:re:"+index+":creditPbs:creditCard").value.length >=17)
+                {
+                     alert("Please Fill in 15 or 16 digits for Card Number.");
+                     check_is_valid = false;
+                     return false;
+                
+                }               
+            }
+        }
+        if (document.getElementById("p:f:pb:re:"+index+":creditPbs:cardExpired").value.length == 0)
+        {
+            alert("Please fill in the Card Expiry date.");
+            check_is_valid = false;
+            return false;
+        }
+        else
+        {
+            var bad = false;
+            var sValue = document.getElementById("p:f:pb:re:"+index+":creditPbs:cardExpired").value.split("/");
+            var pattern = /^\d+$/;
+        
+            if (sValue[0] < 1 || sValue[0] > 12)
+                bad = true;
+        
+            if (!pattern.test(sValue[0]) || !pattern.test(sValue[1]))
+                bad = true;
+        
+            if (bad)
+            {
+                alert("Please enter a valid date in MM/YY format.");
+                check_is_valid = false;
+                return false;               
+            }
+        }
+        if (document.getElementById("p:f:pb:re:"+index+":creditPbs:cardSecurityCode").value.length == 0)
+        {
+            alert("Please fill in the Card Security Code.");
+            check_is_valid = false;
+            return false;
+        }
+        else
+        {
+            if (isNaN(document.getElementById("p:f:pb:re:"+index+":creditPbs:cardSecurityCode").value))
+            {
+                alert("Card Security Code must be a number.");
+                check_is_valid = false;
+                return false;
+            }
+            else 
+            {
+                if(document.getElementById("p:f:pb:re:"+index+":creditPbs:cardSecurityCode").value.length < 3 || document.getElementById("p:f:pb:re:"+index+":creditPbs:cardSecurityCode").value.length >=5)
+                {
+                    alert("Card Security Code must be 3 or 4 digits.");
+                    check_is_valid = false;
+                    return false;
+                }
+            }
+        }
+        
+        var strName = document.getElementById("p:f:pb:re:"+index+":creditPbs:cardHolderName").value;
+       
+        if (strName.length > 40)
+        {
+            alert("Name on Credit Card must be less than 40 characters.");
+            check_is_valid = false;
+            return false;
+        }
+        else if (strName.match(/[\&`~@#$%^*{}[\^\]]/g) != null)
+        {
+            alert("Card Holder name has invalid '"+ strName.match(/[\&`~@#$%^*{}[\^\]]/g)+"' character(s). Correct the Card Holder name.");
+            check_is_valid = false;
+            return false;
+        }       
+        if (document.getElementById("p:f:pb:re:"+index+":creditAbs:amountTotal").value.length == 0)
+        {
+            alert("Please fill in the Amount.");
+            check_is_valid = false;
+            return false;
+        }
+        else if (isNaN(document.getElementById("p:f:pb:re:"+index+":creditAbs:amountTotal").value.replace(/,/g,"")))
+        {
+            alert("Amount must be a number.");
+            check_is_valid = false;
+            return false;
+        }
+        if (document.getElementById("p:f:pb:re:"+index+":creditBbs:country").value.length != 2)
+        {
+            alert("Please fill in the Country with 2 digits code.");
+            check_is_valid = false;
+            return false;
+        }
+        if (check_is_valid)
+        {
+           cardSecurityCode = document.getElementById("p:f:pb:re:"+index+":creditPbs:cardSecurityCode").value;
+           cardNumber = document.getElementById("p:f:pb:re:"+index+":creditPbs:creditCard").value;
+           cardName = document.getElementById("p:f:pb:re:"+index+":creditPbs:cardHolderName").value;
+           cardExpiredDate = document.getElementById("p:f:pb:re:"+index+":creditPbs:cardExpired").value;
+           document.getElementById('preloader2').style.visibility = 'visible';
+           goToReviewJS();
+        }
+    }
+    
+    function saveCreditInfo(index)
+    {
+        cardSecurityCode = document.getElementById("p:f:pb:re:"+index+":creditPbs:cardSecurityCode").value;
+        cardNumber = document.getElementById("p:f:pb:re:"+index+":creditPbs:creditCard").value;
+        cardName =  document.getElementById("p:f:pb:re:"+index+":creditPbs:cardHolderName").value;
+        cardExpiredDate = document.getElementById("p:f:pb:re:"+index+":creditPbs:cardExpired").value;
+    }
+    </script>
+</apex:form>
+</apex:page>

@@ -1,0 +1,5 @@
+<apex:page standardController="MUSW__Permit2__c">
+    <apex:pageMessages ></apex:pageMessages>
+    <BGBK:Notify recordIds="{!MUSW__Permit2__c.Id},{!MUSW__Permit2__c.MUSW__Parcel__c},{!MUSW__Permit2__c.ContractorAccount__c}"/>
+    <apex:detail relatedListHover="true" inlineEdit="true"/>
+</apex:page>

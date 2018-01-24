@@ -1,0 +1,418 @@
+<!-- ATTENTION: Ordering of columns in all tables matters. Don't change them or else the jQuery script needs to be changed -->
+
+<apex:page id="p" controller="BGBK.PaymentAllocateController" action="{!initialize}">
+
+<apex:stylesheet value="{!URLFOR($Resource.BGBK__jQuery172,'themes/base/ui.all.css')}"/>
+<apex:includeScript value="{!URLFOR($Resource.BGBK__jQuery172,'jquery-ui-1.7.2.custom.js')}"/>
+<apex:includeScript value="{!URLFOR($Resource.BGBK__jQuery172,'jquery-1.3.2.js')}"/>
+<apex:includeScript value="{!URLFOR($Resource.BGBK__jQuery172,'ui/ui.core.js')}"/>
+<apex:includeScript value="{!URLFOR($Resource.BGBK__jQuery172,'ui/ui.draggable.js')}"/>
+<apex:includeScript value="{!URLFOR($Resource.BGBK__jQuery172,'ui/ui.droppable.js')}"/>
+<apex:includeScript value="{!URLFOR($Resource.BGBK__jQuery172,'ui/ui.dialog.js')}"/>
+<apex:includeScript value="{!URLFOR($Resource.BGBK__jQuery172,'external/bgiframe/jquery.bgiframe.js')}"/>
+
+<apex:form id="f">
+
+    <apex:sectionHeader title="Payment Allocation" subtitle="">
+        <apex:messages />
+        <apex:commandLink action="{!cancel}" value="{!parentLabel}: {!parentName}" id="backToParent" />
+    </apex:sectionHeader>
+
+    <apex:pageBlock id="b">
+        <apex:pageblockbuttons >
+            <apex:commandbutton action="{!save}" value="Save" id="btn_Save"/>
+            <apex:commandbutton action="{!cancel}" value="Cancel" />
+        </apex:pageblockbuttons>
+        
+        To allocate, drag a Payment and drop it into a {!parentLabel}. After pressing Save, new Payments will be created for every allocation.<br/><br/>
+
+        <apex:pageBlockSection columns="2" id="s">
+            <apex:pageBlockSectionItem >
+                <h1>Available Payments for {!parentLabel} {!parentName}</h1><br/>
+            </apex:pageBlockSectionItem>
+            
+            <apex:pageBlockSectionItem >
+                <h1>Available {!parentLabel}s {!applicantDisplay}</h1><br/>
+            </apex:pageBlockSectionItem>
+            
+            
+            <apex:dataTable value="{!payments}" var="pmt" width="100%" cellpadding="10" headerClass="paymentHeader" rowClasses="paymentRow1, paymentRow2" id="paymentTable">
+                <apex:column >
+                    <apex:facet name="header">Number</apex:facet>
+                    <apex:outputField value="{!pmt.Name}"/>
+                </apex:column>
+                <apex:column id="ids">
+                    <apex:inputHidden value="{!pmt.BGBK__Planning_Application__c}" rendered="{!pmt.BGBK__Planning_Application__c <> null}"/>
+                    <apex:inputHidden value="{!pmt.BGBK__Complaint__c}" rendered="{!pmt.BGBK__Complaint__c <> null}"/>
+                    <apex:inputHidden value="{!pmt.BGBK__License1__c}" rendered="{!pmt.BGBK__License1__c <> null}"/>
+                    <apex:inputHidden value="{!pmt.BGBK__Permit__c}" rendered="{!pmt.BGBK__Permit__c <> null}"/>
+                    <apex:inputHidden value="{!pmt.BGBK__Application2__c}" rendered="{!pmt.BGBK__Application2__c <> null}"/>
+                    <apex:inputHidden value="{!pmt.BGBK__Complaint2__c}" rendered="{!pmt.BGBK__Complaint2__c <> null}"/>
+                    <apex:inputHidden value="{!pmt.BGBK__License2__c}" rendered="{!pmt.BGBK__License2__c <> null}"/>
+                    <apex:inputHidden value="{!pmt.BGBK__Permit2__c}" rendered="{!pmt.BGBK__Permit2__c <> null}"/>
+                </apex:column>
+                <apex:column >
+                    <apex:facet name="header">Type</apex:facet>
+                    <apex:outputField value="{!pmt.BGBK__Type__c}"/>
+                </apex:column>
+                <apex:column >
+                    <apex:facet name="header">Available Amount</apex:facet>
+                    <apex:outputField value="{!pmt.BGBK__Amount_Available__c}"/>
+                </apex:column>
+            </apex:dataTable>
+            
+            <apex:dataTable value="{!parentInfos}" var="info" width="100%" cellpadding="10" headerClass="parentHeader" rowClasses="parentRow1, parentRow2" id="parents">
+                <apex:column >
+                    <apex:facet name="header">{!parentLabel}</apex:facet>
+                    <apex:outputText value="{!info.name}"/>
+                </apex:column>
+                <apex:column id="ids">
+                    <apex:inputHidden value="{!info.pid}"/>
+                </apex:column>
+                <apex:column >
+                    <apex:facet name="header">{!trackingNumberLabel}</apex:facet>
+                    <apex:outputText value="{!info.tracking}"/>
+                </apex:column>
+                <apex:column >
+                    <apex:facet name="header">Total Payments</apex:facet>
+                    <apex:outputText value="${!info.payments}"/>
+                </apex:column>
+                <apex:column >
+                    <apex:facet name="header">Total Fees</apex:facet>
+                    <apex:outputText value="${!info.fees}"/>
+                </apex:column>
+                <apex:column >
+                    <apex:facet name="header">Balance</apex:facet>
+                    <apex:outputText value="${!info.balance}"/>
+                </apex:column>
+            </apex:dataTable>
+        </apex:pageBlockSection>
+        
+        
+        <apex:pageBlockSection columns="2" id="s2">
+            <apex:pageBlockSectionItem >
+                <h1>Allocations</h1><br/>
+            </apex:pageBlockSectionItem>
+            
+            <apex:pageBlockSectionItem >
+            </apex:pageBlockSectionItem>
+            
+            <apex:dataTable value="{!allocations}" var="alloc" width="100%" cellpadding="10" headerClass="allocHeader" rowClasses="allocRow1, allocRow2" id="allocTable" >
+                <apex:column >
+                    <apex:facet name="header">Payment</apex:facet>
+                    <apex:outputText value="{!alloc.payment}"/>
+                </apex:column>
+                <apex:column >
+                    <apex:inputHidden value="{!alloc.parentId}"/>
+                </apex:column>
+                <apex:column >
+                    <apex:facet name="header">{!parentLabel}</apex:facet>
+                    <apex:outputText value="{!alloc.parent}"/>
+                </apex:column>
+                <apex:column >
+                    <apex:facet name="header">Allocation</apex:facet>
+                    $ <apex:inputText onchange="changeAllocationHandler('{!alloc.payment}');" value="{!alloc.amount}"/>
+                    <apex:commandLink onclick="removeAllocationHandler('{!alloc.payment}', '{!alloc.parentId}');" action="{!removeAllocation}" value="Remove" rerender="allocTable">
+                        <apex:param name="delete" assignTo="{!allocKeyToRemove}" value="{!alloc.key}"/>
+                    </apex:commandLink>
+                </apex:column>
+            </apex:dataTable>
+            
+            <apex:pageBlockSectionItem >
+                <div style="color:red" id="message"></div>
+            </apex:pageBlockSectionItem>
+            
+        </apex:pageBlockSection>
+    </apex:pageBlock>
+    
+<apex:actionFunction action="{!addAllocation}" name="addAllocationJS" reRender="allocTable">
+    <apex:param name="w" assignTo="{!parentIdAdded}" value="" />
+    <apex:param name="x" assignTo="{!parentAdded}" value="" />
+    <apex:param name="y" assignTo="{!paymentAdded}" value="" />
+    <apex:param name="z" assignTo="{!amountAdded}" value="" />
+</apex:actionFunction>
+    
+</apex:form>
+
+
+<!------------------------------------------
+//
+//   Allocation dialog
+//
+// ----------------------------------------->
+<div id="dialog" title="Enter allocation amount">
+    <p id="validateTips"></p>
+
+    <form>
+        <input type="text" name="amount" id="amount"/>
+    </form>
+</div>
+
+
+<!------------------------------------------
+//
+//   CSS styling
+//
+// ----------------------------------------->
+<style type="text/css">
+    .paymentHeader {background-color: #25587E; color:white; font-weight: bold; font-size: 13px;}
+    .paymentRow1 {background-color: #95B9C7;}
+    .paymentRow2 {background-color: #AFDCEC;}
+    .parentHeader {background-color: #25587E; color:white; font-weight: bold; font-size: 13px;}
+    .parentRow1 {background-color: #C9C299;}
+    .parentRow2 {background-color: #ECE5B6;}
+    .allocHeader {background-color: #25587E; color:white; font-weight: bold; font-size: 13px;}
+    .allocRow1 {background-color: #98AFC7;}
+    .allocRow2 {background-color: #C6AEC7;}
+    .ui-button { outline: 0; margin:0; padding: .4em 1em .5em; text-decoration:none;  !important; cursor:pointer; position: relative; text-align: center; }
+    .ui-dialog .ui-state-highlight, .ui-dialog .ui-state-error { padding: .3em; }
+    .drophover { opacity:0.2; }
+    
+    #draggable { text-align: center; background: #ADDFFF; width: 40% }
+    #droppable { text-align: center; background: #CFECEC; color: white; width: 50% }
+</style>
+
+
+<!------------------------------------------
+//
+//   Script for drag-drop, and dialog box
+//
+// ----------------------------------------->
+<script>
+var dragPmt, dropParent;
+var parentRow, pmtRow;
+var origPayments = new Array();
+var amount = $("#amount");
+
+$(document).ready(function(){
+    resetTips();
+    
+    // get original Available Amounts for payments
+    $("*").find("table").each(function(n) {
+        if ($(this).attr("id") == "p:f:b:s:paymentTable") { // find paymentTable
+            $(this).find("tr").each(function(m) { // iterate over rows
+                if ($(this).find("td:first").text() != "") { // ignore empty <tr> generated by VF
+                    var amt = $(this).find("td:last").text().replace('$', '').replace(',', '');
+                    var pmt = $(this).find("td:first").text();
+                    origPayments.push({pmt: pmt, amount: amt});
+                }
+            });
+        }
+    });
+    
+    refreshPaymentAmounts();
+    
+    //hideAllocations();
+    
+    $(".paymentRow1, .paymentRow2").draggable({opacity: 0.8, helper: 'clone', cursor: 'move'});
+
+    $(".parentRow1, .parentRow2").droppable({
+        hoverClass: "drophover",
+        drop: function(ev, ui) { 
+            dragPmt = ui.draggable.find("td:first").text();
+            dropParent = $(this).find("td:first").text();
+            parentRow = $(this).find("td");
+            pmtRow = ui.draggable.find("td");
+            var dropParentId = $(this).find("td:eq(1)").find("input").val(); // parent id
+            var dragPmtParentId = ui.draggable.find("td:eq(1)").find("input").val(); // parent id for payment
+            
+            // prevent allocation from payment to its own parent
+            if (dropParentId == dragPmtParentId) {
+                $("#message").text("Cannot allocate to itself.");
+                
+            } else {
+                // set default amount on dialog box
+                pmtRow.each(function(n) {
+                    if (n == pmtRow.size() - 1) { // last column is avbl amount
+                        $("#amount").val($(this).text().replace('$', '').replace(',', ''));
+                    }
+                });
+                
+                $('#dialog').dialog('open');
+            }
+        }
+    }); 
+});
+
+$("#dialog").dialog({
+    bgiframe: true,
+    autoOpen: false,
+    modal: true,
+    buttons: {
+        Cancel: function() {
+            $(this).dialog('close');
+            resetTips();
+        },
+        'Allocate': function() {
+            var bValid = checkRegexp(amount,/^([0-9.])+$/);
+            var bValid = bValid && checkValue(amount);
+            
+            var parName = dropParent;
+            var pmtName = dragPmt;
+            var parId;
+            parentRow.each(function(n) {
+                if (n == 1) { // second col is parent id
+                    parId = $(this).find("input").val();
+                }
+            });
+
+            if (bValid) {
+                // update payment row (some validation done inside too)
+                var goodAlloc = adjustPayment(pmtName, -amount.val(), true);
+                
+                // update allocations in controller
+                addAllocationJS(parId, parName, pmtName, amount.val());
+                
+                showAllocations();
+                $(this).dialog('close');
+            }
+        }
+        
+    },
+    close: function() {
+        resetTips();
+    }
+});
+
+/*
+ *  if isUpdate = true then add amt to Available Amount, else insert amt into that field
+ *  returns boolean for whether the adjustment was successful (eg. was not negative)
+ */
+function adjustPayment(pmt, amt, isUpdate) {
+    var good = true;
+    $("*").find("table").each(function(n) {
+        if ($(this).attr("id") == "p:f:b:s:paymentTable") { // find paymentTable
+            $(this).find("tr").each(function(m) { // iterate over rows
+                if ($(this).find("td:first").text() == pmt) { // found payment row
+                    var newVal;
+                    if (isUpdate == true) {
+                        var oldVal = $(this).find("td:last").text().replace('$', '').replace(',', '');
+                        newVal = parseFloat(oldVal) + parseFloat(amt);
+                    } else {
+                        newVal = amt;
+                    }
+                    
+                    if (newVal < 0) {
+                        $("#message").text("Cannot allocate more than the amount available. Please enter a smaller value.");
+                        good = false;
+                    } else {
+                        $("#message").text("");
+                    }
+                    
+                    $(this).find("td:last").text('$' + newVal);
+                }
+            });
+        }
+    });
+    
+    return good;
+}
+
+/*
+ *  Reads all allocations corresponding to this payment from the Allocations table
+ *  and updates corresponding Available Amount on the Payments table.
+ */
+function changeAllocationHandler(pmt) {
+    var sumAllocs = 0;
+    $("*").find("table").each(function(n) {
+        if ($(this).attr("id") == "p:f:b:s2:allocTable") { // find allocTable
+            $(this).find("tr").each(function(m) { // iterate over rows
+                if ($(this).find("td:first").text() == pmt) { // found alloc row for this payment
+                
+                    // sum up all allocations for this payment and put balance into Available Amount for payment
+                    sumAllocs += parseFloat($(this).find("td:last").find("input").val());
+                    for (var j=0; j < origPayments.length; j++) {
+                        if (origPayments[j].pmt == pmt) {
+                            var diffVal = origPayments[j].amount - parseFloat(sumAllocs );
+                            adjustPayment(pmt, diffVal, false);
+                        }
+                    }
+                }
+            });
+        }
+    });
+}
+
+function refreshPaymentAmounts() {
+    $("*").find("table").each(function(n) {
+        if ($(this).attr("id") == "p:f:b:s:paymentTable") { // find paymentTable
+            $(this).find("tr").each(function(m) { // iterate over rows
+                if ($(this).find("td:first").text() != "") { // ignore empty <tr> generated by VF
+                    var amt = $(this).find("td:last").text().replace('$', '');
+                    var pmt = $(this).find("td:first").text();
+                        
+                    $("*").find("table").each(function(n) { // iterate over allocations
+                        if ($(this).attr("id") == "p:f:b:s2:allocTable") { // find allocTable
+                            $(this).find("tr").each(function(m) { // iterate over rows
+                                if ($(this).find("td:first").text() == pmt) {
+                                    var alloc = $(this).find("td:last").find("input").val();
+                                    adjustPayment(pmt, -alloc, true);
+                                }
+                            });
+                        }
+                    });
+                                    
+                }
+            });
+        }
+    });
+}
+
+function removeAllocationHandler(pmt, parId) {
+    $("*").find("table").each(function(n) {
+        if ($(this).attr("id") == "p:f:b:s2:allocTable") { // find allocTable
+            $(this).find("tr").each(function(m) { // iterate over rows
+                if ($(this).find("td:first").text() == pmt && $(this).find("td:eq(1)").find("input").val() == parId) { // found alloc row for this payment
+                    
+                    var val = parseFloat($(this).find("td:last").find("input").val());
+                    adjustPayment(pmt, val, true);
+                }
+            });
+        }
+    });
+}
+
+function checkRegexp(o,regexp,n) {
+    if ( !( regexp.test( o.val() ) ) ) {
+        updateTips("Please enter a valid amount.");
+        return false;
+    } else {
+        return true;
+    }
+}
+
+function checkValue(o) {
+    if (parseFloat(o.val()) <= 0) {
+        updateTips("Please enter a positive, non-zero amount.");
+        return false;
+    } else {
+        return true;
+    }
+}
+
+function updateTips(t) {
+    $("#validateTips").text(t).css("color", "red");
+}
+
+function resetTips() {
+    $("#validateTips").text("Please enter the amount to be allocated:").css("color", "black");
+}
+
+function hideAllocations() {
+    $("*").find("table").each(function(n) {
+        if ($(this).attr("id") == "p:f:b:s2:allocTable") {
+            $(this).hide();
+        }
+    });
+}
+
+function showAllocations() {
+    $("*").find("table").each(function(n) {
+        if ($(this).attr("id") == "p:f:b:s2:allocTable") {
+            $(this).fadeIn();
+        }
+    });
+}
+
+</script>
+</apex:page>

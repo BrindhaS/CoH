@@ -1,0 +1,429 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html>
+	<head>
+		<title>BuildAutomationModel</title>
+		<link href="/dCSS/Theme2/default/common.css" type="text/css" media="handheld,print,projection,screen,tty,tv" rel="stylesheet">
+	    <script type="text/javascript" src="/js/functions.js"></script>
+	    <script src="/soap/ajax/8.0/connection.js"></script>
+	    {!INCLUDE($SControl.lgmCommon)}
+	    {!INCLUDE($SControl.lgmDataContext)}
+		<script id="clientEventHandlersJS" language="javascript">	
+<!-- 
+//javascript 'escape' escapes everything but * @ - _ + . /
+//index delimiters cannot be any of these values
+//only result values are escaped in the result index
+
+
+
+var queryCount = 3; //used for async query callbacks
+var automationRule = new Array();
+var automationFilter = new Array();
+var automationResult = new Array();
+
+function setup() {
+
+var sqlRuleWhere = "";
+var sqlFilterResultWhere = "";
+var sqlSort = "";
+
+	lgm.href.getParameters();
+	
+	//JAW - get parameters if only want to update one rule
+	var recordID = lgm.href.param["refreshOnly"];
+
+if (recordID == null) {
+	var x = window.confirm("Are you sure you want to update ALL result(s) and filter(s) ?"); 
+	if (!x) { 
+		window.close();
+		return true;
+		
+	}
+}
+	window.status = "Working...";
+	
+	if (recordID != null) {
+		sqlRuleWhere = " where Id = '" + recordID +"'";
+		sqlFilterResultWhere= " where MUSW__Automation_Rule__c = '" + recordID +"'";
+	}
+	
+	//order sequences the index - very important for the engine
+	sqlSort = " order by MUSW__Automation_Rule__c, MUSW__Group__c, MUSW__Table__c, MUSW__Order__c";
+	sqlRuleSort = " order by MUSW__Order__c, Id";
+
+	//rules
+	var qr = sforce.connection.query("SELECT "+getFields("MUSW__Automation_Rule__c")+" FROM MUSW__Automation_Rule__c" + sqlRuleWhere + sqlRuleSort,
+	      	{onSuccess : processQuery,
+       		 onFailure : failureQuery, 
+       		 source : "rule"});
+
+	//results
+	var qr = sforce.connection.query("SELECT "+getFields("MUSW__Automation_Result__c")+" FROM MUSW__Automation_Result__c" + sqlFilterResultWhere + sqlSort,
+      	{onSuccess : processQuery,
+      	 onFailure : failureQuery, 
+      	 source : "result"});
+	
+	//filters
+	var qr = sforce.connection.query("SELECT "+getFields("MUSW__Automation_Filter__c")+" FROM MUSW__Automation_Filter__c" + sqlFilterResultWhere + sqlSort,{
+		onSuccess : processQuery,
+  		onFailure : failureQuery, 
+  		source : "filter"});
+  		
+} 
+
+function processQuery(qr, mySource) {
+
+
+switch (mySource)
+  { 
+    case "rule": { 
+    	automationRule = automationRule.concat(qr.getArray("records"));
+    	break }
+    case "result": { 
+    	automationResult = automationResult.concat(qr.getArray("records"));
+    	break }
+    case "filter": { 
+		automationFilter = automationFilter.concat(qr.getArray("records"));
+    	break }
+ 	default: { ret = false; break }
+  }
+
+	if (qr.queryLocator != null) {
+		queryCount++;
+      	sforce.connection.queryMore(qr.queryLocator, {
+          onSuccess : processQuery, 
+          onFailure : failureQuery,  
+          source : mySource});
+    }
+
+
+	queryCount--;
+	
+	if (queryCount == 0 ) {
+		process();
+	}
+}
+
+function failureQuery(qr, source) {
+	alert(qr.fault.toString());
+}
+
+function process (){
+	
+	
+	var updateObjects = new Array();
+	var fieldValue;
+	
+	
+	//*** update result index
+	
+	var ResultIndex = new Array();
+	
+	for (var j=0;j<automationRule.length;j++) {
+	
+		try {
+		
+		for (var i=0;i<automationResult.length;i++) {
+	
+			if ((automationResult[i]["MUSW__Automation_Rule__c"] == automationRule[j]["Id"]) && (automationResult[i].getBoolean("MUSW__Active__c") == true)) {
+			
+				if (ResultIndex[automationRule[j]["Id"]] != null ) {
+					
+					//Result Table Count, Result Table Group, Result Table Index, Result count, Result Index
+					var ruleOrder = ResultIndex[automationRule[j]["Id"]][0];
+					var tableCount = ResultIndex[automationRule[j]["Id"]][1];
+					var tableGroup = ResultIndex[automationRule[j]["Id"]][2];
+					var tableIndex = ResultIndex[automationRule[j]["Id"]][3];
+					var resultCount = ResultIndex[automationRule[j]["Id"]][4];
+					var resultIndex = ResultIndex[automationRule[j]["Id"]][5];
+					
+					//get tables
+					var tableIndex2 = tableIndex.split("&");
+					var existingTable = false;
+					for (var t=0;t<tableIndex2.length;t++) {
+						if (tableIndex2[t] ==automationResult[i]["MUSW__Table__c"]) {
+							existingTable = true;
+						}
+					}
+					
+					if (existingTable == false) {
+						var tableCount = tableCount +1;
+						var tableIndex = tableIndex+"&"+automationResult[i]["MUSW__Table__c"];
+					}
+					
+					if (automationResult[i]["MUSW__Group__c"] == null ) {
+						var tableGroup = 1;
+					} else {
+						var tableGroup =automationResult[i]["MUSW__Group__c"];
+					}
+					
+					//if no result field specified then result index remains the same, and result count not incremented
+					if (automationResult[i]["MUSW__Field__c"] > " ") {
+						
+						resultCount = resultCount +1;
+						if (automationResult[i]["MUSW__Order__c"] != null) {
+							//Index format: resultId@Action^Group#Order!Table:Column=Value&
+
+							fieldValue = escape(automationResult[i]["MUSW__Value__c"]);
+
+							resultIndex = resultIndex + "&" + automationResult[i]["Id"] + "@" + automationResult[i]["MUSW__Action_Type__c"] + "^" + tableGroup + "#" + automationResult[i]["MUSW__Order__c"] + "!" + automationResult[i]["MUSW__Table__c"]+ ":"+automationResult[i]["MUSW__Field__c"]+"="+fieldValue;
+						} else {
+							throw "Rule without a result order specified: " + automationRule[j]["Name"];
+						}
+					}
+					
+					//Result Table Count, Result Table Group, Result Table Index, Result count, Result Index
+					ResultIndex[automationRule[j]["Id"]] = [ruleOrder,tableCount,tableGroup,tableIndex,resultCount,resultIndex]; 
+					
+				}
+				else { 
+					
+					var tableGroup = automationResult[i]["MUSW__Group__c"];
+					if (tableGroup == null) {
+						tableGroup = 1;
+					}
+					
+					var ruleOrder = automationRule[j]["MUSW__Order__c"]
+					if (ruleOrder == null) {
+						ruleOrder = 999;
+					}
+					//Result Table Count, Result Table Group, Result Table Index, Result count, Result Index
+					//if no result field specified then blank result index, and result count = 0
+					if (automationResult[i]["MUSW__Field__c"] > " ") {
+						//Index format: Action^Group#Order!Table:Column=Value&
+						if (automationResult[i]["MUSW__Order__c"] != null) {
+
+							fieldValue = escape(automationResult[i]["MUSW__Value__c"]);
+
+							ResultIndex[automationRule[j]["Id"]] = [ruleOrder,1,tableGroup,automationResult[i]["MUSW__Table__c"],1, automationResult[i]["Id"] + "@" + automationResult[i]["MUSW__Action_Type__c"] + "^" + tableGroup + "#" + automationResult[i]["MUSW__Order__c"] + "!" + automationResult[i]["MUSW__Table__c"]+":"+automationResult[i]["MUSW__Field__c"]+"="+fieldValue ]; 
+						} else {
+							throw "Rule without a result order specified: " + automationRule[j]["Name"];
+						}
+						
+					}else {
+						ResultIndex[automationRule[j]["Id"]] = [ruleOrder,1,tableGroup,automationResult[i]["MUSW__Table__c"],0, "" ]; 
+					}
+				}
+			}
+		}
+		//if no results defined
+		if (ResultIndex[automationRule[j]["Id"]] == null) {
+			//clear result index
+			ResultIndex[automationRule[j]["Id"]] = [0, 0, null, 0, null];
+		}
+		}
+		catch(err) {
+			alert("Result error : " + err.message);
+		}
+	}
+	
+	//create dynabeans
+	for (ruleUpdate in ResultIndex) {
+		var rule = new sforce.SObject("MUSW__Automation_Rule__c"); 
+		rule.set("Id", ruleUpdate);
+		rule.set("MUSW__Order__c", ResultIndex[ruleUpdate][0]);
+		rule.set("MUSW__Result_Table_Count__c", ResultIndex[ruleUpdate][1]);
+		rule.set("MUSW__Result_Group_Count__c", ResultIndex[ruleUpdate][2]);
+		rule.set("MUSW__Result_Table_Index__c", ResultIndex[ruleUpdate][3]);
+		rule.set("MUSW__Result_Count__c", ResultIndex[ruleUpdate][4]);
+		rule.set("MUSW__Result_Index__c", ResultIndex[ruleUpdate][5]);
+		
+		updateObjects.push(rule);
+	}
+	
+	//**** update filter index
+	
+	var FilterIndex = new Array();
+	var filterOpNotDefault;
+	var filterOp;
+	
+	for (var j=0;j<automationRule.length;j++) {
+	
+		try 
+		{
+		for (var i=0;i<automationFilter.length;i++) {
+	
+			if ((automationFilter[i]["MUSW__Automation_Rule__c"] == automationRule[j]["Id"]) && (automationFilter[i].getBoolean("MUSW__Active__c") == true)) {
+			
+				if (FilterIndex[automationRule[j]["Id"]] != null ) {
+					
+					//Filter Table Count, Filter Table Group, Filter Table Index, Filter count, Filter Index
+					var tableCount = FilterIndex[automationRule[j]["Id"]][0];
+					var tableGroup = FilterIndex[automationRule[j]["Id"]][1];
+					var tableIndex = FilterIndex[automationRule[j]["Id"]][2];
+					var Count = FilterIndex[automationRule[j]["Id"]][3];
+					var Index = FilterIndex[automationRule[j]["Id"]][4];
+					var IndexLong = FilterIndex[automationRule[j]["Id"]][5];
+					
+					//get tables
+					var tableIndex2 = tableIndex.split("&");
+					var existingTable = false;
+					for (var t=0;t<tableIndex2.length;t++) {
+						if (tableIndex2[t] ==automationFilter[i]["MUSW__Table__c"]) {
+							existingTable = true;
+						}
+					}
+					
+					if (existingTable == false) {
+						var tableCount = tableCount +1;
+						var tableIndex = tableIndex+"&"+automationFilter[i]["MUSW__Table__c"];
+					}
+					
+					if (automationFilter[i]["MUSW__Group__c"] == null ) {
+						var tableGroup = 1;
+					} else {
+						var tableGroup =automationFilter[i]["MUSW__Group__c"];
+					}
+					
+					//if operator is not the default "=" nor null, then set operator-not-default marker
+					if ((automationFilter[i]["MUSW__Operator__c"] == "=") || (automationFilter[i]["MUSW__Operator__c"] == null)) {
+						filterOpNotDefault = "";
+					} else {
+						filterOpNotDefault = "?";
+					}
+					
+					filterOp = nvl(automationFilter[i]["MUSW__Operator__c"],"=");
+					
+					//if no filter field specified then index remains the same, and count not incremented
+					if (automationFilter[i]["MUSW__Field__c"] > " ") {
+						
+						Count = Count +1;
+						if (automationFilter[i]["MUSW__Order__c"] != null) {
+							//Index format: Table:Column|Value& or Table:Column?|Value
+							Index = Index + "&" + automationFilter[i]["MUSW__Table__c"]+ ":"+automationFilter[i]["MUSW__Field__c"]+filterOpNotDefault+"|"+automationFilter[i]["MUSW__Value__c"];
+							//Index Long format: Action^Group#Order!Table:Column?Operator|Value&
+							IndexLong = IndexLong + "&" + automationFilter[i]["MUSW__Action_Type__c"] + "^" + tableGroup + "#" + automationFilter[i]["MUSW__Order__c"] + "!" + automationFilter[i]["MUSW__Table__c"]+ ":"+automationFilter[i]["MUSW__Field__c"]+"?"+filterOp+"|"+automationFilter[i]["MUSW__Value__c"];
+						} else {
+							throw "Rule without a filter order specified: " + automationRule[j]["Name"];
+						}
+					}
+					
+					//Filter Table Count, Filter Table Group, Filter Table Index, Filter count, Filter Index
+					FilterIndex[automationRule[j]["Id"]] = [tableCount,tableGroup,tableIndex,Count,Index, IndexLong]; 
+					
+				}
+				else { 
+				
+					//override group if is null
+					var tableGroup = automationFilter[i]["MUSW__Group__c"];
+					if (tableGroup == null) {
+						tableGroup = 1;
+					}
+					
+					//if operator is not the default "=" nor null, then set operator-not-default marker
+					//(used for searching for not exact matches in the first pass of the engine)
+					if ((automationFilter[i]["MUSW__Operator__c"] == "=") || (automationFilter[i]["MUSW__Operator__c"] == null)) {
+						filterOpNotDefault = "";
+					} else {
+						filterOpNotDefault = "?";
+					}
+					
+					filterOp = nvl(automationFilter[i]["MUSW__Operator__c"],"=");
+					
+					//Filter Table Count, Filter Table Group, Filter Table Index, Filter count, Filter Index
+					//if no result field specified then blank result index, and result count = 0
+					if (automationFilter[i]["MUSW__Field__c"] > " ") {
+						if (automationFilter[i]["MUSW__Order__c"] != null) {
+							//Index format: Table:Column|Value& or Table:Column?|Value
+							//Index Long format: Action^Group#Order!Table:Column?Operator|Value&
+							FilterIndex[automationRule[j]["Id"]] = [1,tableGroup,automationFilter[i]["MUSW__Table__c"],1, automationFilter[i]["MUSW__Table__c"]+":"+automationFilter[i]["MUSW__Field__c"]+filterOpNotDefault+"|"+automationFilter[i]["MUSW__Value__c"] , automationFilter[i]["MUSW__Action_Type__c"] + "^" + tableGroup + "#" + automationFilter[i]["MUSW__Order__c"] + "!" + automationFilter[i]["MUSW__Table__c"]+":"+automationFilter[i]["MUSW__Field__c"]+"?"+filterOp+"|"+automationFilter[i]["MUSW__Value__c"] ]; 
+						} else {
+							throw "Rule without a filter order specified: " + automationRule[j]["Name"];
+						}
+					}else {
+						FilterIndex[automationRule[j]["Id"]] = [1,tableGroup,automationFilter[i]["MUSW__Table__c"],0, "","" ]; 
+					}
+				}
+			}
+		}
+		
+		//if no filters defined
+		if (FilterIndex[automationRule[j]["Id"]] == null) {
+			//clear filter index
+			FilterIndex[automationRule[j]["Id"]] = [0, 0, null, 0, null, null];
+		}
+		}
+		catch(err) {
+			alert("Filter error : " + err.message);
+		}
+	}
+	//create dynabeans
+	for (ruleUpdate in FilterIndex) {
+		var rule = new sforce.SObject("MUSW__Automation_Rule__c"); 
+		//set foreign key
+		rule.set("Id", ruleUpdate);
+		rule.set("MUSW__Filter_Table_Count__c", FilterIndex[ruleUpdate][0]);
+		rule.set("MUSW__Filter_Group_Count__c", FilterIndex[ruleUpdate][1]);
+		rule.set("MUSW__Filter_Table_Index__c", FilterIndex[ruleUpdate][2]);
+		rule.set("MUSW__Filter_Count__c", FilterIndex[ruleUpdate][3]);
+		rule.set("MUSW__Filter_Index__c", FilterIndex[ruleUpdate][4]);
+		rule.set("MUSW__Filter_Index_Long__c", FilterIndex[ruleUpdate][5]);
+		
+		updateObjects.push(rule);
+	}
+	var saveError;
+	
+	if (updateObjects.length > 0) { 
+		var numUpdateObjects = updateObjects.length;
+		try {
+			if (updateObjects.length < 200) {
+				var sr = sforce.connection.update(updateObjects);
+				if (sr.toString().indexOf("errors") != -1) {
+					alert("There was an error(s) saving rules");
+					saveError = true;
+				}
+			} else {
+				//send updates in blocks of 200 (limit by SF)
+				while (updateObjects.length > 0) {
+					var block = updateObjects.splice(0,200);
+					
+					var sr = sforce.connection.update(block);
+					if (sr.toString().indexOf("errors") != -1) {
+						alert("There was an error(s) saving rules");
+						saveError = true;
+					}
+				}
+			}
+			if (!saveError) {
+				alert("Updated " + numUpdateObjects + " results and filters");
+			}
+		} catch (err) {
+			alert(err.toString());
+		}
+
+	} else { 
+		alert("No Records will be updated"); 
+	} 
+	
+	window.close();
+	
+}
+//field field list
+getFields = function(sobject) {
+var fieldList = "";
+	var fields = sforce.connection.describeSObject(sobject).fields;
+	for (var i=0; i<fields.length; i++) {
+		if (fields[i].name != "IsDeleted") {
+			fieldList = fieldList + fields[i].name + ", ";
+		}
+	}
+	//chop off last comma
+	fieldList = fieldList.substring(0, fieldList.length-2);
+	return fieldList;
+}
+
+function nvl(value, defaultvalue) {
+
+	if (value == null) {
+		return defaultvalue;
+	} else {
+		return value;
+	}
+}
+
+//JAW - REVIEW - build screen interface
+//-->
+		</script>
+	</head>
+	<body onload="setup()">
+	</body>
+</html>
